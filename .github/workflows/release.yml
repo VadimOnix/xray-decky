@@ -1,0 +1,44 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'pnpm'
+      - name: Build plugin
+        run: |
+          pnpm install
+          pnpm run build
+      - name: Create zip archive
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          mkdir -p release
+          zip -r release/xray-decky-v${VERSION}.zip . \
+            -x "*.git*" \
+            -x "node_modules/*" \
+            -x ".github/*" \
+            -x "specs/*" \
+            -x ".specify/*" \
+            -x ".cursor/*" \
+            -x "*.md" \
+            -x "tests/*" \
+            -x "*.test.*"
+      - name: Upload release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: release/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

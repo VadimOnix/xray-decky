@@ -1,0 +1,11 @@
+{
+  "name": "Xray Decky",
+  "author": "",
+  "flags": ["debug"],
+  "api_version": 1,
+  "publish": {
+    "tags": ["network", "proxy", "vpn", "vless"],
+    "description": "VLESS proxy connections with Reality protocol support for Steam Deck. Import configurations, toggle connections, and enable TUN mode for system-wide routing.",
+    "image": ""
+  }
+}
