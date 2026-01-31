@@ -24,7 +24,7 @@
 **Purpose**: Dependencies, directory structure, backend package layout, and TLS cert generation dependency for HTTPS import server.
 
 - [X] T001 [P] Add aiohttp to backend Python dependencies in backend/requirements.txt; document in README that plugin runtime or install must install from it
-- [X] T002 [P] Add cryptography to backend/requirements.txt for self-signed cert generation (plan, research §9); or document openssl-only path
+- [X] T002 [P] Use OpenSSL subprocess for self-signed cert (backend/src/cert_utils.py); no cryptography dependency (Decky runtime); backend/requirements.txt has aiohttp only; system /usr/bin/openssl on Linux, subprocess env without LD_LIBRARY_PATH/LD_PRELOAD (plan, research §9)
 - [X] T003 [P] Add QR code library to frontend in package.json (e.g. qrcode.react)
 - [X] T004 Create directory backend/static for import page assets (import.html, import.css)
 - [X] T005 [P] Create backend/__init__.py and backend/src/__init__.py so Python can import backend.src.* when plugin loads (spec Constraints & implementation)
@@ -39,7 +39,7 @@
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
 - [X] T007 Ensure DECKY_PLUGIN_RUNTIME_DIR is used for cert storage in main.py; create runtime dir if missing when preparing to start import server (os.makedirs(runtime_dir, exist_ok=True))
-- [X] T008 Implement cert generation: if cert.pem and key.pem are missing in DECKY_PLUGIN_RUNTIME_DIR, generate self-signed cert (cryptography or openssl subprocess), save cert.pem and key.pem to runtime dir; on failure log error and do not start import server (main.py or backend/src/cert_utils.py per plan)
+- [X] T008 Implement cert generation: if cert.pem and key.pem missing in DECKY_PLUGIN_RUNTIME_DIR, generate via OpenSSL subprocess (system /usr/bin/openssl on Linux, env without LD_LIBRARY_PATH/LD_PRELOAD); save cert.pem and key.pem to runtime dir; on failure log error and do not start import server (backend/src/cert_utils.py per plan)
 - [X] T009 Create SSL context in main.py when starting import server: ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER), load_cert_chain(certfile, keyfile), set minimum TLS 1.2; on load failure log and do not start import server
 - [X] T010 Implement reading ImportServerConfig (SettingsManager key importServer.port, default 8765, range 1024–65535) when starting the import server in main.py
 - [X] T011 Implement get_import_server_url() in main.py: resolve LAN IP (not 127.0.0.1) via socket then fallbacks per research.md §8; read port from importServer.port; return { baseUrl: "https://{lan_ip}:{port}", path: "/import" }; register as plugin method (contracts/import-http-api.md)
@@ -159,7 +159,7 @@ Task T020: "Create src/components/QRImportBlock.tsx"
 
 ### MVP First (User Story 1 Only)
 
-1. Complete Phase 1: Setup (including cryptography for cert)
+1. Complete Phase 1: Setup (OpenSSL subprocess for cert, no cryptography)
 2. Complete Phase 2: Foundational (HTTPS server, cert gen, get_import_server_url https, emit on Save)
 3. Complete Phase 3: User Story 1
 4. **STOP and VALIDATE**: Test scan → accept cert → Paste → Save → link in plugin
@@ -192,4 +192,4 @@ Task T020: "Create src/components/QRImportBlock.tsx"
 - Commit after each task or logical group.
 - Stop at any checkpoint to validate that story.
 - All tasks use checklist format: `- [ ] [TaskID] [P?] [Story?] Description with file path`.
-- HTTPS: cert in DECKY_PLUGIN_RUNTIME_DIR; baseUrl uses https; TCPSite with ssl_context; on cert failure do not start import server (plan, spec Clarifications 2026-01-31).
+- HTTPS: cert in DECKY_PLUGIN_RUNTIME_DIR; cert via OpenSSL subprocess (system /usr/bin/openssl, clean env); baseUrl uses https; TCPSite with ssl_context; on cert failure do not start import server (plan, spec Clarifications 2026-01-31).

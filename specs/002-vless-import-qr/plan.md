@@ -10,7 +10,7 @@ User can import a VLESS link via a self-hosted import page: scan QR from the plu
 ## Technical Context
 
 **Language/Version**: Python 3.x (asyncio), TypeScript/React  
-**Primary Dependencies**: aiohttp (HTTPS with ssl.SSLContext), cryptography (or openssl subprocess for cert generation), @decky/api (callable, addEventListener), qrcode.react  
+**Primary Dependencies**: aiohttp (HTTPS with ssl.SSLContext), system OpenSSL via subprocess for cert generation (no cryptography), @decky/api (callable, addEventListener), qrcode.react  
 **Storage**: SettingsManager (vlessConfig, importServer.port); TLS cert/key files in `DECKY_PLUGIN_RUNTIME_DIR` (cert.pem, key.pem)  
 **Testing**: Manual on Steam Deck; optional pytest for backend validation  
 **Target Platform**: Steam Deck (Decky Loader), Linux; import page opened in mobile/desktop browsers on same LAN  
@@ -55,14 +55,14 @@ specs/002-vless-import-qr/
 main.py                  # Plugin entry; _main() starts HTTPS import server, get_import_server_url returns https
 backend/
 ├── __init__.py
-├── requirements.txt     # aiohttp, cryptography (or rely on openssl)
+├── requirements.txt     # aiohttp only; cert via system openssl (no cryptography)
 ├── static/             # import.html, import.css
 └── src/
     ├── __init__.py
     ├── import_server.py   # aiohttp app; no TLS here (main.py passes ssl_context to TCPSite)
     ├── config_parser.py
     ├── error_codes.py
-    └── [cert_utils.py or inline]  # Generate/load cert from DECKY_PLUGIN_RUNTIME_DIR
+    └── cert_utils.py    # Generate/load cert via OpenSSL subprocess (system /usr/bin/openssl, clean env)
 src/
 ├── index.tsx           # definePlugin from @decky/api; QRImportBlock first
 ├── components/
@@ -83,11 +83,11 @@ src/
 
 ## HTTPS for Import Page (Paste over network)
 
-- **Cert storage**: `DECKY_PLUGIN_RUNTIME_DIR` (or env equivalent); create dir if missing. Files: `cert.pem`, `key.pem` (or single PEM with key + cert).
-- **Cert generation**: On first run or at startup if cert/key missing — use `cryptography` (preferred) or `subprocess` to `openssl`; save to runtime dir. Subject/CN can be localhost or LAN IP; validity e.g. 365 days.
+- **Cert storage**: `DECKY_PLUGIN_RUNTIME_DIR` (or env equivalent); create dir if missing. Files: `cert.pem`, `key.pem`.
+- **Cert generation**: On first run or at startup if cert/key missing — use **system OpenSSL** via subprocess only (no `cryptography`). On Linux use `/usr/bin/openssl`; subprocess env MUST omit `LD_LIBRARY_PATH` and `LD_PRELOAD` so the Decky sandbox’s bundled libs are not loaded (they require libssl/libcrypto versions not present on SteamOS). Save `cert.pem` and `key.pem` to runtime dir; subject/CN localhost; validity e.g. 365 days. Implemented in `backend/src/cert_utils.py`.
 - **SSL context**: `ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)`; load cert and key; set minimum version TLS 1.2.
 - **aiohttp**: `web.TCPSite(runner, "0.0.0.0", port, ssl_context=ssl_context)` (or equivalent aiohttp API for HTTPS).
 - **get_import_server_url()**: Return `{ "baseUrl": "https://{lan_ip}:{port}", "path": "/import" }`.
 - **Documentation**: quickstart (and optionally in-plugin hint): on first visit browser shows certificate warning; user clicks "Advanced" → "Proceed to site" once per device; after that Paste works.
 - **Error handling**: If cert generation or load fails — log error, do not start import server. Optional: fallback to HTTP on same or different port (document in plan/spec); default is no start.
-- **Dependencies**: Either add `cryptography` to `backend/requirements.txt` for cert generation, or use system `openssl` (subprocess); document the chosen approach in README or backend/requirements.txt so installers know which path is used.
+- **Dependencies**: **aiohttp only** in `backend/requirements.txt`. Cert generation uses system OpenSSL (no extra Python dependency); document in README or requirements.txt comment that the plugin relies on system `openssl` for TLS cert generation.

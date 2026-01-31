@@ -138,8 +138,11 @@
 - aiohttp supports `TCPSite(..., ssl_context=ssl_context)`; Python stdlib `ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)` and `load_cert_chain(certfile, keyfile)` are sufficient. Prefer TLS 1.2+.
 - On certificate generation or load failure: log the error and do not start the import server (spec: MUST NOT start). Optional: document or implement HTTP fallback as a degraded mode (Paste then only works via manual paste hint).
 
+**Implementation (source of truth)**: Cert generation uses **OpenSSL subprocess only** (no `cryptography`). Decky Loader runtime does not install `backend/requirements.txt`; the sandbox may bundle an `openssl` binary and libs in PATH/`LD_LIBRARY_PATH` that require libssl/libcrypto versions not present on SteamOS. Implementation: call **system** `/usr/bin/openssl` on Linux; run subprocess with env that omits `LD_LIBRARY_PATH` and `LD_PRELOAD` so the loader uses system libssl/libcrypto. Implemented in `backend/src/cert_utils.py`.
+
 **Alternatives considered**:
 
 - **HTTP only**: Paste does not work from another device; rejected per spec FR-002 and user clarification.
 - **Public CA cert**: Requires domain and CA issuance; overkill for local import page. Self-signed is acceptable; one-time acceptance per device is documented.
 - **Cert generation at build time**: Possible but runtime generation keeps one less build step and works on any Deck without pre-bundled certs.
+- **cryptography library**: Would require installing backend deps in Decky runtime; rejected in favor of system OpenSSL subprocess for zero extra Python deps.
