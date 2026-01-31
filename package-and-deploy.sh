@@ -38,11 +38,17 @@ if [ -f README.md ]; then
   cp README.md "$PLUGIN_DIR/"
 fi
 
-# Backend исходники
-if [ -d backend/src ]; then
-  mkdir -p "$PLUGIN_DIR/backend"
-  cp -r backend/src "$PLUGIN_DIR/backend/"
+# Backend and import server: backend/src/*.py (cert_utils, import_server, …), backend/static (import.html, import.css)
+if [ ! -d backend/src ] || [ ! -d backend/static ]; then
+  echo -e "${YELLOW}❌ backend/src or backend/static missing. Import server will not start on device.${NC}"
+  exit 1
 fi
+mkdir -p "$PLUGIN_DIR/backend/src"
+cp backend/__init__.py "$PLUGIN_DIR/backend/" 2>/dev/null || echo "# Backend package" > "$PLUGIN_DIR/backend/__init__.py"
+cp backend/src/__init__.py "$PLUGIN_DIR/backend/src/" 2>/dev/null || echo "# Backend src package" > "$PLUGIN_DIR/backend/src/__init__.py"
+cp backend/src/*.py "$PLUGIN_DIR/backend/src/"
+mkdir -p "$PLUGIN_DIR/backend"
+cp -r backend/static "$PLUGIN_DIR/backend/"
 
 # Backend бинарники (если есть)
 if [ -d backend/out ] && [ "$(ls -A backend/out 2>/dev/null)" ]; then

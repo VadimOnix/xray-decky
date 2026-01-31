@@ -1,29 +1,37 @@
-import { definePlugin, ServerAPI } from 'decky-frontend-lib'
-import { FC } from 'react'
+import { definePlugin } from '@decky/api'
 import { FaNetworkWired } from 'react-icons/fa'
+import { QRImportBlock } from './components/QRImportBlock'
 import { ConfigImport } from './components/ConfigImport'
 import { ConnectionToggle } from './components/ConnectionToggle'
 import { StatusDisplay } from './components/StatusDisplay'
 import { TUNModeToggle } from './components/TUNModeToggle'
 import { KillSwitchToggle } from './components/KillSwitchToggle'
 
-// Main content component
-const Content: FC<{ serverAPI: ServerAPI }> = ({ serverAPI }) => {
+// Main content component (QR block first per FR-001)
+function Content() {
   return (
     <div>
-      <ConfigImport serverAPI={serverAPI} />
-      <StatusDisplay serverAPI={serverAPI} />
-      <ConnectionToggle serverAPI={serverAPI} />
-      <TUNModeToggle serverAPI={serverAPI} />
-      <KillSwitchToggle serverAPI={serverAPI} />
+      <QRImportBlock />
+      <ConfigImport />
+      <StatusDisplay />
+      <ConnectionToggle />
+      <TUNModeToggle />
+      <KillSwitchToggle />
     </div>
   )
 }
 
-export default definePlugin((serverAPI: ServerAPI) => {
+// New Decky API: definePlugin takes no arguments
+// https://wiki.deckbrew.xyz/en/plugin-dev/new-api-migration
+export default definePlugin(() => {
+  console.log('Xray Decky plugin initializing')
+
   return {
-    title: <div>Xray Decky</div>,
-    content: <Content serverAPI={serverAPI} />,
+    name: 'Xray Decky',
+    content: <Content />,
     icon: <FaNetworkWired />,
+    onDismount() {
+      console.log('Xray Decky plugin unloading')
+    },
   }
 })

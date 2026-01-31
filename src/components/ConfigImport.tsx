@@ -1,29 +1,36 @@
 import { FC, useState, useEffect } from 'react'
-import { ServerAPI } from 'decky-frontend-lib'
-import { APIService, VLESSConfig } from '../services/api'
+import { addEventListener, removeEventListener } from '@decky/api'
+import { VLESSConfig, getVLESSConfig, importVLESSConfig } from '../services/api'
 import { validateVLESSURL, getValidationErrorMessage } from '../utils/validation'
 
-interface ConfigImportProps {
-  serverAPI: ServerAPI
-}
+const VLESS_CONFIG_UPDATED_EVENT = 'vless_config_updated'
 
-export const ConfigImport: FC<ConfigImportProps> = ({ serverAPI }) => {
+export const ConfigImport: FC = () => {
   const [url, setUrl] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [storedConfig, setStoredConfig] = useState<VLESSConfig | null>(null)
 
-  const api = new APIService(serverAPI)
-
   // Load existing config on mount
   useEffect(() => {
     loadStoredConfig()
   }, [])
 
+  // Subscribe to backend push: when config is saved via import page (browser), backend emits and we refetch
+  useEffect(() => {
+    const listener = () => {
+      loadStoredConfig()
+    }
+    addEventListener(VLESS_CONFIG_UPDATED_EVENT, listener)
+    return () => {
+      removeEventListener(VLESS_CONFIG_UPDATED_EVENT, listener)
+    }
+  }, [])
+
   const loadStoredConfig = async () => {
     try {
-      const result = await api.getVLESSConfig()
+      const result = await getVLESSConfig()
       if (result.exists && result.config) {
         setStoredConfig(result.config)
         setUrl(result.config.sourceUrl)
@@ -54,7 +61,7 @@ export const ConfigImport: FC<ConfigImportProps> = ({ serverAPI }) => {
       }
 
       // Call backend API
-      const result = await api.importVLESSConfig(url.trim())
+      const result = await importVLESSConfig(url.trim())
 
       if (result.success && result.config) {
         setStoredConfig(result.config)

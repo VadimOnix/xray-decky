@@ -6,9 +6,71 @@ for the Decky Loader plugin. All backend methods are defined here.
 """
 
 import os
+import sys
+import ssl
 import asyncio
+import socket
+import subprocess
 import time
+from pathlib import Path
 from typing import Dict, Any, Optional
+
+
+def _get_lan_ip() -> str:
+    """
+    Determine the host's LAN IP (not 127.0.0.1) so the import page URL is reachable
+    from other devices on the same network. Tries: (1) outgoing socket to 8.8.8.8,
+    (2) hostname -I, (3) ip route get 8.8.8.8. Falls back to 127.0.0.1 only if all fail.
+    """
+    # 1) Outgoing UDP socket: usually gives the interface IP used for default route
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(("8.8.8.8", 80))
+            ip = s.getsockname()[0]
+            if ip and ip != "127.0.0.1":
+                return ip
+    except Exception:
+        pass
+    # 2) Linux: hostname -I returns space-separated IPs; first is typically primary
+    try:
+        out = subprocess.check_output(
+            ["hostname", "-I"],
+            stderr=subprocess.DEVNULL,
+            text=True,
+            timeout=2,
+        )
+        for part in out.strip().split():
+            part = part.strip()
+            if part and not part.startswith("127."):
+                return part
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError):
+        pass
+    # 3) ip route get 8.8.8.8 → parse "src" address
+    try:
+        out = subprocess.check_output(
+            ["ip", "-4", "route", "get", "8.8.8.8"],
+            stderr=subprocess.DEVNULL,
+            text=True,
+            timeout=2,
+        )
+        for line in out.splitlines():
+            if "src" in line:
+                parts = line.split()
+                for i, p in enumerate(parts):
+                    if p == "src" and i + 1 < len(parts):
+                        ip = parts[i + 1].strip()
+                        if ip and ip != "127.0.0.1":
+                            return ip
+                        break
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError):
+        pass
+    return "127.0.0.1"
+
+# Add plugin directory to Python path for backend module imports
+PLUGIN_DIR = Path(__file__).resolve().parent
+if str(PLUGIN_DIR) not in sys.path:
+    sys.path.insert(0, str(PLUGIN_DIR))
+
 from settings import SettingsManager
 from backend.src.config_parser import (
     validate_vless_url,
@@ -25,6 +87,9 @@ from backend.src.xray_manager import XrayManager
 from backend.src.connection_manager import get_connection_state, ConnectionStatus
 from backend.src.tun_manager import TUNManager
 from backend.src.kill_switch import KillSwitch
+from backend.src.import_server import create_import_app
+from backend.src.cert_utils import ensure_cert_key
+from aiohttp import web
 
 # Initialize SettingsManager
 settings_dir = os.environ.get("DECKY_PLUGIN_SETTINGS_DIR", "")
@@ -58,11 +123,81 @@ class Plugin:
         from backend.src.connection_manager import load_connection_state_from_settings
         load_connection_state_from_settings(settings)
 
+        # Start import HTTPS server (TLS self-signed cert so Paste works from any device).
+        # ImportServerConfig: port from settings, default 8765, range 1024–65535.
+        # Bind to 0.0.0.0 so the import page is reachable from LAN (QR scan). If preferred port is in use, try next ports.
+        import_server_config = settings.getSetting("importServer", {"port": 8765})
+        port = int(import_server_config.get("port", 8765))
+        port = max(1024, min(65535, port))
+        static_dir = Path(__file__).resolve().parent / "backend" / "static"
+        runtime_dir = os.environ.get("DECKY_PLUGIN_RUNTIME_DIR", "")
+        ssl_context = None
+        if static_dir.is_dir() and runtime_dir:
+            try:
+                Path(runtime_dir).mkdir(parents=True, exist_ok=True)
+                cert_path, key_path = ensure_cert_key(Path(runtime_dir))
+                ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+                ssl_context.load_cert_chain(str(cert_path), str(key_path))
+                ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
+            except Exception as e:
+                print(f"Xray Decky Plugin: Import server TLS cert failed: {e}. Import server not started.")
+                self._import_runner = None
+                ssl_context = None
+        if static_dir.is_dir() and ssl_context is not None:
+            async def _notify_vless_saved():
+                """Notify frontend that VLESS config was saved (e.g. from import page)."""
+                try:
+                    from decky import emit
+                    await emit("vless_config_updated")
+                except Exception as e:
+                    print(f"Xray Decky Plugin: Failed to emit vless_config_updated: {e}")
+
+            self._import_runner = None
+            runner = None
+            for attempt in range(11):  # try port, port+1, ... port+10
+                try_port = port + attempt
+                if try_port > 65535:
+                    break
+                try:
+                    import_app = create_import_app(settings, static_dir, on_vless_saved=_notify_vless_saved)
+                    runner = web.AppRunner(import_app)
+                    await runner.setup()
+                    site = web.TCPSite(runner, "0.0.0.0", try_port, ssl_context=ssl_context)
+                    await site.start()
+                    self._import_runner = runner
+                    if try_port != port:
+                        import_server_config["port"] = try_port
+                        settings.setSetting("importServer", import_server_config)
+                        settings.commit()
+                        print(f"Xray Decky Plugin: Port {port} in use, using {try_port}. Import server listening on 0.0.0.0:{try_port} (HTTPS)")
+                    else:
+                        print(f"Xray Decky Plugin: Import server listening on 0.0.0.0:{try_port} (HTTPS)")
+                    break
+                except OSError as e:
+                    if runner is not None:
+                        await runner.cleanup()
+                        runner = None
+                    if attempt == 0:
+                        print(f"Xray Decky Plugin: Port {try_port} failed: {e}, trying next ports...")
+                    if attempt == 10:
+                        self._import_runner = None
+                        print(f"Xray Decky Plugin: Import server could not start on ports {port}-{port+10}. Check firewall or free a port.")
+        elif not runtime_dir:
+            self._import_runner = None
+            print("Xray Decky Plugin: DECKY_PLUGIN_RUNTIME_DIR not set, import server not started")
+        elif not static_dir.is_dir():
+            self._import_runner = None
+            print("Xray Decky Plugin: backend/static not found, import server not started")
+
     async def _unload(self):
         """
         Cleanup code called when the plugin is unloaded.
         """
         print("Xray Decky Plugin: Backend unloading")
+        # Stop import HTTP server
+        if getattr(self, "_import_runner", None) is not None:
+            await self._import_runner.cleanup()
+            self._import_runner = None
         # Stop xray-core process if running
         connection_state = get_connection_state()
         if connection_state.status == ConnectionStatus.CONNECTED:
@@ -173,6 +308,25 @@ class Plugin:
             return {"config": config, "exists": exists}
         except Exception as e:
             return create_error_response(ErrorCode.UNKNOWN_ERROR, f"Failed to get config: {str(e)}")
+
+    async def get_import_server_url(self) -> Dict[str, Any]:
+        """
+        Get URL for the import page (for QR code). Resolves LAN IP (not 127.0.0.1)
+        and port from importServer.port so devices on the same network can open the page.
+        Returns https baseUrl so the page is in a secure context and Paste works.
+        
+        Returns:
+            { 'baseUrl': 'https://{lan_ip}:{port}', 'path': '/import' }
+        """
+        try:
+            import_server_config = settings.getSetting("importServer", {"port": 8765})
+            port = int(import_server_config.get("port", 8765))
+            port = max(1024, min(65535, port))
+            local_ip = _get_lan_ip()
+            base_url = f"https://{local_ip}:{port}"
+            return {"baseUrl": base_url, "path": "/import"}
+        except Exception as e:
+            return create_error_response(ErrorCode.UNKNOWN_ERROR, f"Failed to get import URL: {str(e)}")
 
     async def validate_vless_config(self) -> Dict[str, Any]:
         """

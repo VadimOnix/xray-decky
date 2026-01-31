@@ -1,10 +1,15 @@
 /**
- * API Service - Wrapper for ServerAPI calls
+ * API Service - Backend calls using @decky/api (new API)
  *
- * Provides typed methods for all backend API calls.
+ * Uses callable() for typed backend method calls.
+ * https://wiki.deckbrew.xyz/en/plugin-dev/backend-frontend-communication
  */
 
-import { ServerAPI } from 'decky-frontend-lib'
+import { callable } from '@decky/api'
+
+// #region agent log - debug callable
+console.log('[api.ts] Module loaded, callable:', typeof callable, callable)
+// #endregion
 
 // Type definitions
 export interface VLESSConfig {
@@ -98,112 +103,49 @@ export interface DeactivateKillSwitchResponse {
   error?: string
 }
 
-/**
- * API service class for backend communication
- */
-export class APIService {
-  constructor(private serverAPI: ServerAPI) {}
+export interface ImportServerUrlResponse {
+  baseUrl: string
+  path: string
+}
 
-  /**
-   * Import VLESS configuration from URL
-   */
-  async importVLESSConfig(url: string): Promise<ImportConfigResponse> {
-    const response = await this.serverAPI.callPluginMethod<{ url: string }, ImportConfigResponse>(
-      'import_vless_config',
-      { url }
-    )
-    return response.result as ImportConfigResponse
-  }
+// Backend method handles using callable (new API)
+// callable<[arg types], returnType>("method_name")
 
-  /**
-   * Get stored VLESS configuration
-   */
-  async getVLESSConfig(): Promise<GetConfigResponse> {
-    const response = await this.serverAPI.callPluginMethod<{}, GetConfigResponse>('get_vless_config', {})
-    return response.result as GetConfigResponse
-  }
+export const importVLESSConfig = callable<[url: string], ImportConfigResponse>('import_vless_config')
 
-  /**
-   * Validate stored VLESS configuration
-   */
-  async validateVLESSConfig(): Promise<ValidateConfigResponse> {
-    const response = await this.serverAPI.callPluginMethod<{}, ValidateConfigResponse>('validate_vless_config', {})
-    return response.result as ValidateConfigResponse
-  }
+export const getVLESSConfig = callable<[], GetConfigResponse>('get_vless_config')
 
-  /**
-   * Toggle connection on/off
-   */
-  async toggleConnection(enable: boolean): Promise<ToggleConnectionResponse> {
-    const response = await this.serverAPI.callPluginMethod<{ enable: boolean }, ToggleConnectionResponse>(
-      'toggle_connection',
-      { enable }
-    )
-    return response.result as ToggleConnectionResponse
-  }
+export const validateVLESSConfig = callable<[], ValidateConfigResponse>('validate_vless_config')
 
-  /**
-   * Get current connection status
-   */
-  async getConnectionStatus(): Promise<ConnectionStatusResponse> {
-    const response = await this.serverAPI.callPluginMethod<{}, ConnectionStatusResponse>('get_connection_status', {})
-    return response.result as ConnectionStatusResponse
-  }
+export const toggleConnection = callable<[enable: boolean], ToggleConnectionResponse>('toggle_connection')
 
-  /**
-   * Toggle TUN mode
-   */
-  async toggleTUNMode(enabled: boolean): Promise<ToggleTUNModeResponse> {
-    const response = await this.serverAPI.callPluginMethod<{ enabled: boolean }, ToggleTUNModeResponse>(
-      'toggle_tun_mode',
-      { enabled }
-    )
-    return response.result as ToggleTUNModeResponse
-  }
+export const getConnectionStatus = callable<[], ConnectionStatusResponse>('get_connection_status')
 
-  /**
-   * Check TUN privileges
-   */
-  async checkTUNPrivileges(): Promise<CheckPrivilegesResponse> {
-    const response = await this.serverAPI.callPluginMethod<{}, CheckPrivilegesResponse>('check_tun_privileges', {})
-    return response.result as CheckPrivilegesResponse
-  }
+export const toggleTUNMode = callable<[enabled: boolean], ToggleTUNModeResponse>('toggle_tun_mode')
 
-  /**
-   * Get TUN mode status
-   */
-  async getTUNModeStatus(): Promise<TUNModeStatusResponse> {
-    const response = await this.serverAPI.callPluginMethod<{}, TUNModeStatusResponse>('get_tun_mode_status', {})
-    return response.result as TUNModeStatusResponse
-  }
+export const checkTUNPrivileges = callable<[], CheckPrivilegesResponse>('check_tun_privileges')
 
-  /**
-   * Toggle kill switch
-   */
-  async toggleKillSwitch(enabled: boolean): Promise<ToggleKillSwitchResponse> {
-    const response = await this.serverAPI.callPluginMethod<{ enabled: boolean }, ToggleKillSwitchResponse>(
-      'toggle_kill_switch',
-      { enabled }
-    )
-    return response.result as ToggleKillSwitchResponse
-  }
+export const getTUNModeStatus = callable<[], TUNModeStatusResponse>('get_tun_mode_status')
 
-  /**
-   * Get kill switch status
-   */
-  async getKillSwitchStatus(): Promise<KillSwitchStatusResponse> {
-    const response = await this.serverAPI.callPluginMethod<{}, KillSwitchStatusResponse>('get_kill_switch_status', {})
-    return response.result as KillSwitchStatusResponse
-  }
+export const toggleKillSwitch = callable<[enabled: boolean], ToggleKillSwitchResponse>('toggle_kill_switch')
 
-  /**
-   * Deactivate kill switch
-   */
-  async deactivateKillSwitch(): Promise<DeactivateKillSwitchResponse> {
-    const response = await this.serverAPI.callPluginMethod<{}, DeactivateKillSwitchResponse>(
-      'deactivate_kill_switch',
-      {}
-    )
-    return response.result as DeactivateKillSwitchResponse
+export const getKillSwitchStatus = callable<[], KillSwitchStatusResponse>('get_kill_switch_status')
+
+export const deactivateKillSwitch = callable<[], DeactivateKillSwitchResponse>('deactivate_kill_switch')
+
+// #region agent log - wrapped callable with logging
+const _getImportServerUrl = callable<[], ImportServerUrlResponse>('get_import_server_url')
+console.log('[api.ts] _getImportServerUrl callable created:', typeof _getImportServerUrl, _getImportServerUrl)
+
+export const getImportServerUrl = async (): Promise<ImportServerUrlResponse> => {
+  console.log('[api.ts] getImportServerUrl() called, invoking callable...')
+  try {
+    const result = await _getImportServerUrl()
+    console.log('[api.ts] getImportServerUrl() result:', result)
+    return result
+  } catch (err) {
+    console.error('[api.ts] getImportServerUrl() error:', err)
+    throw err
   }
 }
+// #endregion
