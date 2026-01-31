@@ -111,6 +111,10 @@ pnpm install
 # Build frontend
 pnpm run build
 
+# Backend Python dependencies (for import server): install from backend/requirements.txt
+# Plugin runtime or install script must install these in the Decky Python env, e.g.:
+# pip install -r backend/requirements.txt
+
 # Download xray-core binary to backend/out/xray-core
 ```
 

@@ -1,0 +1,6 @@
+# Backend Python dependencies for Xray Decky Plugin
+# Install via: pip install -r backend/requirements.txt
+# Plugin runtime or install script must install these (Decky Python env).
+# Cert generation uses OpenSSL subprocess (no cryptography dependency).
+
+aiohttp>=3.9.0

@@ -4,7 +4,7 @@ Error Codes and User-Friendly Messages
 Centralized error handling with error codes and user-friendly messages.
 """
 
-from typing import Dict, Optional
+from typing import Dict, Optional, Any
 
 
 # Error code constants

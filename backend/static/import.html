@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Import VLESS – Xray Decky</title>
+  <link rel="stylesheet" href="/import/static/import.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>Import VLESS Configuration</h1>
+    <p class="hint">Paste or type your VLESS link below and tap Save. It will appear in the plugin on your Steam Deck.</p>
+
+    <div id="error" class="message error" role="alert" hidden></div>
+    <div id="success" class="message success" hidden>Saved.</div>
+
+    <form id="import-form" action="/import" method="post">
+      <label for="link">VLESS URL</label>
+      <div class="input-row">
+        <button type="button" id="paste-btn" class="btn-icon paste-btn" title="Paste from clipboard" aria-label="Paste">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2"></path>
+            <path d="M9 3m0 2a2 2 0 0 1 2 2v0a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2v0a2 2 0 0 1 2 -2z"></path>
+            <path d="M9 12h6"></path>
+            <path d="M9 15h3"></path>
+          </svg>
+        </button>
+        <input
+          id="link"
+          name="link"
+          type="text"
+          placeholder="vless://uuid@host:port?params#name"
+          autocomplete="off"
+          required
+        />
+      </div>
+      <button type="submit" id="save-btn" class="btn primary">Save</button>
+    </form>
+  </div>
+
+  <script>
+    (function () {
+      var form = document.getElementById('import-form');
+      var linkInput = document.getElementById('link');
+      var pasteBtn = document.getElementById('paste-btn');
+      var errorEl = document.getElementById('error');
+      var successEl = document.getElementById('success');
+
+      function showError(msg) {
+        successEl.hidden = true;
+        errorEl.textContent = msg || 'An error occurred';
+        errorEl.className = 'message error';
+        errorEl.hidden = false;
+      }
+
+      function showInfo(msg) {
+        successEl.hidden = true;
+        errorEl.textContent = msg;
+        errorEl.className = 'message info';
+        errorEl.hidden = false;
+      }
+
+      function showSuccess() {
+        errorEl.hidden = true;
+        successEl.hidden = false;
+      }
+
+      function hideMessages() {
+        errorEl.hidden = true;
+        successEl.hidden = true;
+      }
+
+      pasteBtn.addEventListener('click', function () {
+        if (navigator.clipboard && typeof navigator.clipboard.readText === 'function') {
+          navigator.clipboard.readText().then(function (text) {
+            if (text && text.trim()) linkInput.value = text.trim();
+          }).catch(function () {
+            linkInput.focus();
+            showInfo('Paste with Ctrl+V (Cmd+V on Mac) in the field.');
+          });
+        } else {
+          linkInput.focus();
+          showInfo('Use Ctrl+V (or Cmd+V on Mac) in the field above to paste.');
+        }
+      });
+
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        hideMessages();
+        var link = (linkInput.value || '').trim();
+        if (!link) {
+          showError('Please enter a VLESS URL');
+          return;
+        }
+        var saveBtn = document.getElementById('save-btn');
+        saveBtn.disabled = true;
+        fetch('/import', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: 'link=' + encodeURIComponent(link)
+        })
+          .then(function (res) {
+            return res.json().then(function (data) {
+              return { status: res.status, data: data };
+            });
+          })
+          .then(function (_ref) {
+            var status = _ref.status;
+            var data = _ref.data;
+            if (status === 200 && data.success) {
+              showSuccess();
+            } else {
+              showError(data.error || 'Request failed');
+            }
+          })
+          .catch(function () {
+            showError('Network error');
+          })
+          .finally(function () {
+            saveBtn.disabled = false;
+          });
+      });
+    })();
+  </script>
+</body>
+</html>

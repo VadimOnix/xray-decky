@@ -1,18 +1,11 @@
 import { FC, useState, useEffect } from 'react'
-import { ServerAPI } from 'decky-frontend-lib'
-import { APIService, ConnectionStatus } from '../services/api'
+import { ConnectionStatus, getConnectionStatus, toggleConnection } from '../services/api'
 
-interface ConnectionToggleProps {
-  serverAPI: ServerAPI
-}
-
-export const ConnectionToggle: FC<ConnectionToggleProps> = ({ serverAPI }) => {
+export const ConnectionToggle: FC = () => {
   const [isEnabled, setIsEnabled] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [status, setStatus] = useState<ConnectionStatus>('disconnected')
-
-  const api = new APIService(serverAPI)
 
   // Load initial status
   useEffect(() => {
@@ -24,7 +17,7 @@ export const ConnectionToggle: FC<ConnectionToggleProps> = ({ serverAPI }) => {
 
   const loadStatus = async () => {
     try {
-      const result = await api.getConnectionStatus()
+      const result = await getConnectionStatus()
       setStatus(result.status)
       setIsEnabled(result.status === 'connected' || result.status === 'connecting')
     } catch (err) {
@@ -38,7 +31,7 @@ export const ConnectionToggle: FC<ConnectionToggleProps> = ({ serverAPI }) => {
 
     try {
       const newState = !isEnabled
-      const result = await api.toggleConnection(newState)
+      const result = await toggleConnection(newState)
 
       if (result.success) {
         setIsEnabled(newState)
