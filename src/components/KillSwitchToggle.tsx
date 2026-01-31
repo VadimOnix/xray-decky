@@ -1,19 +1,12 @@
 import { FC, useState, useEffect } from 'react'
-import { ServerAPI } from 'decky-frontend-lib'
-import { APIService } from '../services/api'
+import { getKillSwitchStatus, toggleKillSwitch, deactivateKillSwitch } from '../services/api'
 
-interface KillSwitchToggleProps {
-  serverAPI: ServerAPI
-}
-
-export const KillSwitchToggle: FC<KillSwitchToggleProps> = ({ serverAPI }) => {
+export const KillSwitchToggle: FC = () => {
   const [enabled, setEnabled] = useState(false)
   const [isActive, setIsActive] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [activatedAt, setActivatedAt] = useState<number | null>(null)
-
-  const api = new APIService(serverAPI)
 
   // Load initial status
   useEffect(() => {
@@ -25,7 +18,7 @@ export const KillSwitchToggle: FC<KillSwitchToggleProps> = ({ serverAPI }) => {
 
   const loadStatus = async () => {
     try {
-      const result = await api.getKillSwitchStatus()
+      const result = await getKillSwitchStatus()
       setEnabled(result.enabled)
       setIsActive(result.isActive)
       setActivatedAt(result.activatedAt || null)
@@ -40,7 +33,7 @@ export const KillSwitchToggle: FC<KillSwitchToggleProps> = ({ serverAPI }) => {
 
     try {
       const newState = !enabled
-      const result = await api.toggleKillSwitch(newState)
+      const result = await toggleKillSwitch(newState)
 
       if (result.success) {
         setEnabled(result.enabled)
@@ -62,7 +55,7 @@ export const KillSwitchToggle: FC<KillSwitchToggleProps> = ({ serverAPI }) => {
     setLoading(true)
 
     try {
-      const result = await api.deactivateKillSwitch()
+      const result = await deactivateKillSwitch()
 
       if (result.success) {
         setIsActive(false)

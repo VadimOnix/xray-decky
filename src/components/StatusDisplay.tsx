@@ -1,25 +1,18 @@
 import { FC, useEffect, useState } from 'react'
-import { ServerAPI } from 'decky-frontend-lib'
-import { APIService, ConnectionStatus } from '../services/api'
+import { ConnectionStatus, getConnectionStatus } from '../services/api'
 
-interface StatusDisplayProps {
-  serverAPI: ServerAPI
-}
-
-export const StatusDisplay: FC<StatusDisplayProps> = ({ serverAPI }) => {
+export const StatusDisplay: FC = () => {
   const [status, setStatus] = useState<ConnectionStatus>('disconnected')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [uptime, setUptime] = useState<number | null>(null)
   const [processId, setProcessId] = useState<number | null>(null)
   const [connectedAt, setConnectedAt] = useState<number | null>(null)
 
-  const api = new APIService(serverAPI)
-
   useEffect(() => {
     // Poll connection status
     const pollStatus = async () => {
       try {
-        const result = await api.getConnectionStatus()
+        const result = await getConnectionStatus()
         setStatus(result.status)
         setErrorMessage(result.errorMessage || null)
         setUptime(result.uptime || null)

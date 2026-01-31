@@ -1,12 +1,7 @@
 import { FC, useState, useEffect } from 'react'
-import { ServerAPI } from 'decky-frontend-lib'
-import { APIService } from '../services/api'
+import { getTUNModeStatus, checkTUNPrivileges, toggleTUNMode } from '../services/api'
 
-interface TUNModeToggleProps {
-  serverAPI: ServerAPI
-}
-
-export const TUNModeToggle: FC<TUNModeToggleProps> = ({ serverAPI }) => {
+export const TUNModeToggle: FC = () => {
   const [enabled, setEnabled] = useState(false)
   const [hasPrivileges, setHasPrivileges] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -14,8 +9,6 @@ export const TUNModeToggle: FC<TUNModeToggleProps> = ({ serverAPI }) => {
   const [error, setError] = useState<string | null>(null)
   const [tunInterface, setTunInterface] = useState<string | null>(null)
   const [isActive, setIsActive] = useState(false)
-
-  const api = new APIService(serverAPI)
 
   // Load initial status
   useEffect(() => {
@@ -27,7 +20,7 @@ export const TUNModeToggle: FC<TUNModeToggleProps> = ({ serverAPI }) => {
 
   const loadStatus = async () => {
     try {
-      const result = await api.getTUNModeStatus()
+      const result = await getTUNModeStatus()
       setEnabled(result.enabled)
       setHasPrivileges(result.hasPrivileges)
       setTunInterface(result.tunInterface || null)
@@ -37,12 +30,12 @@ export const TUNModeToggle: FC<TUNModeToggleProps> = ({ serverAPI }) => {
     }
   }
 
-  const checkPrivileges = async () => {
+  const handleCheckPrivileges = async () => {
     setCheckingPrivileges(true)
     setError(null)
 
     try {
-      const result = await api.checkTUNPrivileges()
+      const result = await checkTUNPrivileges()
       setHasPrivileges(result.hasPrivileges)
 
       if (!result.hasPrivileges && result.error) {
@@ -64,7 +57,7 @@ export const TUNModeToggle: FC<TUNModeToggleProps> = ({ serverAPI }) => {
 
     try {
       const newState = !enabled
-      const result = await api.toggleTUNMode(newState)
+      const result = await toggleTUNMode(newState)
 
       if (result.success) {
         setEnabled(result.enabled)
@@ -130,7 +123,7 @@ export const TUNModeToggle: FC<TUNModeToggleProps> = ({ serverAPI }) => {
               Please complete the installation steps to enable TUN mode. See INSTALLATION.md for details.
             </p>
             <button
-              onClick={checkPrivileges}
+              onClick={handleCheckPrivileges}
               disabled={checkingPrivileges}
               style={{
                 marginTop: '10px',
