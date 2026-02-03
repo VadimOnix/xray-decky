@@ -13,6 +13,7 @@ This guide provides a quick start for developers working on the Xray Reality VLE
 ## Prerequisites
 
 ### Required Software
+
 - **Node.js**: v16.14 or higher
 - **pnpm**: Version 9 (mandatory, not optional)
 - **Python**: 3.x (for backend development)
@@ -20,6 +21,7 @@ This guide provides a quick start for developers working on the Xray Reality VLE
 - **Steam Deck** (or SteamOS VM): For testing
 
 ### Development Tools
+
 - **VS Code** or **VSCodium**: Recommended IDE
 - **Decky Loader**: Installed on Steam Deck for testing
 - **xray-core binary**: Will be downloaded/built during setup
@@ -149,8 +151,8 @@ All communication uses `ServerAPI.callPluginMethod()`:
 ```typescript
 // Frontend example
 const result = await serverAPI.callPluginMethod('import_vless_config', {
-  url: 'vless://...'
-});
+  url: 'vless://...',
+})
 ```
 
 ### Settings Persistence
@@ -216,11 +218,13 @@ pytest backend/tests/integration/
 ### Manual Testing on Steam Deck
 
 1. **Build plugin**:
+
    ```bash
    pnpm run build
    ```
 
 2. **Copy to Steam Deck** (via SSH or USB):
+
    ```bash
    # SSH to Steam Deck
    scp -r . deck@<steam-deck-ip>:/home/deck/homebrew/plugins/xray-decky/
@@ -272,23 +276,31 @@ pnpm run build
 ### Build Errors
 
 **Error**: `pnpm: command not found`
+
 - **Solution**: Install pnpm v9: `sudo npm i -g pnpm@9`
 
 **Error**: `@decky/ui not found`
+
 - **Solution**: Run `pnpm install` and ensure pnpm v9 is used
 
 **Error**: `dist/index.js not found`
+
 - **Solution**: Run `pnpm run build` after code changes
 
 ### Runtime Errors
 
 **Error**: `xray-core: command not found`
+
 - **Solution**: Ensure `backend/out/xray-core` exists and is executable
 
 **Error**: `TUN mode requires privileges`
-- **Solution**: Complete installation steps for sudo exemption
+
+- **Solution**: Complete installation steps for sudo exemption (or use plugin.json "root" flag)
+
+**Note**: When TUN mode connects, System Proxy is automatically enabled (gsettings). No manual gsettings/SSH configuration required.
 
 **Error**: `SettingsManager error`
+
 - **Solution**: Check `DECKY_PLUGIN_SETTINGS_DIR` environment variable
 
 ---

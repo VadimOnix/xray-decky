@@ -26,14 +26,14 @@
 
 **Purpose**: Project initialization and basic structure
 
-- [X] T001 Create project structure per implementation plan (src/, backend/src/, backend/out/, assets/, tests/, backend/tests/)
-- [X] T002 [P] Initialize frontend project with package.json (Node.js v16.14+, pnpm v9, @decky/ui, decky-frontend-lib, React, TypeScript)
-- [X] T003 [P] Create plugin.json with plugin metadata (name, author, flags, publish metadata)
-- [X] T004 [P] Create LICENSE.md file (required for Plugin Store publication)
-- [X] T005 [P] Create tsconfig.json for TypeScript configuration
-- [X] T006 [P] Create .gitignore with Decky Loader patterns
-- [X] T007 [P] Create README.md with project documentation
-- [X] T008 [P] Setup GitHub Actions workflows (.github/workflows/ci.yml, .github/workflows/release.yml)
+- [x] T001 Create project structure per implementation plan (src/, backend/src/, backend/out/, assets/, tests/, backend/tests/)
+- [x] T002 [P] Initialize frontend project with package.json (Node.js v16.14+, pnpm v9, @decky/ui, decky-frontend-lib, React, TypeScript)
+- [x] T003 [P] Create plugin.json with plugin metadata (name, author, flags, publish metadata)
+- [x] T004 [P] Create LICENSE.md file (required for Plugin Store publication)
+- [x] T005 [P] Create tsconfig.json for TypeScript configuration
+- [x] T006 [P] Create .gitignore with Decky Loader patterns
+- [x] T007 [P] Create README.md with project documentation
+- [x] T008 [P] Setup GitHub Actions workflows (.github/workflows/ci.yml, .github/workflows/release.yml)
 
 ---
 
@@ -43,14 +43,14 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [X] T009 Create main.py with Plugin class structure (async methods, \_main(), \_unload())
-- [X] T010 [P] Setup SettingsManager integration in main.py (read DECKY_PLUGIN_SETTINGS_DIR, initialize SettingsManager)
-- [X] T011 [P] Create backend/src/ directory structure
-- [X] T012 Download or build xray-core binary and place in backend/out/xray-core (make executable)
-- [X] T013 [P] Create src/index.tsx with definePlugin entry point (basic structure, no components yet)
-- [X] T014 [P] Create src/services/api.ts with ServerAPI wrapper skeleton
-- [X] T015 Create backend/src/connection_manager.py skeleton (ConnectionState management)
-- [X] T016 Create error handling infrastructure (error codes, user-friendly messages)
+- [x] T009 Create main.py with Plugin class structure (async methods, \_main(), \_unload())
+- [x] T010 [P] Setup SettingsManager integration in main.py (read DECKY_PLUGIN_SETTINGS_DIR, initialize SettingsManager)
+- [x] T011 [P] Create backend/src/ directory structure
+- [x] T012 Download or build xray-core binary and place in backend/out/xray-core (make executable)
+- [x] T013 [P] Create src/index.tsx with definePlugin entry point (basic structure, no components yet)
+- [x] T014 [P] Create src/services/api.ts with ServerAPI wrapper skeleton
+- [x] T015 Create backend/src/connection_manager.py skeleton (ConnectionState management)
+- [x] T016 Create error handling infrastructure (error codes, user-friendly messages)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -64,17 +64,17 @@
 
 ### Implementation for User Story 1
 
-- [X] T017 [P] [US1] Create backend/src/config_parser.py with VLESS URL parsing logic (regex pattern, UUID validation, port validation)
-- [X] T018 [US1] Implement VLESS URL validation in backend/src/config_parser.py (validate format, UUID v4, hostname/IP, port range 1-65535)
-- [X] T019 [US1] Implement subscription URL parsing in backend/src/config_parser.py (base64 decode, JSON array parsing, extract single node)
-- [X] T020 [US1] Implement import_vless_config backend method in main.py (call config_parser, validate, store via SettingsManager)
-- [X] T021 [US1] Implement get_vless_config backend method in main.py (retrieve from SettingsManager)
-- [X] T022 [US1] Implement validate_vless_config backend method in main.py (re-validate stored config)
-- [X] T023 [P] [US1] Create src/utils/validation.ts with frontend VLESS URL validation helper (regex check before backend call)
-- [X] T024 [P] [US1] Create src/components/ConfigImport.tsx component (input field, submit button, error display)
-- [X] T025 [US1] Implement ConfigImport component logic (call import_vless_config API, handle success/error, show stored config)
-- [X] T026 [US1] Add ConfigImport component to src/index.tsx plugin content
-- [X] T027 [US1] Implement error handling in ConfigImport (invalid URL format, invalid UUID, invalid port, network errors)
+- [x] T017 [P] [US1] Create backend/src/config_parser.py with VLESS URL parsing logic (regex pattern, UUID validation, port validation)
+- [x] T018 [US1] Implement VLESS URL validation in backend/src/config_parser.py (validate format, UUID v4, hostname/IP, port range 1-65535)
+- [x] T019 [US1] Implement subscription URL parsing in backend/src/config_parser.py (base64 decode, JSON array parsing, extract single node)
+- [x] T020 [US1] Implement import_vless_config backend method in main.py (call config_parser, validate, store via SettingsManager)
+- [x] T021 [US1] Implement get_vless_config backend method in main.py (retrieve from SettingsManager)
+- [x] T022 [US1] Implement validate_vless_config backend method in main.py (re-validate stored config)
+- [x] T023 [P] [US1] Create src/utils/validation.ts with frontend VLESS URL validation helper (regex check before backend call)
+- [x] T024 [P] [US1] Create src/components/ConfigImport.tsx component (input field, submit button, error display)
+- [x] T025 [US1] Implement ConfigImport component logic (call import_vless_config API, handle success/error, show stored config)
+- [x] T026 [US1] Add ConfigImport component to src/index.tsx plugin content
+- [x] T027 [US1] Implement error handling in ConfigImport (invalid URL format, invalid UUID, invalid port, network errors)
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently. Users can import VLESS configs and see them stored.
 
@@ -88,19 +88,19 @@
 
 ### Implementation for User Story 2
 
-- [X] T028 [P] [US2] Create backend/src/xray_manager.py with xray-core process management (start, stop, monitor process)
-- [X] T029 [US2] Implement xray-core config file generation in backend/src/xray_manager.py (convert VLESSConfig to xray-core JSON config, avoid Steam ports UDP 27015-27030 for local listeners)
-- [X] T030 [US2] Implement xray-core subprocess spawning in backend/src/xray_manager.py (asyncio.create_subprocess_exec, handle stdout/stderr)
-- [X] T031 [US2] Implement xray-core process monitoring in backend/src/xray_manager.py (check if process is alive, handle crashes)
-- [X] T032 [US2] Implement toggle_connection backend method in main.py (load config, validate, start/stop xray-core via xray_manager)
-- [X] T033 [US2] Implement get_connection_status backend method in main.py (return current status, process ID, uptime)
-- [X] T034 [US2] Update backend/src/connection_manager.py with ConnectionState management (track status, timestamps, process ID)
-- [X] T035 [P] [US2] Create src/components/ConnectionToggle.tsx component (toggle switch, connection status display)
-- [X] T036 [US2] Implement ConnectionToggle component logic (call toggle_connection API, poll get_connection_status, handle errors)
-- [X] T037 [P] [US2] Create src/components/StatusDisplay.tsx component (show connection status: disconnected/connecting/connected/error)
-- [X] T038 [US2] Add ConnectionToggle and StatusDisplay components to src/index.tsx
-- [X] T039 [US2] Implement error handling in ConnectionToggle (no config, invalid config, xray-core process failed, network errors)
-- [X] T040 [US2] Implement connection state persistence in connection_manager.py (save status to SettingsManager for UI restoration)
+- [x] T028 [P] [US2] Create backend/src/xray_manager.py with xray-core process management (start, stop, monitor process)
+- [x] T029 [US2] Implement xray-core config file generation in backend/src/xray_manager.py (convert VLESSConfig to xray-core JSON config, avoid Steam ports UDP 27015-27030 for local listeners)
+- [x] T030 [US2] Implement xray-core subprocess spawning in backend/src/xray_manager.py (asyncio.create_subprocess_exec, handle stdout/stderr)
+- [x] T031 [US2] Implement xray-core process monitoring in backend/src/xray_manager.py (check if process is alive, handle crashes)
+- [x] T032 [US2] Implement toggle_connection backend method in main.py (load config, validate, start/stop xray-core via xray_manager)
+- [x] T033 [US2] Implement get_connection_status backend method in main.py (return current status, process ID, uptime)
+- [x] T034 [US2] Update backend/src/connection_manager.py with ConnectionState management (track status, timestamps, process ID)
+- [x] T035 [P] [US2] Create src/components/ConnectionToggle.tsx component (toggle switch, connection status display)
+- [x] T036 [US2] Implement ConnectionToggle component logic (call toggle_connection API, poll get_connection_status, handle errors)
+- [x] T037 [P] [US2] Create src/components/StatusDisplay.tsx component (show connection status: disconnected/connecting/connected/error)
+- [x] T038 [US2] Add ConnectionToggle and StatusDisplay components to src/index.tsx
+- [x] T039 [US2] Implement error handling in ConnectionToggle (no config, invalid config, xray-core process failed, network errors)
+- [x] T040 [US2] Implement connection state persistence in connection_manager.py (save status to SettingsManager for UI restoration)
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently. Users can import configs and toggle connections.
 
@@ -114,12 +114,12 @@
 
 ### Implementation for User Story 4
 
-- [X] T041 [P] [US4] Create installation documentation in README.md (sudo exemption setup steps, AppImage configuration)
-- [X] T042 [US4] Implement check_tun_privileges backend method in main.py (test TUN interface creation, check CAP_NET_ADMIN)
-- [X] T043 [US4] Create backend/src/tun_manager.py skeleton (privilege checking, TUN interface management)
-- [X] T044 [US4] Implement privilege check logic in backend/src/tun_manager.py (attempt TUN creation test, detect insufficient privileges)
-- [X] T045 [US4] Implement get_tun_mode_status backend method in main.py (return privilege status, TUN interface info)
-- [X] T046 [P] [US4] Create installation script or guide for sudo exemption (document /etc/sudoers.d/ configuration)
+- [x] T041 [P] [US4] Create installation documentation in README.md (sudo exemption setup steps, AppImage configuration)
+- [x] T042 [US4] Implement check_tun_privileges backend method in main.py (test TUN interface creation, check CAP_NET_ADMIN)
+- [x] T043 [US4] Create backend/src/tun_manager.py skeleton (privilege checking, TUN interface management)
+- [x] T044 [US4] Implement privilege check logic in backend/src/tun_manager.py (attempt TUN creation test, detect insufficient privileges)
+- [x] T045 [US4] Implement get_tun_mode_status backend method in main.py (return privilege status, TUN interface info)
+- [x] T046 [P] [US4] Create installation script or guide for sudo exemption (document /etc/sudoers.d/ configuration)
 
 **Checkpoint**: Installation and privilege checking infrastructure ready. TUN mode can now be implemented.
 
@@ -133,17 +133,17 @@
 
 ### Implementation for User Story 3
 
-- [X] T047 [US3] Implement TUN mode configuration in backend/src/xray_manager.py (add TUN outbound to xray-core config when enabled)
-- [X] T048 [US3] Implement TUN interface creation in backend/src/tun_manager.py (use xray-core built-in TUN support via config)
-- [X] T049 [US3] Implement TUN mode teardown in backend/src/tun_manager.py (cleanup TUN interface on disable/disconnect)
-- [X] T050 [US3] Implement toggle_tun_mode backend method in main.py (check privileges, update preference, validate)
-- [X] T051 [US3] Update toggle_connection to respect TUN mode preference (include TUN config in xray-core config when enabled)
-- [X] T052 [US3] Update connection_manager.py to handle TUN mode state (track TUN interface, privilege status)
-- [X] T053 [P] [US3] Create src/components/TUNModeToggle.tsx component (toggle switch, privilege status display, error messages)
-- [X] T054 [US3] Implement TUNModeToggle component logic (call toggle_tun_mode API, check privileges, handle insufficient privileges error)
-- [X] T055 [US3] Add TUNModeToggle component to src/index.tsx
-- [X] T056 [US3] Implement error handling in TUNModeToggle (insufficient privileges, TUN creation failed, guidance messages)
-- [X] T057 [US3] Update SettingsManager persistence for TUN mode preference (store enabled state, privilege status)
+- [x] T047 [US3] Implement TUN mode configuration in backend/src/xray_manager.py (add TUN outbound to xray-core config when enabled)
+- [x] T048 [US3] Implement TUN interface creation in backend/src/tun_manager.py (use xray-core built-in TUN support via config)
+- [x] T049 [US3] Implement TUN mode teardown in backend/src/tun_manager.py (cleanup TUN interface on disable/disconnect)
+- [x] T050 [US3] Implement toggle_tun_mode backend method in main.py (check privileges, update preference, validate)
+- [x] T051 [US3] Update toggle_connection to respect TUN mode preference (include TUN config in xray-core config when enabled)
+- [x] T052 [US3] Update connection_manager.py to handle TUN mode state (track TUN interface, privilege status)
+- [x] T053 [P] [US3] Create src/components/TUNModeToggle.tsx component (toggle switch, privilege status display, error messages)
+- [x] T054 [US3] Implement TUNModeToggle component logic (call toggle_tun_mode API, check privileges, handle insufficient privileges error)
+- [x] T055 [US3] Add TUNModeToggle component to src/index.tsx
+- [x] T056 [US3] Implement error handling in TUNModeToggle (insufficient privileges, TUN creation failed, guidance messages)
+- [x] T057 [US3] Update SettingsManager persistence for TUN mode preference (store enabled state, privilege status)
 
 **Checkpoint**: All user stories should now be independently functional. Users can import configs, toggle connections, and enable TUN mode (with proper installation).
 
@@ -157,22 +157,34 @@
 
 ### Implementation for Kill Switch
 
-- [X] T058 [P] Create backend/src/kill_switch.py with iptables rule management (apply rules, remove rules, track rule IDs)
-- [X] T059 Implement kill switch activation in backend/src/kill_switch.py (apply iptables DROP rules, allow xray-core process)
-- [X] T060 Implement kill switch deactivation in backend/src/kill_switch.py (remove iptables rules, restore normal routing)
-- [X] T061 Implement unexpected disconnect detection in backend/src/connection_manager.py (monitor xray-core process, detect crashes)
-- [X] T062 Implement kill switch activation on unexpected disconnect in connection_manager.py (check preference, call kill_switch.activate)
-- [X] T063 Implement toggle_kill_switch backend method in main.py (update preference, activate/deactivate if needed)
-- [X] T064 Implement get_kill_switch_status backend method in main.py (return enabled state, active state, activation timestamp)
-- [X] T065 Implement deactivate_kill_switch backend method in main.py (manual deactivation, remove iptables rules)
-- [X] T066 [P] Create src/components/KillSwitchToggle.tsx component (toggle switch, active state display, blocked message)
-- [X] T067 Implement KillSwitchToggle component logic (call toggle_kill_switch API, show blocked state, handle errors)
-- [X] T068 Add KillSwitchToggle component to src/index.tsx
-- [X] T069 Implement notification system for kill switch activation (toast notification when traffic is blocked)
-- [X] T070 Update connection_manager.py to handle kill switch on reconnect (deactivate when connection restored)
-- [X] T071 Update SettingsManager persistence for kill switch preference (store enabled state, active state)
+- [x] T058 [P] Create backend/src/kill_switch.py with iptables rule management (apply rules, remove rules, track rule IDs)
+- [x] T059 Implement kill switch activation in backend/src/kill_switch.py (apply iptables DROP rules, allow xray-core process)
+- [x] T060 Implement kill switch deactivation in backend/src/kill_switch.py (remove iptables rules, restore normal routing)
+- [x] T061 Implement unexpected disconnect detection in backend/src/connection_manager.py (monitor xray-core process, detect crashes)
+- [x] T062 Implement kill switch activation on unexpected disconnect in connection_manager.py (check preference, call kill_switch.activate)
+- [x] T063 Implement toggle_kill_switch backend method in main.py (update preference, activate/deactivate if needed)
+- [x] T064 Implement get_kill_switch_status backend method in main.py (return enabled state, active state, activation timestamp)
+- [x] T065 Implement deactivate_kill_switch backend method in main.py (manual deactivation, remove iptables rules)
+- [x] T066 [P] Create src/components/KillSwitchToggle.tsx component (toggle switch, active state display, blocked message)
+- [x] T067 Implement KillSwitchToggle component logic (call toggle_kill_switch API, show blocked state, handle errors)
+- [x] T068 Add KillSwitchToggle component to src/index.tsx
+- [x] T069 Implement notification system for kill switch activation (toast notification when traffic is blocked)
+- [x] T070 Update connection_manager.py to handle kill switch on reconnect (deactivate when connection restored)
+- [x] T071 Update SettingsManager persistence for kill switch preference (store enabled state, active state)
 
 **Checkpoint**: Kill switch fully functional. System blocks traffic on unexpected disconnect, user is notified, can reconnect or disable.
+
+---
+
+## Phase 8a: Post-Implementation Fixes (Reality + System Proxy)
+
+**Purpose**: Corrections from production testing—Reality client config, System Proxy auto-enable
+
+- [x] T089 [US3] Fix Reality client config in xray_manager.py (use publicKey not privateKey, serverName not serverNames, remove dest/xver—server-only settings)
+- [x] T090 [US3] Create backend/src/system_proxy.py (gsettings/kwriteconfig5 for GNOME/KDE)
+- [x] T091 [US3] Auto-enable System Proxy when TUN mode connects in toggle_connection
+- [x] T092 [US3] Auto-clear System Proxy on disconnect
+- [x] T093 [US2] Add SOCKS (10808) and HTTP (10809) inbounds to xray config for System Proxy compatibility
 
 ---
 
@@ -180,21 +192,21 @@
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [X] T072 [P] Update README.md with complete usage instructions (import config, toggle connection, enable TUN, kill switch, port conflict considerations - avoid Steam ports UDP 27015-27030)
-- [X] T073 [P] Add error message improvements across all components (user-friendly, actionable messages)
-- [X] T074 [P] Implement connection state persistence across plugin restarts (restore UI state from SettingsManager)
-- [X] T075 [P] Add connection metrics display (bytes sent/received, uptime) in StatusDisplay component
-- [X] T076 [P] Implement config replacement flow in ConfigImport (show existing config, allow replacement)
-- [X] T077 [P] Add validation feedback improvements (real-time validation, clear error messages)
-- [X] T078 [P] Code cleanup and refactoring (extract common patterns, improve error handling)
-- [X] T079 [P] Add logging throughout backend (log connection events, errors, state changes)
+- [x] T072 [P] Update README.md with complete usage instructions (import config, toggle connection, enable TUN, kill switch, port conflict considerations - avoid Steam ports UDP 27015-27030)
+- [x] T073 [P] Add error message improvements across all components (user-friendly, actionable messages)
+- [x] T074 [P] Implement connection state persistence across plugin restarts (restore UI state from SettingsManager)
+- [x] T075 [P] Add connection metrics display (bytes sent/received, uptime) in StatusDisplay component
+- [x] T076 [P] Implement config replacement flow in ConfigImport (show existing config, allow replacement)
+- [x] T077 [P] Add validation feedback improvements (real-time validation, clear error messages)
+- [x] T078 [P] Code cleanup and refactoring (extract common patterns, improve error handling)
+- [x] T079 [P] Add logging throughout backend (log connection events, errors, state changes)
 - [ ] T080 [P] Create assets/icon.svg for plugin icon
 - [ ] T081 [P] Create assets/store-image.png for Plugin Store (PNG format, required dimensions)
-- [X] T082 [P] Update plugin.json with complete publish metadata (tags, description, image URL)
-- [X] T083 [P] Update package.json with correct version (SemVer format, update before PR)
-- [X] T084 [P] Validate quickstart.md instructions against actual implementation
+- [x] T082 [P] Update plugin.json with complete publish metadata (tags, description, image URL)
+- [x] T083 [P] Update package.json with correct version (SemVer format, update before PR)
+- [x] T084 [P] Validate quickstart.md instructions against actual implementation
 - [ ] T085 [P] Test on actual Steam Deck hardware (Game Mode and Desktop Mode)
-- [X] T086 [P] Test plugin restart scenarios (verify state persistence)
+- [x] T086 [P] Test plugin restart scenarios (verify state persistence)
 - [ ] T087 [P] Test SteamOS update scenarios (verify installation persistence)
 - [ ] T088 [P] Validate performance goals (connection establishment <5s, config validation <1s, UI responsiveness <200ms, memory footprint <50MB idle) during real device testing
 
@@ -324,7 +336,7 @@ With multiple developers:
 
 ## Task Summary
 
-- **Total Tasks**: 87
+- **Total Tasks**: 94 (includes Phase 8a post-implementation fixes)
 - **Phase 1 (Setup)**: 8 tasks
 - **Phase 2 (Foundational)**: 8 tasks
 - **Phase 3 (User Story 1 - MVP)**: 11 tasks

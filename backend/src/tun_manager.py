@@ -20,11 +20,15 @@ class TUNManager:
     - Manage TUN interface lifecycle
     """
     
+    TUN_INTERFACE = "xray0"
+    ROUTE_METRIC = 100
+
     def __init__(self):
         """Initialize TUNManager."""
         self.tun_interface: Optional[str] = None
         self.has_privileges: bool = False
         self.last_check: Optional[float] = None
+        self._route_added: bool = False
     
     async def check_privileges(self) -> Dict[str, Any]:
         """
@@ -172,24 +176,107 @@ class TUNManager:
         except Exception as e:
             return {"success": False, "error": str(e)}
     
-    async def create_tun_interface(self, interface_name: str = "tun0") -> Dict[str, Any]:
+    async def get_physical_interface(self) -> Optional[str]:
+        """Get the default route's interface (e.g. wlan0) for sockopt.interface binding."""
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                "ip", "-4", "route", "show", "default",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            await proc.wait()
+            if proc.returncode != 0:
+                return None
+            out = await proc.stdout.read()
+            for line in out.decode("utf-8", errors="ignore").strip().split("\n"):
+                parts = line.split()
+                for i, p in enumerate(parts):
+                    if p == "dev" and i + 1 < len(parts):
+                        dev = parts[i + 1]
+                        if dev and dev != self.TUN_INTERFACE:
+                            return dev
+                        break
+        except Exception:
+            pass
+        return None
+
+    async def setup_system_route(self) -> Dict[str, Any]:
         """
-        Create TUN interface (xray-core will handle this via config, but we can verify).
+        Add default route via xray0. Xray's proxy outbound must use sockopt.interface
+        to bind to the physical interface (wlan0) - that bypasses routing and avoids loop.
+        """
+        try:
+            dev = self.TUN_INTERFACE
+            for _ in range(20):
+                proc = await asyncio.create_subprocess_exec(
+                    "ip", "link", "show", dev,
+                    stdout=asyncio.subprocess.DEVNULL,
+                    stderr=asyncio.subprocess.DEVNULL,
+                )
+                await proc.wait()
+                if proc.returncode == 0:
+                    break
+                await asyncio.sleep(0.25)
+            else:
+                return {"success": False, "error": f"Interface {dev} did not appear"}
+
+            proc = await asyncio.create_subprocess_exec(
+                "ip", "route", "add", "default", "dev", dev,
+                "metric", str(self.ROUTE_METRIC),
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            await proc.wait()
+            if proc.returncode == 0:
+                self._route_added = True
+                return {"success": True}
+            err = (await proc.stderr.read()).decode("utf-8", errors="ignore").strip()
+            return {"success": False, "error": err}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    async def remove_system_route(self) -> Dict[str, Any]:
+        """Remove default route via xray0. Also cleanup legacy fwmark rule if present."""
+        try:
+            # Remove legacy fwmark rule/table from previous versions (ignore errors)
+            for args in [
+                ["ip", "rule", "del", "fwmark", "0x206", "table", "100"],
+                ["ip", "route", "del", "default", "table", "100"],
+            ]:
+                proc = await asyncio.create_subprocess_exec(
+                    *args,
+                    stdout=asyncio.subprocess.DEVNULL,
+                    stderr=asyncio.subprocess.DEVNULL,
+                )
+                await proc.wait()
+            if not self._route_added:
+                return {"success": True}
+            proc = await asyncio.create_subprocess_exec(
+                "ip", "route", "del", "default", "dev", self.TUN_INTERFACE,
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.DEVNULL,
+            )
+            await proc.wait()
+            self._route_added = False
+            return {"success": True}
+        except Exception as e:
+            self._route_added = False
+            return {"success": False, "error": str(e)}
+
+    async def create_tun_interface(self, interface_name: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Track TUN interface (xray-core creates it via config).
         
         Args:
-            interface_name: Name for TUN interface
+            interface_name: Name for TUN interface (default: xray0)
         
         Returns:
             Dictionary with creation result
         """
         try:
-            # xray-core creates TUN interface via its config
-            # We just verify it exists after xray-core starts
-            self.tun_interface = interface_name
-            return {
-                "success": True,
-                "interface": interface_name
-            }
+            name = interface_name or self.TUN_INTERFACE
+            self.tun_interface = name
+            return {"success": True, "interface": name}
         except Exception as e:
             return {
                 "success": False,

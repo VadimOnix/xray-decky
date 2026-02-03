@@ -12,28 +12,29 @@ Decky Loader plugin for Steam Deck that enables VLESS proxy connections with Rea
 ## Technical Context
 
 **Language/Version**: TypeScript (frontend), Python 3.x (backend)  
-**Primary Dependencies**: 
+**Primary Dependencies**:
+
 - Frontend: Node.js v16.14+, pnpm v9, @decky/ui, decky-frontend-lib, React
 - Backend: Python 3.x (asyncio), SettingsManager, xray-core binary (Go-based, distributed as binary)
 - Testing: Jest/Vitest (frontend), pytest (backend), GitHub Actions CI/CD
 - Build: pnpm, TypeScript compiler, Python packaging  
-**Storage**: SettingsManager (JSON files via DECKY_PLUGIN_SETTINGS_DIR) for VLESS configs, preferences (TUN mode, kill switch)  
-**Testing**: Jest/Vitest for frontend unit tests, pytest for backend unit/integration tests, GitHub Actions for CI/CD, manual testing on Steam Deck hardware  
-**Target Platform**: SteamOS (Arch-based Linux), Game Mode and Desktop Mode, immutable filesystem constraints, AppImage/Flatpak distribution model  
-**Project Type**: decky-plugin (frontend + backend hybrid structure)  
-**Performance Goals**: Connection establishment <5s, config validation <1s, UI responsiveness <200ms, minimal memory footprint (<50MB idle)  
-**Constraints**: 
+  **Storage**: SettingsManager (JSON files via DECKY_PLUGIN_SETTINGS_DIR) for VLESS configs, preferences (TUN mode, kill switch)  
+  **Testing**: Jest/Vitest for frontend unit tests, pytest for backend unit/integration tests, GitHub Actions for CI/CD, manual testing on Steam Deck hardware  
+  **Target Platform**: SteamOS (Arch-based Linux), Game Mode and Desktop Mode, immutable filesystem constraints, AppImage/Flatpak distribution model  
+  **Project Type**: decky-plugin (frontend + backend hybrid structure)  
+  **Performance Goals**: Connection establishment <5s, config validation <1s, UI responsiveness <200ms, minimal memory footprint (<50MB idle)  
+  **Constraints**:
 - Must respect SteamOS immutable filesystem (read-only system partition)
 - Must work in both Game Mode and Desktop Mode
 - TUN mode requires elevated privileges (sudo exemption setup)
 - Avoid conflicts with Steam ports (UDP 27015-27030)
 - Must handle network interruptions gracefully
 - Kill switch must prevent all clearnet traffic on unexpected disconnect  
-**Scale/Scope**: Single-user plugin, 1 VLESS config at a time (with subscription support), 3-5 UI screens, ~2000-3000 LOC estimated
+  **Scale/Scope**: Single-user plugin, 1 VLESS config at a time (with subscription support), 3-5 UI screens, ~2000-3000 LOC estimated
 
 ## Constitution Check
 
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+_GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
 Verify compliance with Nekodeck Constitution principles:
 
@@ -42,7 +43,7 @@ Verify compliance with Nekodeck Constitution principles:
 - **III. Frontend Development Standards**: ✅ Yes - Using Node.js v16.14+, pnpm v9 (mandatory), @decky/ui components, decky-frontend-lib with `definePlugin`, TypeScript/React
 - **IV. Backend Development Patterns**: ✅ Yes - Python `Plugin` class with async methods, `_main()` for long-running code, `_unload()` for cleanup, SettingsManager for persistent settings (VLESS configs, preferences), xray-core binary in `backend/out/`
 - **V. Build & Distribution Requirements**: ✅ Yes - `dist/index.js` will be generated via `pnpm run build`, version in `package.json` updated before each PR, all mandatory files included in distribution
-- **VI. Security First**: ✅ Yes - Root flag avoided (TUN mode uses sudo exemption, not root flag), all user inputs validated (VLESS URL validation), SettingsManager used for persistence (no direct filesystem access), xray-core binary will use SHA256 hash verification if distributed via `remote_binary`
+- **VI. Security First**: ✅ Yes - Root flag used only where absolutely necessary (TUN mode on SteamOS requires plugin.json "root" flag for CAP_NET_ADMIN; alternative sudo exemption documented for users who prefer it), all user inputs validated (VLESS URL validation), SettingsManager used for persistence (no direct filesystem access), xray-core binary will use SHA256 hash verification if distributed via `remote_binary`
 - **VII. Semantic Versioning**: ✅ Yes - Version in `package.json` follows SemVer (MAJOR.MINOR.PATCH), updated before every PR with changes, changelog in update descriptions
 - **VIII. Real Device Testing**: ✅ Yes - Plan includes testing on actual Steam Deck hardware in both Game Mode and Desktop Mode, compatibility testing with latest Decky Loader version, update scenario testing
 
@@ -80,10 +81,11 @@ src/                          # Frontend TypeScript/React code
 
 backend/                      # Backend Python code
 ├── src/                      # Backend source code
-│   ├── xray_manager.py       # xray-core process management
+│   ├── xray_manager.py       # xray-core process management, config generation (Reality client: publicKey, serverName, shortId)
 │   ├── config_parser.py      # VLESS config parsing/validation
-│   ├── tun_manager.py        # TUN mode setup/teardown
-│   ├── kill_switch.py         # Kill switch traffic blocking
+│   ├── tun_manager.py        # TUN mode setup/teardown, system route (default dev xray0 metric 100), sockopt.interface for loop prevention
+│   ├── system_proxy.py       # System Proxy management (gsettings/kwriteconfig5), auto-enabled with TUN mode
+│   ├── kill_switch.py        # Kill switch traffic blocking
 │   └── connection_manager.py # Connection state management
 ├── out/                      # Compiled binaries (created during build)
 │   └── xray-core             # xray-core binary (downloaded/built)
@@ -133,9 +135,11 @@ No violations identified. All Constitution principles are followed.
 **Status**: All research tasks completed, all "NEEDS CLARIFICATION" items resolved.
 
 **Deliverables**:
+
 - ✅ `research.md` - Comprehensive research on xray-core integration, TUN mode, kill switch, VLESS validation, GitHub best practices, Decky patterns, SteamOS constraints
 
 **Key Decisions**:
+
 - xray-core integration via subprocess management
 - TUN mode using xray-core built-in TUN with privilege checks
 - Kill switch using iptables rules
@@ -150,12 +154,14 @@ No violations identified. All Constitution principles are followed.
 **Status**: All design artifacts generated, agent context updated.
 
 **Deliverables**:
+
 - ✅ `data-model.md` - Complete data model with entities (VLESSConfig, ConnectionState, TUNModePreference, KillSwitchPreference), validation rules, state transitions, relationships
 - ✅ `contracts/frontend-backend-api.md` - Complete API contracts for all frontend-backend communication methods
 - ✅ `quickstart.md` - Developer quick start guide with setup, workflow, and troubleshooting
 - ✅ Agent context updated (`.cursor/rules/specify-rules.mdc`)
 
 **Key Design Decisions**:
+
 - SettingsManager for all persistence (VLESS configs, preferences)
 - ServerAPI.callPluginMethod() pattern for all frontend-backend communication
 - Async/await pattern for all backend operations
@@ -169,6 +175,7 @@ No violations identified. All Constitution principles are followed.
 **Status**: Not started. Use `/speckit.tasks` command to generate task breakdown.
 
 **Next Steps**:
+
 - Run `/speckit.tasks` to break down implementation into actionable tasks
 - Tasks will reference this plan, data model, and API contracts
 
@@ -176,9 +183,10 @@ No violations identified. All Constitution principles are followed.
 
 ## Constitution Check (Post-Phase 1)
 
-*Re-evaluated after Phase 1 design completion.*
+_Re-evaluated after Phase 1 design completion._
 
 All Constitution principles remain compliant:
+
 - ✅ Project structure follows Decky Loader standards
 - ✅ All mandatory files will be included
 - ✅ Frontend/backend patterns follow Decky conventions
@@ -192,14 +200,14 @@ All Constitution principles remain compliant:
 
 ## Generated Artifacts Summary
 
-| Artifact | Path | Status |
-|----------|------|--------|
-| Implementation Plan | `specs/001-xray-vless-decky/plan.md` | ✅ Complete |
-| Research Document | `specs/001-xray-vless-decky/research.md` | ✅ Complete |
-| Data Model | `specs/001-xray-vless-decky/data-model.md` | ✅ Complete |
-| API Contracts | `specs/001-xray-vless-decky/contracts/frontend-backend-api.md` | ✅ Complete |
-| Quick Start Guide | `specs/001-xray-vless-decky/quickstart.md` | ✅ Complete |
-| Agent Context | `.cursor/rules/specify-rules.mdc` | ✅ Updated |
+| Artifact            | Path                                                           | Status      |
+| ------------------- | -------------------------------------------------------------- | ----------- |
+| Implementation Plan | `specs/001-xray-vless-decky/plan.md`                           | ✅ Complete |
+| Research Document   | `specs/001-xray-vless-decky/research.md`                       | ✅ Complete |
+| Data Model          | `specs/001-xray-vless-decky/data-model.md`                     | ✅ Complete |
+| API Contracts       | `specs/001-xray-vless-decky/contracts/frontend-backend-api.md` | ✅ Complete |
+| Quick Start Guide   | `specs/001-xray-vless-decky/quickstart.md`                     | ✅ Complete |
+| Agent Context       | `.cursor/rules/specify-rules.mdc`                              | ✅ Updated  |
 
 ---
 

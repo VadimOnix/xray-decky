@@ -81,17 +81,21 @@ This method uses Linux capabilities instead of sudo.
    sudo visudo -c
    ```
 
-#### TUN mode still not working
+#### TUN mode still not working / traffic not routed through proxy
 
-1. Check if ip command is available:
+1. **Verify TUN interface exists** (with plugin running and TUN enabled):
    ```bash
-   which ip
+   ip link show xray0
+   # or: ip link show tun0
    ```
 
-2. Check if TUN device exists:
+2. **System routing**: Xray does not auto-modify the system routing table. If traffic still uses your real IP, ensure default route points to the TUN interface. With the plugin running as root and TUN enabled:
    ```bash
-   ls -l /dev/net/tun
+   # Check current routes
+   ip route
+   # The default route should go via xray0 (or tun0) when TUN is active
    ```
+   If the interface exists but traffic bypasses it, you may need to add routes manually (advanced; consult Xray TUN docs).
 
 3. Check plugin logs for detailed error messages
 

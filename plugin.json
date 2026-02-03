@@ -1,7 +1,7 @@
 {
   "name": "Xray Decky",
   "author": "",
-  "flags": ["debug"],
+  "flags": ["debug", "root"],
   "api_version": 1,
   "publish": {
     "tags": ["network", "proxy", "vpn", "vless"],

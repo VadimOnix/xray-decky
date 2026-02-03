@@ -36,13 +36,19 @@ class XrayManager:
         self.config_file: Optional[str] = None
         self.process_id: Optional[int] = None
     
-    def generate_config(self, vless_config: Dict[str, Any], tun_mode: bool = False) -> str:
+    def generate_config(
+        self,
+        vless_config: Dict[str, Any],
+        tun_mode: bool = False,
+        outbound_interface: Optional[str] = None,
+    ) -> str:
         """
         Generate xray-core JSON configuration from VLESSConfig.
         
         Args:
             vless_config: VLESSConfig dictionary
             tun_mode: Whether to enable TUN mode
+            outbound_interface: For TUN mode, bind proxy to this interface (e.g. wlan0)
         
         Returns:
             Path to generated config file
@@ -52,7 +58,7 @@ class XrayManager:
         config_file = os.path.join(config_dir, f"xray-config-{os.getpid()}.json")
         
         # Generate xray-core config
-        xray_config = self._build_xray_config(vless_config, tun_mode)
+        xray_config = self._build_xray_config(vless_config, tun_mode, outbound_interface)
         
         # Write config file
         with open(config_file, 'w') as f:
@@ -61,7 +67,12 @@ class XrayManager:
         self.config_file = config_file
         return config_file
     
-    def _build_xray_config(self, vless_config: Dict[str, Any], tun_mode: bool) -> Dict[str, Any]:
+    def _build_xray_config(
+        self,
+        vless_config: Dict[str, Any],
+        tun_mode: bool,
+        outbound_interface: Optional[str] = None,
+    ) -> Dict[str, Any]:
         """
         Build xray-core JSON configuration structure.
         
@@ -82,9 +93,10 @@ class XrayManager:
         security = vless_config.get("security", "none")
         reality_config = vless_config.get("realityConfig", {})
         
-        # Build outbound configuration
+        # Build outbound configuration (tag "proxy" for routing)
         outbound = {
             "protocol": "vless",
+            "tag": "proxy",
             "settings": {
                 "vnext": [
                     {
@@ -106,18 +118,16 @@ class XrayManager:
             }
         }
         
-        # Add Reality-specific settings
+        # Add Reality-specific settings (CLIENT configuration)
+        # Note: Client uses publicKey, serverName, shortId, fingerprint
+        # Server uses privateKey, dest, xver - these are NOT for client!
         if security == "reality" and reality_config:
             outbound["streamSettings"]["realitySettings"] = {
-                "show": False,
-                "dest": f"{reality_config.get('serverName', address)}:443",
-                "xver": 0,
-                "serverNames": [reality_config.get("serverName", address)],
-                "privateKey": reality_config.get("publicKey", ""),
-                "shortIds": [reality_config.get("shortId", "")],
+                "serverName": reality_config.get("serverName", address),
+                "publicKey": reality_config.get("publicKey", ""),
+                "shortId": reality_config.get("shortId", ""),
+                "fingerprint": reality_config.get("fingerprint", "chrome"),
             }
-            if reality_config.get("fingerprint"):
-                outbound["streamSettings"]["realitySettings"]["fingerprint"] = reality_config["fingerprint"]
         
         # Network-specific settings
         if network == "ws":
@@ -125,6 +135,10 @@ class XrayManager:
                 "path": "/",
                 "headers": {}
             }
+        
+        # TUN mode: bind proxy outbound to physical interface to bypass routing (avoid loop)
+        if tun_mode and outbound_interface:
+            outbound["streamSettings"]["sockopt"] = {"interface": outbound_interface}
         
         # Build complete config
         config = {
@@ -135,53 +149,61 @@ class XrayManager:
             "outbounds": [outbound]
         }
         
+        # Always add SOCKS proxy inbound (needed for System Proxy mode)
+        # This allows System Proxy to work both with and without TUN mode
+        config["inbounds"].append({
+            "protocol": "socks",
+            "listen": "127.0.0.1",
+            "port": 10808,  # Standard SOCKS port, avoids Steam ports
+            "settings": {
+                "udp": True
+            },
+            "tag": "socks"
+        })
+        
+        # Add HTTP proxy inbound (some apps prefer HTTP proxy)
+        config["inbounds"].append({
+            "protocol": "http",
+            "listen": "127.0.0.1",
+            "port": 10809,  # HTTP proxy port
+            "tag": "http"
+        })
+        
         # Add TUN mode configuration if enabled
         if tun_mode:
-            # xray-core TUN mode uses a special outbound configuration
-            # Add TUN outbound for system-wide routing
-            tun_outbound = {
+            # Direct outbound for bypassing (private/LAN IPs - geoip:private)
+            direct_outbound = {
                 "protocol": "freedom",
-                "settings": {
-                    "domainStrategy": "UseIP"
-                },
-                "tag": "tun"
+                "settings": {"domainStrategy": "UseIP"},
+                "tag": "direct"
             }
             
-            # Add routing rules for TUN mode
+            # Routing: TUN inbound -> proxy (VLESS); private IPs bypass via direct
+            # SOCKS/HTTP inbounds also route to proxy
             config["routing"] = {
                 "domainStrategy": "IPIfNonMatch",
                 "rules": [
-                    {
-                        "type": "field",
-                        "inboundTag": ["tun"],
-                        "outboundTag": "tun"
-                    }
+                    # Bypass private/LAN IPs (127.x, 10.x, 192.168.x, etc.)
+                    {"type": "field", "ip": ["geoip:private"], "outboundTag": "direct"},
+                    # All TUN traffic goes through VLESS proxy
+                    {"type": "field", "inboundTag": ["tun"], "outboundTag": "proxy"},
+                    # SOCKS/HTTP inbound traffic goes through proxy
+                    {"type": "field", "inboundTag": ["socks", "http"], "outboundTag": "proxy"}
                 ]
             }
             
             # Add TUN inbound (xray-core will create TUN interface)
+            # Xray docs: name, MTU, userLevel. Xray does NOT auto-modify system routing.
             config["inbounds"].append({
                 "protocol": "tun",
                 "settings": {
-                    "mtu": 1500,
-                    "stack": "system"
+                    "name": "xray0",
+                    "MTU": 1500
                 },
                 "tag": "tun"
             })
             
-            # Add TUN outbound
-            config["outbounds"].append(tun_outbound)
-        
-        # Add SOCKS proxy inbound (for non-TUN mode)
-        else:
-            config["inbounds"].append({
-                "protocol": "socks",
-                "listen": "127.0.0.1",
-                "port": 10808,  # Standard SOCKS port, avoids Steam ports
-                "settings": {
-                    "udp": True
-                }
-            })
+            config["outbounds"].append(direct_outbound)
         
         return config
     

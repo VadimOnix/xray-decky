@@ -87,6 +87,7 @@ from backend.src.xray_manager import XrayManager
 from backend.src.connection_manager import get_connection_state, ConnectionStatus
 from backend.src.tun_manager import TUNManager
 from backend.src.kill_switch import KillSwitch
+from backend.src.system_proxy import SystemProxyManager
 from backend.src.import_server import create_import_app
 from backend.src.cert_utils import ensure_cert_key
 from aiohttp import web
@@ -99,10 +100,18 @@ if not settings_dir:
 settings = SettingsManager(name="settings", settings_directory=settings_dir)
 settings.read()
 
-# Initialize XrayManager, TUNManager, and KillSwitch
-xray_manager = XrayManager()
+# Resolve xray-core path: deployed uses bin/, dev uses backend/out/
+def _resolve_xray_path(plugin_dir: Path) -> str:
+    for candidate in (plugin_dir / "bin" / "xray-core", plugin_dir / "backend" / "out" / "xray-core"):
+        if candidate.exists():
+            return str(candidate)
+    return str(plugin_dir / "backend" / "out" / "xray-core")  # fallback for clearer error
+
+# Initialize XrayManager, TUNManager, KillSwitch, and SystemProxyManager
+xray_manager = XrayManager(xray_binary_path=_resolve_xray_path(PLUGIN_DIR))
 tun_manager = TUNManager()
 kill_switch = KillSwitch()
+system_proxy_manager = SystemProxyManager()
 
 
 class Plugin:
@@ -198,9 +207,22 @@ class Plugin:
         if getattr(self, "_import_runner", None) is not None:
             await self._import_runner.cleanup()
             self._import_runner = None
+        
+        # Clear system proxy if active
+        system_proxy_pref = settings.getSetting("systemProxy", {})
+        if system_proxy_pref.get("enabled", False):
+            await system_proxy_manager.clear_system_proxy()
+            system_proxy_pref["enabled"] = False
+            settings.setSetting("systemProxy", system_proxy_pref)
+            settings.commit()
+        
         # Stop xray-core process if running
         connection_state = get_connection_state()
         if connection_state.status == ConnectionStatus.CONNECTED:
+            tun_pref = settings.getSetting("tunMode", {})
+            if tun_pref.get("enabled", False):
+                await tun_manager.remove_system_route()
+                await tun_manager.cleanup_tun_interface()
             await xray_manager.stop()
             connection_state.set_disconnected()
         
@@ -583,11 +605,21 @@ class Plugin:
                                 "TUN mode requires elevated privileges. Please complete installation steps."
                             )
                     
-                    # Create TUN interface tracking
-                    await tun_manager.create_tun_interface("tun0")
+                    await tun_manager.create_tun_interface()
                 
-                # Generate xray-core config
-                config_file = xray_manager.generate_config(config, tun_mode)
+                # TUN: get physical interface for sockopt.interface (avoids routing loop)
+                outbound_if = await tun_manager.get_physical_interface() if tun_mode else None
+                if tun_mode and not outbound_if:
+                    connection_state.set_error(
+                        "TUN: could not determine physical interface",
+                        ErrorCode.UNKNOWN_ERROR,
+                    )
+                    return create_error_response(
+                        ErrorCode.UNKNOWN_ERROR,
+                        "TUN mode: could not get default route interface. Check network.",
+                    )
+                
+                config_file = xray_manager.generate_config(config, tun_mode, outbound_if)
                 
                 # Start xray-core
                 result = await xray_manager.start(config_file)
@@ -597,6 +629,38 @@ class Plugin:
                     error_code = result.get("errorCode", ErrorCode.PROCESS_FAILED)
                     connection_state.set_error(error_msg, error_code)
                     return create_error_response(error_code, error_msg)
+                
+                # TUN: policy routing via fwmark - xray outbound uses table 100, rest uses xray0
+                if tun_mode:
+                    route_result = await tun_manager.setup_system_route()
+                    if not route_result.get("success"):
+                        await xray_manager.stop()
+                        connection_state.set_error(
+                            f"TUN route failed: {route_result.get('error', 'Unknown')}",
+                            ErrorCode.UNKNOWN_ERROR,
+                        )
+                        return create_error_response(
+                            ErrorCode.UNKNOWN_ERROR,
+                            f"Could not set TUN route: {route_result.get('error', 'Unknown')}",
+                        )
+                    
+                    # Auto-enable System Proxy when TUN mode is active
+                    # Only set autoEnabled if user had not manually enabled proxy
+                    proxy_result = await system_proxy_manager.set_system_proxy(
+                        socks_port=10808,
+                        http_port=10809
+                    )
+                    if proxy_result.get("success"):
+                        system_proxy_pref = settings.getSetting("systemProxy", {})
+                        was_manually_enabled = system_proxy_pref.get("enabled", False) and not system_proxy_pref.get(
+                            "autoEnabled", False
+                        )
+                        system_proxy_pref["enabled"] = True
+                        if not was_manually_enabled:
+                            system_proxy_pref["autoEnabled"] = True  # Mark as auto-enabled by TUN
+                        system_proxy_pref["lastEnabledAt"] = int(time.time())
+                        settings.setSetting("systemProxy", system_proxy_pref)
+                    # Note: Don't fail connection if system proxy fails - TUN still works
                 
                 # Update connection state
                 process_id = result.get("processId")
@@ -630,17 +694,27 @@ class Plugin:
                         "status": "disconnected"
                     })
                 
+                # Clear system proxy only if it was auto-enabled by TUN mode
+                # Preserve user's manual system proxy preference when TUN disconnects
+                system_proxy_pref = settings.getSetting("systemProxy", {})
+                if system_proxy_pref.get("autoEnabled", False):
+                    await system_proxy_manager.clear_system_proxy()
+                    system_proxy_pref["enabled"] = False
+                    system_proxy_pref["autoEnabled"] = False
+                    settings.setSetting("systemProxy", system_proxy_pref)
+                
+                # TUN: remove route first, then stop xray
+                tun_pref = settings.getSetting("tunMode", {})
+                if tun_pref.get("enabled", False):
+                    await tun_manager.remove_system_route()
+                    await tun_manager.cleanup_tun_interface()
+                
                 # Stop xray-core
                 result = await xray_manager.stop()
                 
                 if not result.get("success", False):
                     # Log error but still mark as disconnected
                     print(f"Warning: Failed to stop xray-core cleanly: {result.get('error')}")
-                
-                # Cleanup TUN interface if active
-                tun_pref = settings.getSetting("tunMode", {})
-                if tun_pref.get("enabled", False):
-                    await tun_manager.cleanup_tun_interface()
                 
                 # Update connection state
                 connection_state.set_disconnected()
@@ -705,6 +779,11 @@ class Plugin:
                         connection_state.set_blocked()
                         settings.setSetting("killSwitch", kill_switch_pref)
                         settings.commit()
+                
+                # Cleanup TUN route if was active
+                tun_pref = settings.getSetting("tunMode", {})
+                if tun_pref.get("enabled", False):
+                    await tun_manager.remove_system_route()
                 
                 # Cleanup
                 await xray_manager.stop()
@@ -829,3 +908,105 @@ class Plugin:
                 ErrorCode.UNKNOWN_ERROR,
                 f"Failed to deactivate kill switch: {str(e)}"
             )
+
+    # System Proxy Management
+    async def toggle_system_proxy(self, enabled: bool) -> Dict[str, Any]:
+        """
+        Toggle system proxy preference. When enabled, configures system to use
+        local SOCKS/HTTP proxy (gsettings for GNOME, kwriteconfig5 for KDE).
+        
+        Args:
+            enabled: True to enable, False to disable
+        
+        Returns:
+            {
+                'success': bool,
+                'enabled': bool,
+                'error': str | None
+            }
+        """
+        try:
+            system_proxy_pref = settings.getSetting("systemProxy", {})
+            
+            if enabled:
+                # Check if connected - system proxy only works when xray is running
+                connection_state = get_connection_state()
+                if connection_state.status != ConnectionStatus.CONNECTED:
+                    return create_error_response(
+                        ErrorCode.NOT_CONNECTED,
+                        "System proxy requires active connection. Please connect first."
+                    )
+                
+                # Set system proxy (SOCKS 10808, HTTP 10809)
+                result = await system_proxy_manager.set_system_proxy(
+                    socks_port=10808,
+                    http_port=10809
+                )
+                
+                if not result.get("success"):
+                    return create_error_response(
+                        ErrorCode.UNKNOWN_ERROR,
+                        result.get("error", "Failed to set system proxy")
+                    )
+                
+                system_proxy_pref["enabled"] = True
+                system_proxy_pref["autoEnabled"] = False  # Manual enable, not by TUN
+                system_proxy_pref["lastEnabledAt"] = int(time.time())
+                system_proxy_pref["socksPort"] = 10808
+                system_proxy_pref["httpPort"] = 10809
+            else:
+                # Clear system proxy
+                await system_proxy_manager.clear_system_proxy()
+                system_proxy_pref["enabled"] = False
+                system_proxy_pref["autoEnabled"] = False
+                system_proxy_pref["lastDisabledAt"] = int(time.time())
+            
+            settings.setSetting("systemProxy", system_proxy_pref)
+            settings.commit()
+            
+            return create_success_response({
+                "enabled": enabled,
+                "socksPort": 10808 if enabled else None,
+                "httpPort": 10809 if enabled else None
+            })
+            
+        except Exception as e:
+            return create_error_response(
+                ErrorCode.UNKNOWN_ERROR,
+                f"Failed to toggle system proxy: {str(e)}"
+            )
+
+    async def get_system_proxy_status(self) -> Dict[str, Any]:
+        """
+        Get system proxy preference and status.
+        
+        Returns:
+            {
+                'enabled': bool,
+                'isActive': bool,
+                'socksPort': int | None,
+                'httpPort': int | None
+            }
+        """
+        try:
+            system_proxy_pref = settings.getSetting("systemProxy", {})
+            enabled = system_proxy_pref.get("enabled", False)
+            
+            # Get actual status from manager
+            manager_status = system_proxy_manager.get_status()
+            is_active = manager_status.get("isActive", False)
+            
+            return {
+                "enabled": enabled,
+                "isActive": is_active,
+                "socksPort": manager_status.get("socksPort"),
+                "httpPort": manager_status.get("httpPort"),
+                "address": manager_status.get("address")
+            }
+            
+        except Exception as e:
+            return {
+                "enabled": False,
+                "isActive": False,
+                "error": str(e)
+            }
