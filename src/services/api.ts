@@ -7,10 +7,6 @@
 
 import { callable } from '@decky/api'
 
-// #region agent log - debug callable
-console.log('[api.ts] Module loaded, callable:', typeof callable, callable)
-// #endregion
-
 // Type definitions
 export interface VLESSConfig {
   sourceUrl: string
@@ -133,19 +129,4 @@ export const getKillSwitchStatus = callable<[], KillSwitchStatusResponse>('get_k
 
 export const deactivateKillSwitch = callable<[], DeactivateKillSwitchResponse>('deactivate_kill_switch')
 
-// #region agent log - wrapped callable with logging
-const _getImportServerUrl = callable<[], ImportServerUrlResponse>('get_import_server_url')
-console.log('[api.ts] _getImportServerUrl callable created:', typeof _getImportServerUrl, _getImportServerUrl)
-
-export const getImportServerUrl = async (): Promise<ImportServerUrlResponse> => {
-  console.log('[api.ts] getImportServerUrl() called, invoking callable...')
-  try {
-    const result = await _getImportServerUrl()
-    console.log('[api.ts] getImportServerUrl() result:', result)
-    return result
-  } catch (err) {
-    console.error('[api.ts] getImportServerUrl() error:', err)
-    throw err
-  }
-}
-// #endregion
+export const getImportServerUrl = callable<[], ImportServerUrlResponse>('get_import_server_url')
