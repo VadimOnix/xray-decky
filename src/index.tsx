@@ -1,23 +1,86 @@
 import { definePlugin } from '@decky/api'
+import { ErrorBoundary } from '@decky/ui'
 import { FaNetworkWired } from 'react-icons/fa'
-import { QRImportBlock } from './components/QRImportBlock'
-import { ConfigImport } from './components/ConfigImport'
-import { ConnectionToggle } from './components/ConnectionToggle'
-import { StatusDisplay } from './components/StatusDisplay'
-import { TUNModeToggle } from './components/TUNModeToggle'
-import { KillSwitchToggle } from './components/KillSwitchToggle'
+import { useEffect, useState } from 'react'
+import { ConfiguredLayout } from './components/layouts/ConfiguredLayout'
+import { SetupLayout } from './components/layouts/SetupLayout'
+import { usePluginPanelState } from './hooks/usePluginPanelState'
 
-// Main content component (QR block first per FR-001)
 function Content() {
+  const {
+    layout,
+    configSummary,
+    connection,
+    options,
+    isLoading,
+    saveConfig,
+    resetConfig,
+    toggleConnection,
+    toggleTUNMode,
+    toggleKillSwitch,
+    deactivateKillSwitch,
+    checkTUNPrivileges,
+  } = usePluginPanelState()
+
+  const [vlessUrl, setVlessUrl] = useState('')
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [saveSuccess, setSaveSuccess] = useState<string | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
+
+  useEffect(() => {
+    if (layout === 'setup') {
+      setSaveError(null)
+      setSaveSuccess(null)
+      setVlessUrl('')
+    }
+  }, [layout])
+
+  const handleSave = async () => {
+    setSaveError(null)
+    setSaveSuccess(null)
+    setIsSaving(true)
+    try {
+      const result = await saveConfig(vlessUrl)
+      if (result.success) {
+        setSaveSuccess('Configuration saved')
+        setTimeout(() => setSaveSuccess(null), 3000)
+      } else {
+        setSaveError(result.error || 'Failed to save configuration')
+      }
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  if (isLoading && layout === 'setup') {
+    return <div style={{ padding: '10px', color: '#8f98a0' }}>Loading…</div>
+  }
+
   return (
-    <div>
-      <QRImportBlock />
-      <ConfigImport />
-      <StatusDisplay />
-      <ConnectionToggle />
-      <TUNModeToggle />
-      <KillSwitchToggle />
-    </div>
+    <>
+      {layout === 'setup' ? (
+        <SetupLayout
+          vlessUrl={vlessUrl}
+          onVlessUrlChange={setVlessUrl}
+          onSave={handleSave}
+          isSaving={isSaving}
+          error={saveError}
+          successMessage={saveSuccess}
+        />
+      ) : (
+        <ConfiguredLayout
+          configSummary={configSummary}
+          connection={connection}
+          options={options}
+          onToggleConnection={toggleConnection}
+          onToggleTUNMode={toggleTUNMode}
+          onCheckTUNPrivileges={checkTUNPrivileges}
+          onToggleKillSwitch={toggleKillSwitch}
+          onDeactivateKillSwitch={deactivateKillSwitch}
+          onResetConfig={resetConfig}
+        />
+      )}
+    </>
   )
 }
 
@@ -28,7 +91,11 @@ export default definePlugin(() => {
 
   return {
     name: 'Xray Decky',
-    content: <Content />,
+    content: (
+      <ErrorBoundary>
+        <Content />
+      </ErrorBoundary>
+    ),
     icon: <FaNetworkWired />,
     onDismount() {
       console.log('Xray Decky plugin unloading')

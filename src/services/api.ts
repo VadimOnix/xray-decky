@@ -37,6 +37,11 @@ export interface ImportConfigResponse {
   error?: string
 }
 
+export interface ResetConfigResponse {
+  success: boolean
+  error?: string
+}
+
 export interface GetConfigResponse {
   config?: VLESSConfig
   exists: boolean
@@ -99,6 +104,23 @@ export interface DeactivateKillSwitchResponse {
   error?: string
 }
 
+export interface ToggleSystemProxyResponse {
+  success: boolean
+  enabled: boolean
+  error?: string
+  socksPort?: number | null
+  httpPort?: number | null
+}
+
+export interface SystemProxyStatusResponse {
+  enabled: boolean
+  isActive: boolean
+  socksPort?: number | null
+  httpPort?: number | null
+  address?: string | null
+  error?: string
+}
+
 export interface ImportServerUrlResponse {
   baseUrl: string
   path: string
@@ -110,6 +132,8 @@ export interface ImportServerUrlResponse {
 export const importVLESSConfig = callable<[url: string], ImportConfigResponse>('import_vless_config')
 
 export const getVLESSConfig = callable<[], GetConfigResponse>('get_vless_config')
+
+export const resetVLESSConfig = callable<[], ResetConfigResponse>('reset_vless_config')
 
 export const validateVLESSConfig = callable<[], ValidateConfigResponse>('validate_vless_config')
 
@@ -128,5 +152,9 @@ export const toggleKillSwitch = callable<[enabled: boolean], ToggleKillSwitchRes
 export const getKillSwitchStatus = callable<[], KillSwitchStatusResponse>('get_kill_switch_status')
 
 export const deactivateKillSwitch = callable<[], DeactivateKillSwitchResponse>('deactivate_kill_switch')
+
+export const toggleSystemProxy = callable<[enabled: boolean], ToggleSystemProxyResponse>('toggle_system_proxy')
+
+export const getSystemProxyStatus = callable<[], SystemProxyStatusResponse>('get_system_proxy_status')
 
 export const getImportServerUrl = callable<[], ImportServerUrlResponse>('get_import_server_url')

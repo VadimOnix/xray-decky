@@ -26,6 +26,7 @@ bower_components
 
 # Editors
 .idea
+.idea/
 *.iml
 
 # OS metadata
@@ -34,8 +35,13 @@ Thumbs.db
 
 # Ignore built ts files
 dist/
+build/
 
 __pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
 
 /.yalc
 yalc.lock

@@ -1,8 +1,29 @@
-import { FC, useState, useEffect } from 'react'
+import { FC, useEffect, useState } from 'react'
+import { Focusable } from '@decky/ui'
 import { QRCodeSVG } from 'qrcode.react'
 import { getImportServerUrl, ImportServerUrlResponse } from '../services/api'
+import { HelpPopover } from './ui/HelpPopover'
+import type { HelpTopic } from '../types/ui'
 
-export const QRImportBlock: FC = () => {
+interface QRImportBlockProps {
+  helpTopicQr?: HelpTopic
+  helpTopicLan?: HelpTopic
+}
+
+const headerRowStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: '8px',
+}
+
+const headerLabelStyle = {
+  fontSize: '14px',
+  fontWeight: 600,
+  color: '#c7d5e0',
+}
+
+export const QRImportBlock: FC<QRImportBlockProps> = ({ helpTopicQr, helpTopicLan }) => {
   const [urlInfo, setUrlInfo] = useState<ImportServerUrlResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -12,7 +33,6 @@ export const QRImportBlock: FC = () => {
     const fetchUrl = async () => {
       try {
         const res = await getImportServerUrl()
-
         if (!cancelled) {
           setUrlInfo(res)
           setError(null)
@@ -35,18 +55,24 @@ export const QRImportBlock: FC = () => {
 
   if (error) {
     return (
-      <div style={{ padding: '10px' }}>
-        <h2>Import via QR</h2>
-        <p style={{ color: '#ff6b6b' }}>{error}</p>
+      <div>
+        <div style={headerRowStyle}>
+          <span style={headerLabelStyle}>Import via QR</span>
+          {helpTopicQr && <HelpPopover label="Help: QR import" topic={helpTopicQr} />}
+        </div>
+        <p style={{ color: '#ff6b6b', marginTop: '8px' }}>{error}</p>
       </div>
     )
   }
 
   if (!urlInfo) {
     return (
-      <div style={{ padding: '10px' }}>
-        <h2>Import via QR</h2>
-        <p style={{ color: '#8f98a0' }}>Loading…</p>
+      <div>
+        <div style={headerRowStyle}>
+          <span style={headerLabelStyle}>Import via QR</span>
+          {helpTopicQr && <HelpPopover label="Help: QR import" topic={helpTopicQr} />}
+        </div>
+        <p style={{ color: '#8f98a0', marginTop: '8px' }}>Loading import address…</p>
       </div>
     )
   }
@@ -54,33 +80,38 @@ export const QRImportBlock: FC = () => {
   const importUrl = urlInfo.baseUrl.replace(/\/$/, '') + urlInfo.path
 
   return (
-    <div style={{ padding: '10px' }}>
-      <h2>Import via QR</h2>
+    <div>
+      <div style={headerRowStyle}>
+        <span style={headerLabelStyle}>Import via QR</span>
+        {helpTopicQr && <HelpPopover label="Help: QR import" topic={helpTopicQr} />}
+      </div>
       <p style={{ color: '#8f98a0', marginBottom: '12px' }}>
         Scan with your phone or open the link below to import your VLESS configuration.
       </p>
 
-      {/* Always show the link as fallback */}
-      <div style={{ marginBottom: '12px', padding: '10px', backgroundColor: '#1e3a5f', borderRadius: '5px' }}>
-        <p style={{ fontSize: '14px', color: '#c7d5e0', marginBottom: '8px' }}>
-          <strong>Import URL:</strong>
-        </p>
-        <p
-          style={{
-            fontSize: '14px',
-            color: '#66c0f4',
-            wordBreak: 'break-all',
-            fontFamily: 'monospace',
-          }}
-        >
-          {importUrl}
-        </p>
-      </div>
-
       {/* QR code section */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
         <QRCodeSVG value={importUrl} size={180} level="M" />
       </div>
+
+      <Focusable>
+        <div style={{ marginBottom: '12px', padding: '10px', backgroundColor: '#1e3a5f', borderRadius: '5px' }}>
+          <div style={headerRowStyle}>
+            <span style={{ fontSize: '14px', color: '#c7d5e0' }}>Import URL</span>
+            {helpTopicLan && <HelpPopover label="Help: LAN address" topic={helpTopicLan} />}
+          </div>
+          <p
+            style={{
+              fontSize: '14px',
+              color: '#66c0f4',
+              wordBreak: 'break-all',
+              fontFamily: 'monospace',
+            }}
+          >
+            {importUrl}
+          </p>
+        </div>
+      </Focusable>
     </div>
   )
 }

@@ -1,6 +1,6 @@
 {
   "name": "xray-decky",
-  "version": "0.2.0-alpha.6",
+  "version": "0.3.0-alpha.1",
   "description": "Decky Loader plugin for VLESS proxy connections with Reality protocol support",
   "type": "module",
   "scripts": {
@@ -10,11 +10,11 @@
     "deploy": "./deploy.sh",
     "deploy:simple": "pnpm run build && rsync -avz --delete --progress --timeout=30 --partial -e 'ssh -o ServerAliveInterval=10 -o ServerAliveCountMax=3' dist/ package.json plugin.json main.py LICENSE.md backend/src/ backend/static/ steamdeck:/home/deck/homebrew/plugins/xray-decky/",
     "package": "./package-and-deploy.sh",
-    "package:local": "pnpm run build && mkdir -p dist-package/xray-decky && cp -r dist package.json plugin.json main.py LICENSE.md dist-package/xray-decky/ && mkdir -p dist-package/xray-decky/backend && cp -r backend/src dist-package/xray-decky/backend/ && (test -d backend/static && cp -r backend/static dist-package/xray-decky/backend/ || true) && cd dist-package && zip -r ../xray-decky-v0.2.0-alpha.1.zip xray-decky && cd .. && rm -rf dist-package && echo '✅ ZIP created: xray-decky-v0.2.0-alpha.1.zip'"
+    "package:local": "pnpm run build && mkdir -p dist-package/xray-decky && cp -r dist package.json plugin.json main.py LICENSE.md dist-package/xray-decky/ && mkdir -p dist-package/xray-decky/backend && cp -r backend/src dist-package/xray-decky/backend/ && (test -d backend/static && cp -r backend/static dist-package/xray-decky/backend/ || true) && cd dist-package && zip -r ../xray-decky-v0.3.0-alpha.1.zip xray-decky && cd .. && rm -rf dist-package && echo '✅ ZIP created: xray-decky-v0.3.0-alpha.1.zip'"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/SteamDeckHomebrew/nekodeck.git"
+    "url": "git+https://github.com/SteamDeckHomebrew/xray-decky.git"
   },
   "keywords": [
     "decky",
@@ -26,9 +26,9 @@
   "author": "",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/SteamDeckHomebrew/nekodeck/issues"
+    "url": "https://github.com/SteamDeckHomebrew/xray-decky/issues"
   },
-  "homepage": "https://github.com/SteamDeckHomebrew/nekodeck#readme",
+  "homepage": "https://github.com/SteamDeckHomebrew/xray-decky#readme",
   "devDependencies": {
     "@decky/rollup": "^1.0.2",
     "@decky/ui": "^4.11.0",
