@@ -26,7 +26,7 @@ _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
 This feature **adds a standalone static public page**; it does not change the Decky Loader plugin code, build, or distribution.
 
-- **I. Standardized Project Structure**: Plugin structure unchanged. Static page lives in a dedicated folder `pages/` so plugin `src/`, `backend/`, `dist/` remain as-is.
+- **I. Standardized Project Structure**: Plugin structure unchanged. Static page lives in `docs/` so plugin `src/`, `backend/`, `dist/` remain as-is.
 - **II. Mandatory Metadata Files**: No change to plugin.json, package.json, LICENSE.
 - **III. Frontend Development Standards**: Plugin frontend (React/Decky) unchanged. Public page is separate static HTML/CSS (no React/Node required for the page itself).
 - **IV. Backend Development Patterns**: No backend for the public page.
@@ -53,24 +53,22 @@ specs/004-plugin-public-page/
 
 ### Source Code (repository root)
 
-Static public page lives in `pages/` for GitHub Pages deployment (source: root).
+Static public page lives in `docs/` for GitHub Pages deployment (source: /docs).
 
 ```text
-pages/                    # Public landing page (this feature)
-├── index.html           # Single page, semantic sections
+docs/                    # Documentation + public plugin page
+├── index.html           # Plugin landing page (single page, semantic sections)
 ├── styles/
 │   └── main.css         # Mobile-first, Steam Deck–style, minimal/no JS
 ├── assets/              # Images: hero, feature icons/graphics
 │   ├── hero.*           # Hero/header image
 │   └── features/        # Per-feature visuals
-└── scripts/             # Optional build scripts (e.g. optimize-images.sh)
-
-docs/
+├── scripts/             # Optional build scripts (e.g. optimize-images.sh)
 ├── DEVELOPMENT.md
 └── RELEASING.md
 ```
 
-**Structure Decision**: One folder `pages/` with one HTML file, one main CSS file, and an assets subfolder. GitHub Pages: deploy from branch root → site at `https://<owner>.github.io/<repo>/pages/`. No build step required; optional minification available.
+**Structure Decision**: Plugin page in `docs/` with index.html, styles, assets. GitHub Pages: source = /docs → site at `https://<owner>.github.io/<repo>/`. No build step required; optional minification available.
 
 ## Complexity Tracking
 
