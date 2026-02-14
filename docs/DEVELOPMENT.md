@@ -2,6 +2,8 @@
 
 Setting up the environment from scratch (Decky on Deck, SSH, one-time sudo for watch): see [CONTRIBUTING.md](../CONTRIBUTING.md). Below are details on watch, SSH, and debugging.
 
+**Creating a release?** See [RELEASING.md](RELEASING.md).
+
 ## Watch mode (continuous UI delivery)
 
 For UI development the plugin is configured so that on each save the frontend is rebuilt and automatically synced to the Steam Deck.
