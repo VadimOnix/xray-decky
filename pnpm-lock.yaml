@@ -38,8 +38,8 @@ devDependencies:
     specifier: 19.2.14
     version: 19.2.14
   '@types/react-dom':
-    specifier: 19.1.11
-    version: 19.1.11(@types/react@19.2.14)
+    specifier: 19.2.3
+    version: 19.2.3(@types/react@19.2.14)
   '@types/webpack':
     specifier: ^5.28.5
     version: 5.28.5
@@ -744,10 +744,10 @@ packages:
       undici-types: 7.16.0
     dev: true
 
-  /@types/react-dom@19.1.11(@types/react@19.2.14):
-    resolution: {integrity: sha512-3BKc/yGdNTYQVVw4idqHtSOcFsgGuBbMveKCOgF8wQ5QtrYOc3jDIlzg3jef04zcXFIHLelyGlj0T+BJ8+KN+w==}
+  /@types/react-dom@19.2.3(@types/react@19.2.14):
+    resolution: {integrity: sha512-jp2L/eY6fn+KgVVQAOqYItbF0VY/YApe5Mz2F0aykSO8gx31bYCZyvSeYxCHKvzHG5eZjc+zyaS5BrBWya2+kQ==}
     peerDependencies:
-      '@types/react': ^19.0.0
+      '@types/react': ^19.2.0
     dependencies:
       '@types/react': 19.2.14
     dev: true

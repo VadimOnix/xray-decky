@@ -41,7 +41,7 @@
     "@eslint/js": "^9.39.2",
     "@rollup/rollup-linux-x64-musl": "^4.57.1",
     "@types/react": "19.2.14",
-    "@types/react-dom": "19.1.11",
+    "@types/react-dom": "19.2.3",
     "@types/webpack": "^5.28.5",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
