@@ -35,7 +35,7 @@ This guide provides a quick start for developers working on the Xray Reality VLE
 ```bash
 # Clone repository (if applicable)
 git clone <repository-url>
-cd nekodeck
+cd xray-decky
 
 # Navigate to plugin directory (when created)
 cd xray-decky-plugin

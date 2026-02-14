@@ -36,7 +36,7 @@ Decky Loader plugin for Steam Deck that enables VLESS proxy connections with Rea
 
 _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
-Verify compliance with Nekodeck Constitution principles:
+Verify compliance with xray-decky Constitution principles:
 
 - **I. Standardized Project Structure**: ✅ Yes - Following Decky Loader plugin structure: `src/` for frontend TypeScript, `backend/src/` for backend source, `backend/out/` for xray-core binary, `assets/` for resources, root-level `main.py` for Python backend entry point
 - **II. Mandatory Metadata Files**: ✅ Yes - Will include `plugin.json` (name, author, flags, publish metadata), `package.json` (lowercase name, semantic version), `LICENSE(.md)` for Plugin Store publication

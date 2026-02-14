@@ -1,93 +1,61 @@
-import { FC, useState, useEffect } from 'react'
-import { ConnectionStatus, getConnectionStatus, toggleConnection } from '../services/api'
+import { FC, useMemo, useState } from 'react'
+import { Field, Toggle } from '@decky/ui'
+import type { ConnectionStatus, ToggleConnectionResponse } from '../services/api'
 
-export const ConnectionToggle: FC = () => {
-  const [isEnabled, setIsEnabled] = useState(false)
+interface ConnectionToggleProps {
+  status: ConnectionStatus
+  onToggle: (enable: boolean) => Promise<ToggleConnectionResponse>
+}
+
+export const ConnectionToggle: FC<ConnectionToggleProps> = ({ status, onToggle }) => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [status, setStatus] = useState<ConnectionStatus>('disconnected')
+  const leftDescriptionStyle = { display: 'block', textAlign: 'left' } as const
 
-  // Load initial status
-  useEffect(() => {
-    loadStatus()
-    // Poll status every 2 seconds
-    const interval = setInterval(loadStatus, 2000)
-    return () => clearInterval(interval)
-  }, [])
+  const isEnabled = status === 'connected' || status === 'connecting'
 
-  const loadStatus = async () => {
-    try {
-      const result = await getConnectionStatus()
-      setStatus(result.status)
-      setIsEnabled(result.status === 'connected' || result.status === 'connecting')
-    } catch (err) {
-      console.error('Failed to load connection status:', err)
+  const isToggleDisabled = useMemo(() => {
+    return loading || status === 'connecting' || status === 'blocked'
+  }, [loading, status])
+
+  const description = useMemo(() => {
+    if (status === 'blocked') {
+      return 'Kill switch is active. Disable it to reconnect.'
     }
-  }
+    if (loading) {
+      return status === 'connecting' ? 'Connecting…' : 'Disconnecting…'
+    }
+    return isEnabled ? 'Proxy is active.' : 'Proxy is inactive'
+  }, [isEnabled, loading, status])
 
-  const handleToggle = async () => {
+  const handleToggle = async (nextEnabled: boolean) => {
     setError(null)
     setLoading(true)
 
     try {
-      const newState = !isEnabled
-      const result = await toggleConnection(newState)
-
-      if (result.success) {
-        setIsEnabled(newState)
-        setStatus(result.status)
-        setError(null)
-      } else {
-        const errorMsg = result.error || 'Failed to toggle connection'
-        setError(errorMsg)
-        setIsEnabled(false)
-        setStatus('error')
+      const result = await onToggle(nextEnabled)
+      if (!result.success) {
+        setError(result.error || 'Failed to toggle connection')
       }
     } catch (err) {
       console.error('Toggle error:', err)
       setError('Network error. Please check your connection and try again.')
-      setIsEnabled(false)
-      setStatus('error')
     } finally {
       setLoading(false)
     }
   }
 
-  const getToggleLabel = (): string => {
-    if (loading) {
-      return status === 'connecting' ? 'Connecting...' : 'Disconnecting...'
-    }
-    return isEnabled ? 'Disconnect' : 'Connect'
-  }
-
-  const isToggleDisabled = (): boolean => {
-    return loading || status === 'connecting' || status === 'blocked'
-  }
-
   return (
     <div style={{ padding: '10px' }}>
-      <h3>Connection Control</h3>
-
-      <div style={{ marginBottom: '15px' }}>
-        <button
-          onClick={handleToggle}
-          disabled={isToggleDisabled()}
-          style={{
-            padding: '15px 30px',
-            fontSize: '18px',
-            fontWeight: 'bold',
-            backgroundColor: isEnabled ? (loading ? '#3a5f8f' : '#ff6b6b') : loading ? '#3a5f8f' : '#5f8f3a',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '5px',
-            cursor: isToggleDisabled() ? 'not-allowed' : 'pointer',
-            width: '100%',
-            transition: 'background-color 0.2s',
-          }}
-        >
-          {getToggleLabel()}
-        </button>
-      </div>
+      <Field
+        label="Enable connection"
+        description={<span style={leftDescriptionStyle}>{description}</span>}
+        highlightOnFocus
+        childrenLayout="inline"
+        bottomSeparator="none"
+      >
+        <Toggle value={isEnabled} disabled={isToggleDisabled} onChange={handleToggle} />
+      </Field>
 
       {error && (
         <div
@@ -116,16 +84,6 @@ export const ConnectionToggle: FC = () => {
           }}
         >
           <strong>Kill Switch Active:</strong> Connection is blocked. Please disable kill switch first.
-        </div>
-      )}
-
-      {!error && status !== 'blocked' && (
-        <div style={{ marginTop: '10px', fontSize: '12px', color: '#aaa' }}>
-          {isEnabled ? (
-            <p>Proxy is active. Click to disconnect.</p>
-          ) : (
-            <p>Proxy is inactive. Make sure you have imported a VLESS configuration first.</p>
-          )}
         </div>
       )}
     </div>

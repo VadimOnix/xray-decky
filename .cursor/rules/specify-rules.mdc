@@ -1,8 +1,17 @@
-# nekodeck Development Guidelines
+# xray-decky Development Guidelines
 
 Auto-generated from all feature plans. Last updated: 2026-01-26
 
 ## Active Technologies
+
+- Python 3.x (backend), TypeScript (frontend), Node.js v16.14+ (build) + decky-frontend-lib, @decky/ui, SettingsManager (Decky), aiohttp (backend HTTP server for import page) (002-vless-import-qr)
+- SettingsManager (vlessConfig key); no new storage (002-vless-import-qr)
+- Python 3.x (backend), TypeScript/React (frontend) + aiohttp (backend HTTP server), @decky/api (frontend entry and backend calls), qrcode.react (frontend QR), SettingsManager (persistence) (002-vless-import-qr)
+- SettingsManager (`vlessConfig`, `importServer.port`); no separate DB (002-vless-import-qr)
+- Python 3.x (asyncio), TypeScript/Reac + aiohttp (HTTPS with ssl.SSLContext), cryptography (or openssl subprocess for cert generation), @decky/api (callable, addEventListener), qrcode.reac (002-vless-import-qr)
+- SettingsManager (vlessConfig, importServer.port); TLS cert/key files in `DECKY_PLUGIN_RUNTIME_DIR` (cert.pem, key.pem) (002-vless-import-qr)
+- TypeScript/React (frontend), Python 3.x (backend) + `@decky/ui` (SteamOS-styled UI components), `@decky/api` (callables/events), `qrcode.react` (QR), existing backend modules for xray/TUN/kill-switch managemen (003-refactor-decky-ux)
+- Decky `SettingsManager` (existing keys for VLESS config + options; no new DB) (003-refactor-decky-ux)
 
 - TypeScript (frontend), Python 3.x (backend) (001-xray-vless-decky)
 
@@ -23,7 +32,9 @@ TypeScript (frontend), Python 3.x (backend): Follow standard conventions
 
 ## Recent Changes
 
-- 001-xray-vless-decky: Added TypeScript (frontend), Python 3.x (backend)
+- 003-refactor-decky-ux: Added TypeScript/React (frontend), Python 3.x (backend) + `@decky/ui` (SteamOS-styled UI components), `@decky/api` (callables/events), `qrcode.react` (QR), existing backend modules for xray/TUN/kill-switch managemen
+- 002-vless-import-qr: Added Python 3.x (asyncio), TypeScript/Reac + aiohttp (HTTPS with ssl.SSLContext), cryptography (or openssl subprocess for cert generation), @decky/api (callable, addEventListener), qrcode.reac
+- 002-vless-import-qr: Added Python 3.x (backend), TypeScript/React (frontend) + aiohttp (backend HTTP server), @decky/api (frontend entry and backend calls), qrcode.react (frontend QR), SettingsManager (persistence)
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->

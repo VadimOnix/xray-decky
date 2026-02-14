@@ -1,47 +1,39 @@
-import { FC, useState, useEffect } from 'react'
-import { getTUNModeStatus, checkTUNPrivileges, toggleTUNMode } from '../services/api'
+import { FC, useState } from 'react'
+import { DialogButton, Field, Toggle } from '@decky/ui'
+import { FaShieldAlt } from 'react-icons/fa'
+import { HelpPopover } from './ui/HelpPopover'
+import type { CheckPrivilegesResponse, ToggleTUNModeResponse } from '../services/api'
 
-export const TUNModeToggle: FC = () => {
-  const [enabled, setEnabled] = useState(false)
-  const [hasPrivileges, setHasPrivileges] = useState(false)
+interface TUNModeToggleProps {
+  enabled: boolean
+  hasPrivileges: boolean
+  isActive: boolean
+  tunInterface?: string | null
+  onToggle: (enabled: boolean) => Promise<ToggleTUNModeResponse>
+  onCheckPrivileges: () => Promise<CheckPrivilegesResponse>
+}
+
+export const TUNModeToggle: FC<TUNModeToggleProps> = ({
+  enabled,
+  hasPrivileges,
+  isActive,
+  tunInterface,
+  onToggle,
+  onCheckPrivileges,
+}) => {
   const [loading, setLoading] = useState(false)
   const [checkingPrivileges, setCheckingPrivileges] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [tunInterface, setTunInterface] = useState<string | null>(null)
-  const [isActive, setIsActive] = useState(false)
-
-  // Load initial status
-  useEffect(() => {
-    loadStatus()
-    // Poll status every 3 seconds
-    const interval = setInterval(loadStatus, 3000)
-    return () => clearInterval(interval)
-  }, [])
-
-  const loadStatus = async () => {
-    try {
-      const result = await getTUNModeStatus()
-      setEnabled(result.enabled)
-      setHasPrivileges(result.hasPrivileges)
-      setTunInterface(result.tunInterface || null)
-      setIsActive(result.isActive)
-    } catch (err) {
-      console.error('Failed to load TUN mode status:', err)
-    }
-  }
+  const leftDescriptionStyle = { display: 'block', textAlign: 'left' } as const
 
   const handleCheckPrivileges = async () => {
     setCheckingPrivileges(true)
     setError(null)
 
     try {
-      const result = await checkTUNPrivileges()
-      setHasPrivileges(result.hasPrivileges)
-
+      const result = await onCheckPrivileges()
       if (!result.hasPrivileges && result.error) {
         setError(result.error)
-      } else {
-        setError(null)
       }
     } catch (err) {
       console.error('Failed to check privileges:', err)
@@ -51,21 +43,14 @@ export const TUNModeToggle: FC = () => {
     }
   }
 
-  const handleToggle = async () => {
+  const handleToggle = async (nextEnabled: boolean) => {
     setError(null)
     setLoading(true)
 
     try {
-      const newState = !enabled
-      const result = await toggleTUNMode(newState)
-
-      if (result.success) {
-        setEnabled(result.enabled)
-        setHasPrivileges(result.hasPrivileges)
-        setError(null)
-      } else {
-        const errorMsg = result.error || 'Failed to toggle TUN mode'
-        setError(errorMsg)
+      const result = await onToggle(nextEnabled)
+      if (!result.success) {
+        setError(result.error || 'Failed to toggle TUN mode')
       }
     } catch (err) {
       console.error('Toggle error:', err)
@@ -76,38 +61,35 @@ export const TUNModeToggle: FC = () => {
   }
 
   return (
-    <div style={{ padding: '10px', marginTop: '15px' }}>
-      <h3>TUN Mode (System-Wide Routing)</h3>
+    <div style={{ padding: '10px' }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '8px',
+          marginBottom: '4px',
+        }}
+      >
+        <span style={{ fontSize: '14px', fontWeight: 600, color: '#c7d5e0' }}>TUN Mode</span>
+        <HelpPopover label="Help: TUN mode" topic="options.tun_mode" />
+      </div>
 
       <div style={{ marginBottom: '15px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
-          <input
-            type="checkbox"
-            id="tun-mode-toggle"
-            checked={enabled}
-            onChange={handleToggle}
-            disabled={loading || !hasPrivileges || checkingPrivileges}
-            style={{
-              width: '20px',
-              height: '20px',
-              marginRight: '10px',
-              cursor: loading || !hasPrivileges || checkingPrivileges ? 'not-allowed' : 'pointer',
-            }}
-          />
-          <label
-            htmlFor="tun-mode-toggle"
-            style={{
-              fontSize: '16px',
-              cursor: loading || !hasPrivileges || checkingPrivileges ? 'not-allowed' : 'pointer',
-            }}
-          >
-            Enable TUN Mode
-          </label>
-        </div>
+        <Field
+          label="Enable TUN Mode"
+          description={<span style={leftDescriptionStyle}>Routes all system traffic through the proxy.</span>}
+          bottomSeparator="none"
+          highlightOnFocus
+          childrenLayout="inline"
+        >
+          <Toggle value={enabled} disabled={loading || !hasPrivileges || checkingPrivileges} onChange={handleToggle} />
+        </Field>
 
         {!hasPrivileges && (
           <div
             style={{
+              marginTop: '12px',
               padding: '10px',
               backgroundColor: '#5f1e1e',
               color: '#ff6b6b',
@@ -122,27 +104,19 @@ export const TUNModeToggle: FC = () => {
             <p style={{ marginTop: '5px' }}>
               Please complete the installation steps to enable TUN mode. See INSTALLATION.md for details.
             </p>
-            <button
-              onClick={handleCheckPrivileges}
-              disabled={checkingPrivileges}
-              style={{
-                marginTop: '10px',
-                padding: '8px 16px',
-                backgroundColor: checkingPrivileges ? '#3a5f8f' : '#5f8f3a',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: checkingPrivileges ? 'not-allowed' : 'pointer',
-              }}
-            >
-              {checkingPrivileges ? 'Checking...' : 'Check Privileges'}
-            </button>
+            <DialogButton onClick={handleCheckPrivileges} disabled={checkingPrivileges} style={{ width: '100%' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                <FaShieldAlt />
+                {checkingPrivileges ? 'Checking...' : 'Check Privileges'}
+              </span>
+            </DialogButton>
           </div>
         )}
 
         {hasPrivileges && enabled && (
           <div
             style={{
+              marginTop: '12px',
               padding: '10px',
               backgroundColor: '#1e5f1e',
               color: '#6bff6b',
@@ -162,6 +136,7 @@ export const TUNModeToggle: FC = () => {
         {error && (
           <div
             style={{
+              marginTop: '12px',
               padding: '10px',
               backgroundColor: '#5f1e1e',
               color: '#ff6b6b',
@@ -179,18 +154,6 @@ export const TUNModeToggle: FC = () => {
             {enabled ? 'Disabling TUN mode...' : 'Enabling TUN mode...'}
           </div>
         )}
-      </div>
-
-      <div style={{ fontSize: '12px', color: '#aaa', marginTop: '10px' }}>
-        <p>
-          <strong>About TUN Mode:</strong>
-        </p>
-        <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
-          <li>Routes all system traffic through the proxy</li>
-          <li>Requires elevated privileges (sudo exemption)</li>
-          <li>Works system-wide, not just browser/app-specific</li>
-          <li>See INSTALLATION.md for setup instructions</li>
-        </ul>
       </div>
     </div>
   )

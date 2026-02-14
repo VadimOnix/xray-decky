@@ -20,6 +20,8 @@ class ErrorCode:
     UNKNOWN_ERROR = "UNKNOWN_ERROR"
     CONNECTION_FAILED = "CONNECTION_FAILED"
     VALIDATION_ERROR = "VALIDATION_ERROR"
+    NOT_CONNECTED = "NOT_CONNECTED"
+    CONNECTION_ACTIVE = "CONNECTION_ACTIVE"
 
 
 # User-friendly error messages
@@ -34,6 +36,8 @@ ERROR_MESSAGES: Dict[str, str] = {
     ErrorCode.UNKNOWN_ERROR: "An unexpected error occurred. Please try again or check the logs.",
     ErrorCode.CONNECTION_FAILED: "Failed to establish connection. Please check your configuration and network.",
     ErrorCode.VALIDATION_ERROR: "Configuration validation failed. Please check your VLESS URL format.",
+    ErrorCode.NOT_CONNECTED: "System proxy requires active connection. Please connect first.",
+    ErrorCode.CONNECTION_ACTIVE: "Disconnect before resetting configuration.",
 }
 
 

@@ -1,46 +1,36 @@
-import { FC, useState, useEffect } from 'react'
-import { getKillSwitchStatus, toggleKillSwitch, deactivateKillSwitch } from '../services/api'
+import { FC, useState } from 'react'
+import { DialogButtonPrimary, Field, Toggle } from '@decky/ui'
+import { FaPowerOff } from 'react-icons/fa'
+import { HelpPopover } from './ui/HelpPopover'
+import type { DeactivateKillSwitchResponse, ToggleKillSwitchResponse } from '../services/api'
 
-export const KillSwitchToggle: FC = () => {
-  const [enabled, setEnabled] = useState(false)
-  const [isActive, setIsActive] = useState(false)
+interface KillSwitchToggleProps {
+  enabled: boolean
+  isActive: boolean
+  activatedAt?: number | null
+  onToggle: (enabled: boolean) => Promise<ToggleKillSwitchResponse>
+  onDeactivate: () => Promise<DeactivateKillSwitchResponse>
+}
+
+export const KillSwitchToggle: FC<KillSwitchToggleProps> = ({
+  enabled,
+  isActive,
+  activatedAt,
+  onToggle,
+  onDeactivate,
+}) => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [activatedAt, setActivatedAt] = useState<number | null>(null)
+  const leftDescriptionStyle = { display: 'block', textAlign: 'left' } as const
 
-  // Load initial status
-  useEffect(() => {
-    loadStatus()
-    // Poll status every 2 seconds
-    const interval = setInterval(loadStatus, 2000)
-    return () => clearInterval(interval)
-  }, [])
-
-  const loadStatus = async () => {
-    try {
-      const result = await getKillSwitchStatus()
-      setEnabled(result.enabled)
-      setIsActive(result.isActive)
-      setActivatedAt(result.activatedAt || null)
-    } catch (err) {
-      console.error('Failed to load kill switch status:', err)
-    }
-  }
-
-  const handleToggle = async () => {
+  const handleToggle = async (nextEnabled: boolean) => {
     setError(null)
     setLoading(true)
 
     try {
-      const newState = !enabled
-      const result = await toggleKillSwitch(newState)
-
-      if (result.success) {
-        setEnabled(result.enabled)
-        setError(null)
-      } else {
-        const errorMsg = 'Failed to toggle kill switch'
-        setError(errorMsg)
+      const result = await onToggle(nextEnabled)
+      if (!result.success) {
+        setError('Failed to toggle kill switch')
       }
     } catch (err) {
       console.error('Toggle error:', err)
@@ -55,15 +45,9 @@ export const KillSwitchToggle: FC = () => {
     setLoading(true)
 
     try {
-      const result = await deactivateKillSwitch()
-
-      if (result.success) {
-        setIsActive(false)
-        setActivatedAt(null)
-        setError(null)
-      } else {
-        const errorMsg = result.error || 'Failed to deactivate kill switch'
-        setError(errorMsg)
+      const result = await onDeactivate()
+      if (!result.success) {
+        setError(result.error || 'Failed to deactivate kill switch')
       }
     } catch (err) {
       console.error('Deactivate error:', err)
@@ -79,38 +63,37 @@ export const KillSwitchToggle: FC = () => {
   }
 
   return (
-    <div style={{ padding: '10px', marginTop: '15px' }}>
-      <h3>Kill Switch</h3>
+    <div style={{ padding: '10px' }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '8px',
+          marginBottom: '4px',
+        }}
+      >
+        <span style={{ fontSize: '14px', fontWeight: 600, color: '#c7d5e0' }}>Kill Switch</span>
+        <HelpPopover label="Help: Kill switch" topic="options.kill_switch" />
+      </div>
 
       <div style={{ marginBottom: '15px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
-          <input
-            type="checkbox"
-            id="kill-switch-toggle"
-            checked={enabled}
-            onChange={handleToggle}
-            disabled={loading}
-            style={{
-              width: '20px',
-              height: '20px',
-              marginRight: '10px',
-              cursor: loading ? 'not-allowed' : 'pointer',
-            }}
-          />
-          <label
-            htmlFor="kill-switch-toggle"
-            style={{
-              fontSize: '16px',
-              cursor: loading ? 'not-allowed' : 'pointer',
-            }}
-          >
-            Enable Kill Switch
-          </label>
-        </div>
+        <Field
+          label="Enable Kill Switch"
+          description={
+            <span style={leftDescriptionStyle}>Blocks all traffic if the proxy disconnects unexpectedly.</span>
+          }
+          bottomSeparator="none"
+          highlightOnFocus
+          childrenLayout="inline"
+        >
+          <Toggle value={enabled} disabled={loading} onChange={handleToggle} />
+        </Field>
 
         {isActive && (
           <div
             style={{
+              marginTop: '12px',
               padding: '15px',
               backgroundColor: '#5f1e1e',
               color: '#ff6b6b',
@@ -128,29 +111,19 @@ export const KillSwitchToggle: FC = () => {
             {activatedAt && (
               <p style={{ marginTop: '5px', fontSize: '12px' }}>Activated at: {formatTime(activatedAt)}</p>
             )}
-            <button
-              onClick={handleDeactivate}
-              disabled={loading}
-              style={{
-                marginTop: '10px',
-                padding: '10px 20px',
-                fontSize: '16px',
-                backgroundColor: loading ? '#3a5f8f' : '#ff6b6b',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                fontWeight: 'bold',
-              }}
-            >
-              {loading ? 'Deactivating...' : 'Deactivate Kill Switch'}
-            </button>
+            <DialogButtonPrimary onClick={handleDeactivate} disabled={loading} style={{ width: '100%' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                <FaPowerOff />
+                {loading ? 'Deactivating...' : 'Deactivate Kill Switch'}
+              </span>
+            </DialogButtonPrimary>
           </div>
         )}
 
         {enabled && !isActive && (
           <div
             style={{
+              marginTop: '12px',
               padding: '10px',
               backgroundColor: '#1e5f1e',
               color: '#6bff6b',
@@ -169,6 +142,7 @@ export const KillSwitchToggle: FC = () => {
         {error && (
           <div
             style={{
+              marginTop: '12px',
               padding: '10px',
               backgroundColor: '#5f1e1e',
               color: '#ff6b6b',
@@ -186,18 +160,6 @@ export const KillSwitchToggle: FC = () => {
             {enabled ? 'Disabling kill switch...' : 'Enabling kill switch...'}
           </div>
         )}
-      </div>
-
-      <div style={{ fontSize: '12px', color: '#aaa', marginTop: '10px' }}>
-        <p>
-          <strong>About Kill Switch:</strong>
-        </p>
-        <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
-          <li>Blocks all system traffic when proxy disconnects unexpectedly</li>
-          <li>Prevents clearnet leaks if connection fails</li>
-          <li>Off by default - enable only if needed</li>
-          <li>Requires iptables (standard on Linux)</li>
-        </ul>
       </div>
     </div>
   )

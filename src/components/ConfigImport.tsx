@@ -1,153 +1,49 @@
-import { FC, useState, useEffect } from 'react'
-import { addEventListener, removeEventListener } from '@decky/api'
-import { VLESSConfig, getVLESSConfig, importVLESSConfig } from '../services/api'
-import { validateVLESSURL, getValidationErrorMessage } from '../utils/validation'
+import { FC } from 'react'
+import { ButtonItem, TextField } from '@decky/ui'
+import { FaSave } from 'react-icons/fa'
+import { HelpPopover } from './ui/HelpPopover'
+import type { HelpTopic } from '../types/ui'
 
-const VLESS_CONFIG_UPDATED_EVENT = 'vless_config_updated'
+interface ConfigImportProps {
+  value: string
+  onChange: (value: string) => void
+  onSave: () => void
+  isSaving: boolean
+  error?: string | null
+  successMessage?: string | null
+  helpTopic?: HelpTopic
+}
 
-export const ConfigImport: FC = () => {
-  const [url, setUrl] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
-  const [storedConfig, setStoredConfig] = useState<VLESSConfig | null>(null)
-
-  // Load existing config on mount
-  useEffect(() => {
-    loadStoredConfig()
-  }, [])
-
-  // Subscribe to backend push: when config is saved via import page (browser), backend emits and we refetch
-  useEffect(() => {
-    const listener = () => {
-      loadStoredConfig()
-    }
-    addEventListener(VLESS_CONFIG_UPDATED_EVENT, listener)
-    return () => {
-      removeEventListener(VLESS_CONFIG_UPDATED_EVENT, listener)
-    }
-  }, [])
-
-  const loadStoredConfig = async () => {
-    try {
-      const result = await getVLESSConfig()
-      if (result.exists && result.config) {
-        setStoredConfig(result.config)
-        setUrl(result.config.sourceUrl)
-      }
-    } catch (err) {
-      console.error('Failed to load stored config:', err)
-    }
-  }
-
-  const handleImport = async () => {
-    // Clear previous errors/success
-    setError(null)
-    setSuccess(false)
-    setLoading(true)
-
-    try {
-      // Frontend validation
-      if (!url.trim()) {
-        setError('Please enter a VLESS URL')
-        setLoading(false)
-        return
-      }
-
-      if (!validateVLESSURL(url.trim())) {
-        setError('Invalid VLESS URL format. Please check the URL and try again.')
-        setLoading(false)
-        return
-      }
-
-      // Call backend API
-      const result = await importVLESSConfig(url.trim())
-
-      if (result.success && result.config) {
-        setStoredConfig(result.config)
-        setSuccess(true)
-        setError(null)
-        // Clear success message after 3 seconds
-        setTimeout(() => setSuccess(false), 3000)
-      } else {
-        const errorMsg = result.error || 'Failed to import configuration'
-        setError(getValidationErrorMessage(errorMsg))
-      }
-    } catch (err) {
-      console.error('Import error:', err)
-      setError('Network error. Please check your connection and try again.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleReplace = () => {
-    setStoredConfig(null)
-    setUrl('')
-    setError(null)
-    setSuccess(false)
-  }
+export const ConfigImport: FC<ConfigImportProps> = ({
+  value,
+  onChange,
+  onSave,
+  isSaving,
+  error,
+  successMessage,
+  helpTopic,
+}) => {
+  const labelText = isSaving ? 'Saving…' : 'Save configuration'
+  const leftDescriptionStyle = { display: 'block', textAlign: 'left' } as const
 
   return (
-    <div style={{ padding: '10px' }}>
-      <h2>Import VLESS Configuration</h2>
-
-      {storedConfig && (
-        <div
-          style={{
-            marginBottom: '15px',
-            padding: '10px',
-            backgroundColor: '#1e3a5f',
-            borderRadius: '5px',
-          }}
-        >
-          <p>
-            <strong>Current Configuration:</strong>
-          </p>
-          <p>Type: {storedConfig.configType}</p>
-          <p>
-            Address: {storedConfig.address}:{storedConfig.port}
-          </p>
-          {storedConfig.name && <p>Name: {storedConfig.name}</p>}
-          <p>Status: {storedConfig.isValid ? '✓ Valid' : '✗ Invalid'}</p>
-          <button onClick={handleReplace} style={{ marginTop: '10px', padding: '5px 10px' }}>
-            Replace Configuration
-          </button>
-        </div>
-      )}
-
-      <div style={{ marginBottom: '10px' }}>
-        <label htmlFor="vless-url" style={{ display: 'block', marginBottom: '5px' }}>
-          VLESS URL:
-        </label>
-        <input
-          id="vless-url"
-          type="text"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="vless://uuid@host:port?params#name"
-          disabled={loading}
-          style={{
-            width: '100%',
-            padding: '8px',
-            fontSize: '14px',
-            backgroundColor: '#1e3a5f',
-            color: '#fff',
-            border: '1px solid #3a5f8f',
-            borderRadius: '4px',
-          }}
-          onKeyPress={(e) => {
-            if (e.key === 'Enter' && !loading) {
-              handleImport()
-            }
-          }}
-        />
-      </div>
+    <div>
+      <TextField
+        label="VLESS link"
+        description={
+          <span style={leftDescriptionStyle}>Paste or edit your VLESS link. We validate the link before saving.</span>
+        }
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        disabled={isSaving}
+        bShowClearAction
+        inlineControls={helpTopic ? <HelpPopover label="Help: VLESS link" topic={helpTopic} /> : undefined}
+      />
 
       {error && (
         <div
           style={{
-            marginBottom: '10px',
+            marginTop: '10px',
             padding: '10px',
             backgroundColor: '#5f1e1e',
             color: '#ff6b6b',
@@ -158,42 +54,31 @@ export const ConfigImport: FC = () => {
         </div>
       )}
 
-      {success && (
+      {successMessage && (
         <div
           style={{
-            marginBottom: '10px',
+            marginTop: '10px',
             padding: '10px',
             backgroundColor: '#1e5f1e',
             color: '#6bff6b',
             borderRadius: '5px',
           }}
         >
-          <strong>Success:</strong> Configuration imported successfully!
+          <strong>Success:</strong> {successMessage}
         </div>
       )}
 
-      <button
-        onClick={handleImport}
-        disabled={loading || !url.trim()}
-        style={{
-          padding: '10px 20px',
-          fontSize: '16px',
-          backgroundColor: loading ? '#3a5f8f' : '#5f8f3a',
-          color: '#fff',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: loading ? 'not-allowed' : 'pointer',
-        }}
-      >
-        {loading ? 'Importing...' : storedConfig ? 'Update Configuration' : 'Import Configuration'}
-      </button>
-
-      <div style={{ marginTop: '15px', fontSize: '12px', color: '#aaa' }}>
-        <p>Supported formats:</p>
-        <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
-          <li>Single node: vless://uuid@host:port?params#name</li>
-          <li>Subscription: Base64-encoded JSON array</li>
-        </ul>
+      <div style={{ marginTop: '10px' }}>
+        <ButtonItem
+          icon={<FaSave />}
+          description={
+            <span style={leftDescriptionStyle}>Save the VLESS link and switch to the configured layout.</span>
+          }
+          onClick={onSave}
+          disabled={isSaving || !value.trim()}
+        >
+          {labelText}
+        </ButtonItem>
       </div>
     </div>
   )

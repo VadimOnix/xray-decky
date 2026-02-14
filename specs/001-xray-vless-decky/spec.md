@@ -61,7 +61,7 @@ A user who needs all system traffic (including games) to go through the proxy ca
 **Acceptance Scenarios**:
 
 1. **Given** the plugin is installed with elevated privileges and the user has a stored VLESS config, **When** the user enables TUN mode and turns the connection on, **Then** all system traffic is routed through the proxy (e.g. games in Game Mode use it) and System Proxy is automatically enabled (gsettings mode=manual, SOCKS 127.0.0.1:10808).
-2. **Given** TUN mode is on, **When** the user disables TUN mode or turns the connection off, **Then** system traffic resumes normal routing. System Proxy is cleared only if it was auto-enabled by TUN; a manually enabled System Proxy (via toggle_system_proxy) is preserved.
+2. **Given** TUN mode is on, **When** the user disables TUN mode or turns the connection off, **Then** system traffic resumes normal routing and System Proxy is automatically cleared.
 3. **Given** the user enables TUN mode but the plugin does not have the required privileges, **When** the system checks, **Then** the user is informed that TUN mode requires elevated privileges and guided on next steps (e.g. installation / sudo configuration).
 
 ---
@@ -88,7 +88,6 @@ During installation, the user can set up the plugin so that it runs with adminis
 - What happens when the connection fails (e.g. server down, network error)? The system surfaces a clear error, allows the user to retry or turn the connection off, and does not leave the UI stuck in "connecting."
 - What happens when TUN mode is enabled but privileges are insufficient? The system detects this, does not start TUN, and informs the user how to fix it (e.g. re-run installation, check sudo configuration).
 - What happens when Steam or other services use ports (e.g. UDP 27015–27030) that could conflict? The plugin avoids using those ports for its own listeners where possible; if conflict occurs, the user is informed and guided to adjust config or firewall.
-- What happens when the user manually enables System Proxy, then enables TUN mode (which auto-enables proxy), then disconnects? The system clears only proxy that was auto-enabled by TUN; the user's manual preference is preserved and proxy remains enabled.
 - What happens when the user switches between Game Mode and Desktop Mode while connected? Behavior follows platform constraints; the plugin aims to keep connection state where possible, and the user can toggle again if the platform resets it.
 - What happens when the proxy disconnects unexpectedly and kill switch is on? “Unexpected” means any drop (network error, server down, timeout) except when the user explicitly turns the connection off. The system blocks all system traffic immediately, informs the user via a brief notification (e.g. toast) and a clear message inside the plugin panel, and keeps blocking until the user reconnects or disables the kill switch.
 
@@ -114,7 +113,7 @@ During installation, the user can set up the plugin so that it runs with adminis
 - **VLESS config**: The user’s proxy configuration obtained via URL. Key attributes: source URL, stored config content, validation status. Used for establishing and tearing down the connection.
 - **Connection state**: Whether the proxy is on or off, and optionally status such as connecting, connected, error. Drives UI and behavior of the toggle.
 - **TUN mode preference**: User’s choice to enable or disable system-wide tunneling. Stored and applied when the connection is turned on, subject to privilege checks. When TUN connects, System Proxy is auto-enabled.
-- **System Proxy state**: Managed automatically or manually. When TUN mode connects, System Proxy is auto-enabled (gsettings/kwriteconfig5) unless the user had already enabled it manually. On disconnect, only auto-enabled proxy is cleared (`autoEnabled` flag); manual preference is preserved. Optional API `toggle_system_proxy` / `get_system_proxy_status` for manual control.
+- **System Proxy state**: Managed automatically—enabled when TUN mode connects (gsettings/kwriteconfig5), cleared on disconnect. Not exposed as a separate user preference.
 - **Kill switch preference**: User’s choice to enable or disable the kill switch; off by default. When on and an unexpected disconnect occurs (any drop except user-initiated toggle-off), all system traffic is blocked until reconnect or disable.
 
 ## Assumptions

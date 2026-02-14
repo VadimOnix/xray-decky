@@ -410,6 +410,46 @@ class Plugin:
                 "error": f"Validation error: {str(e)}",
             }
 
+    async def reset_vless_config(self) -> Dict[str, Any]:
+        """
+        Clear stored VLESS configuration and return to setup state.
+        Rejects if connection is active (connected/connecting/blocked).
+        Clears system proxy so SOCKS is not left pointing at a stopped proxy.
+        
+        Returns:
+            { 'success': bool, 'error': str | None }
+        """
+        connection_state = get_connection_state()
+        status = connection_state.status
+        if status in (ConnectionStatus.CONNECTED, ConnectionStatus.CONNECTING, ConnectionStatus.BLOCKED):
+            return create_error_response(
+                ErrorCode.CONNECTION_ACTIVE,
+                "Disconnect before resetting configuration.",
+            )
+        try:
+            # Clear system proxy unconditionally so SOCKS is not left on after reset
+            await system_proxy_manager.clear_system_proxy()
+            system_proxy_pref = settings.getSetting("systemProxy", {})
+            if system_proxy_pref.get("enabled", False):
+                system_proxy_pref["enabled"] = False
+                settings.setSetting("systemProxy", system_proxy_pref)
+            
+            settings.setSetting("vlessConfig", None)
+            settings.commit()
+            
+            try:
+                from decky import emit
+                await emit("vless_config_updated")
+            except Exception as e:
+                print(f"Xray Decky Plugin: Failed to emit vless_config_updated: {e}")
+            
+            return create_success_response()
+        except Exception as e:
+            return create_error_response(
+                ErrorCode.UNKNOWN_ERROR,
+                f"Failed to reset configuration: {str(e)}",
+            )
+
     # TUN Mode Management
     async def check_tun_privileges(self) -> Dict[str, Any]:
         """
@@ -645,19 +685,15 @@ class Plugin:
                         )
                     
                     # Auto-enable System Proxy when TUN mode is active
-                    # Only set autoEnabled if user had not manually enabled proxy
+                    # This ensures all applications use the proxy (gsettings for GTK/Qt apps)
                     proxy_result = await system_proxy_manager.set_system_proxy(
                         socks_port=10808,
                         http_port=10809
                     )
                     if proxy_result.get("success"):
                         system_proxy_pref = settings.getSetting("systemProxy", {})
-                        was_manually_enabled = system_proxy_pref.get("enabled", False) and not system_proxy_pref.get(
-                            "autoEnabled", False
-                        )
                         system_proxy_pref["enabled"] = True
-                        if not was_manually_enabled:
-                            system_proxy_pref["autoEnabled"] = True  # Mark as auto-enabled by TUN
+                        system_proxy_pref["autoEnabled"] = True  # Mark as auto-enabled
                         system_proxy_pref["lastEnabledAt"] = int(time.time())
                         settings.setSetting("systemProxy", system_proxy_pref)
                     # Note: Don't fail connection if system proxy fails - TUN still works
@@ -694,13 +730,11 @@ class Plugin:
                         "status": "disconnected"
                     })
                 
-                # Clear system proxy only if it was auto-enabled by TUN mode
-                # Preserve user's manual system proxy preference when TUN disconnects
+                # Always clear system proxy on disconnect so SOCKS is never left on
+                await system_proxy_manager.clear_system_proxy()
                 system_proxy_pref = settings.getSetting("systemProxy", {})
-                if system_proxy_pref.get("autoEnabled", False):
-                    await system_proxy_manager.clear_system_proxy()
+                if system_proxy_pref.get("enabled", False):
                     system_proxy_pref["enabled"] = False
-                    system_proxy_pref["autoEnabled"] = False
                     settings.setSetting("systemProxy", system_proxy_pref)
                 
                 # TUN: remove route first, then stop xray
@@ -950,7 +984,6 @@ class Plugin:
                     )
                 
                 system_proxy_pref["enabled"] = True
-                system_proxy_pref["autoEnabled"] = False  # Manual enable, not by TUN
                 system_proxy_pref["lastEnabledAt"] = int(time.time())
                 system_proxy_pref["socksPort"] = 10808
                 system_proxy_pref["httpPort"] = 10809
@@ -958,7 +991,6 @@ class Plugin:
                 # Clear system proxy
                 await system_proxy_manager.clear_system_proxy()
                 system_proxy_pref["enabled"] = False
-                system_proxy_pref["autoEnabled"] = False
                 system_proxy_pref["lastDisabledAt"] = int(time.time())
             
             settings.setSetting("systemProxy", system_proxy_pref)

@@ -1,0 +1,21 @@
+{
+  "name": "Import VLESS – Xray Decky",
+  "short_name": "Import VLESS",
+  "icons": [
+    {
+      "src": "/import/static/assets/image/web-app-manifest-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/import/static/assets/image/web-app-manifest-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "theme_color": "#1b2838",
+  "background_color": "#1b2838",
+  "display": "standalone"
+}
