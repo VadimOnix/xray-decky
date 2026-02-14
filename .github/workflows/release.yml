@@ -5,40 +5,71 @@ on:
     tags:
       - 'v*'
 
+env:
+  XRAY_VERSION: "v1.8.4"
+  PLUGIN_NAME: "xray-decky"
+
 jobs:
   release:
     name: Create Release
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: pnpm/action-setup@v2
         with:
           version: 9
+
       - uses: actions/setup-node@v4
         with:
-          node-version: '18'
-          cache: 'pnpm'
+          node-version: "18"
+          cache: "pnpm"
+
       - name: Build plugin
         run: |
           pnpm install
           pnpm run build
-      - name: Create zip archive
+
+      - name: Download xray-core
         run: |
-          VERSION=${GITHUB_REF#refs/tags/v}
-          mkdir -p release
-          zip -r release/xray-decky-v${VERSION}.zip . \
-            -x "*.git*" \
-            -x "node_modules/*" \
-            -x ".github/*" \
-            -x "specs/*" \
-            -x ".specify/*" \
-            -x ".cursor/*" \
-            -x "*.md" \
-            -x "tests/*" \
-            -x "*.test.*"
+          XRAY_ZIP="Xray-linux-64.zip"
+          wget -q "https://github.com/XTLS/Xray-core/releases/download/${XRAY_VERSION}/${XRAY_ZIP}" -O /tmp/xray.zip
+          unzip -o /tmp/xray.zip -d /tmp/xray-extract
+          mkdir -p xray-bin
+          mv /tmp/xray-extract/xray xray-bin/xray-core
+          chmod +x xray-bin/xray-core
+          rm -rf /tmp/xray.zip /tmp/xray-extract
+
+      - name: Package plugin
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          PLUGIN_DIR="release/${PLUGIN_NAME}"
+          mkdir -p "$PLUGIN_DIR"
+
+          # Copy plugin files per DeckBrew structure
+          cp -r dist "$PLUGIN_DIR/"
+          cp package.json plugin.json main.py LICENSE.md "$PLUGIN_DIR/"
+          [ -f README.md ] && cp README.md "$PLUGIN_DIR/"
+
+          # Backend
+          mkdir -p "$PLUGIN_DIR/backend/src"
+          cp backend/__init__.py "$PLUGIN_DIR/backend/" 2>/dev/null || echo "# Backend package" > "$PLUGIN_DIR/backend/__init__.py"
+          cp backend/src/__init__.py "$PLUGIN_DIR/backend/src/" 2>/dev/null || echo "# Backend src package" > "$PLUGIN_DIR/backend/src/__init__.py"
+          cp backend/src/*.py "$PLUGIN_DIR/backend/src/"
+          cp -r backend/static "$PLUGIN_DIR/backend/"
+
+          # xray-core binary
+          mkdir -p "$PLUGIN_DIR/bin"
+          cp xray-bin/xray-core "$PLUGIN_DIR/bin/"
+
+          # Create ZIP with xray-decky/ as root
+          cd release
+          zip -r "${PLUGIN_NAME}-v${VERSION}.zip" "$PLUGIN_NAME"
+
       - name: Upload release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: release/*.zip
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

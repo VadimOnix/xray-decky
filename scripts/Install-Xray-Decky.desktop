@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Install Xray Decky Plugin
+Comment=One-click install of Xray Decky plugin for Decky Loader
+Exec=bash -c 'curl -sSL https://raw.githubusercontent.com/VadimOnix/xray-decky/master/scripts/install-xray-decky.sh | bash'
+Icon=utilities-terminal
+Terminal=true
+Categories=Utility;

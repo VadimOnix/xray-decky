@@ -23,6 +23,16 @@ Decky Loader plugin for Steam Deck that enables VLESS proxy connections with Rea
 3. Search for "Xray Decky"
 4. Click Install
 
+### Install from Desktop Mode (One-Click)
+
+1. Switch to Desktop Mode (Power menu → Desktop Mode)
+2. Download [Install-Xray-Decky.desktop](https://raw.githubusercontent.com/VadimOnix/xray-decky/master/scripts/Install-Xray-Decky.desktop)
+3. Right-click → Properties → Permissions → enable "Is executable"
+4. Double-click to run the installer
+5. Switch back to Gaming Mode; the plugin appears in Quick Access (⋯)
+
+See [scripts/README.md](scripts/README.md) for details.
+
 ### Manual Installation
 
 1. Download the latest release zip file

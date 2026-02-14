@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Decky Loader Documentation
+    url: https://wiki.deckbrew.xyz/
+    about: Plugin development and Decky Loader documentation
