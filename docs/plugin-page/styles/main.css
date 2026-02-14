@@ -142,6 +142,36 @@ pre code {
   color: var(--color-accent) !important;
 }
 
+.nav-github-short {
+  display: none;
+}
+
+@media (max-width: 399px) {
+  .nav-github-long {
+    display: none;
+  }
+  .nav-github-short {
+    display: inline;
+  }
+}
+
+@media (max-width: 400px) {
+  .nav-inner {
+    padding: 0.5rem 0.75rem;
+    gap: 0.25rem;
+  }
+  .nav-links {
+    gap: 0.125rem;
+  }
+  .nav-links a {
+    padding: 0.3rem 0.5rem;
+    font-size: 0.8125rem;
+  }
+  .nav-brand {
+    font-size: 1rem;
+  }
+}
+
 /* ===== Layout ===== */
 header, main, footer {
   max-width: 100%;
