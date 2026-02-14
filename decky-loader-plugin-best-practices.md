@@ -1,87 +1,87 @@
-# Лучшие практики разработки плагинов Decky Loader
+# Decky Loader Plugin Development Best Practices
 
-> Документ создан на основе анализа официальной документации, шаблонов и сообщества разработчиков Decky Loader (январь 2026)
+> This document is based on analysis of official documentation, templates, and the Decky Loader developer community (January 2026)
 
-## Содержание
+## Table of contents
 
-1. [Структура проекта](#структура-проекта)
-2. [Метаданные плагина](#метаданные-плагина)
-3. [Frontend разработка (TypeScript/React)](#frontend-разработка-typescriptreact)
-4. [Backend разработка (Python)](#backend-разработка-python)
-5. [Сборка и распространение](#сборка-и-распространение)
-6. [Безопасность и производительность](#безопасность-и-производительность)
-7. [Рекомендации по обновлениям](#рекомендации-по-обновлениям)
+1. [Project structure](#project-structure)
+2. [Plugin metadata](#plugin-metadata)
+3. [Frontend development (TypeScript/React)](#frontend-development-typescriptreact)
+4. [Backend development (Python)](#backend-development-python)
+5. [Build and distribution](#build-and-distribution)
+6. [Security and performance](#security-and-performance)
+7. [Update recommendations](#update-recommendations)
 
 ---
 
-## Структура проекта
+## Project structure
 
-### Базовая структура плагина
+### Basic plugin structure
 
 ```
 pluginname/
-├── assets/              # Изображения и другие ресурсы
-├── defaults/            # Конфигурационные файлы и шаблоны (опционально)
-├── backend/             # Backend код (если используется)
-│   ├── src/            # Исходный код backend
-│   └── out/            # Скомпилированные бинарники (создается при сборке)
-├── py_modules/         # Python модули (если используются)
-├── src/                # Frontend TypeScript код
-│   └── index.tsx       # Главная точка входа
-├── main.py             # Backend Python код (если используется)
-├── plugin.json         # Метаданные плагина [ОБЯЗАТЕЛЬНО]
-├── package.json        # Метаданные для pnpm [ОБЯЗАТЕЛЬНО]
-├── README.md           # Описание проекта (рекомендуется)
-├── LICENSE(.md)        # Лицензия [ОБЯЗАТЕЛЬНО]
-└── tsconfig.json       # Конфигурация TypeScript
+├── assets/              # Images and other resources
+├── defaults/            # Config files and templates (optional)
+├── backend/             # Backend code (if used)
+│   ├── src/            # Backend source code
+│   └── out/            # Compiled binaries (created on build)
+├── py_modules/         # Python modules (if used)
+├── src/                # Frontend TypeScript code
+│   └── index.tsx       # Main entry point
+├── main.py             # Backend Python code (if used)
+├── plugin.json         # Plugin metadata [REQUIRED]
+├── package.json        # pnpm metadata [REQUIRED]
+├── README.md           # Project description (recommended)
+├── LICENSE(.md)        # License [REQUIRED]
+└── tsconfig.json       # TypeScript configuration
 ```
 
-### Быстрый старт
+### Quick start
 
-1. Используйте официальный [Decky Plugin Template](https://github.com/SteamDeckHomebrew/decky-plugin-template)
-2. Нажмите "Use this Template" на GitHub для создания нового репозитория
-3. Клонируйте созданный репозиторий
+1. Use the official [Decky Plugin Template](https://github.com/SteamDeckHomebrew/decky-plugin-template)
+2. Click "Use this Template" on GitHub to create a new repository
+3. Clone the created repository
 
 ---
 
-## Метаданные плагина
+## Plugin metadata
 
 ### plugin.json
 
-Обязательный файл для каждого плагина. Содержит:
+Required file for every plugin. Contains:
 
 ```json
 {
-  "name": "Название плагина",
-  "author": "Ваше имя",
+  "name": "Plugin name",
+  "author": "Your name",
   "flags": [
-    "debug", // Включает авто-перезагрузку и отладку
-    "root" // Запуск от root (ИСПОЛЬЗУЙТЕ ТОЛЬКО ПРИ НЕОБХОДИМОСТИ!)
+    "debug", // Enables auto-reload and debugging
+    "root" // Run as root (USE ONLY WHEN NECESSARY!)
   ],
   "publish": {
     "tags": ["tag1", "tag2"],
-    "description": "Краткое описание плагина",
-    "image": "https://example.com/plugin-image.png" // Должно быть PNG!
+    "description": "Short plugin description",
+    "image": "https://example.com/plugin-image.png" // Must be PNG!
   }
 }
 ```
 
-**Важные замечания:**
+**Important notes:**
 
-- Флаг `"root"` следует использовать только когда это действительно необходимо
-- Изображение для store должно быть в формате PNG
-- Теги помогают пользователям находить ваш плагин
+- The `"root"` flag should only be used when truly necessary
+- Store image must be in PNG format
+- Tags help users find your plugin
 
 ### package.json
 
-Обязательный файл для каждого плагина. Содержит:
+Required file for every plugin. Contains:
 
 ```json
 {
-  "name": "plugin-name", // Только lowercase с дефисами
-  "version": "1.0.0", // Обновляйте перед каждым PR
+  "name": "plugin-name", // Lowercase with hyphens only
+  "version": "1.0.0", // Update before every PR
   "remote_binary": {
-    // Опционально, для больших бинарников
+    // Optional, for large binaries
     "name": "binary-name",
     "url": "https://direct-download-url",
     "sha256hash": "sha256-hash-here"
@@ -89,122 +89,122 @@ pluginname/
 }
 ```
 
-**Важные замечания:**
+**Important notes:**
 
-- `name` должен быть в lowercase с дефисами (например: `donkey-farm`, не `Donkey Farm`)
-- `version` необходимо обновлять перед каждым PR с обновлениями
-- `remote_binary` используется для больших бинарных файлов, чтобы избежать проблем с размером zip-архивов
+- `name` must be lowercase with hyphens (e.g.: `donkey-farm`, not `Donkey Farm`)
+- `version` must be updated before every PR with updates
+- `remote_binary` is used for large binary files to avoid zip archive size issues
 
 ---
 
-## Frontend разработка (TypeScript/React)
+## Frontend development (TypeScript/React)
 
-### Требования
+### Requirements
 
-- **Node.js**: v16.14 или выше
-- **pnpm**: версия 9 (обязательно!)
-- **@decky/ui**: библиотека React компонентов для Steam Deck UI
+- **Node.js**: v16.14 or higher
+- **pnpm**: version 9 (mandatory!)
+- **@decky/ui**: React component library for Steam Deck UI
 
-### Установка зависимостей
+### Installing dependencies
 
 ```bash
-# Установка pnpm v9 (рекомендуется через npm)
+# Install pnpm v9 (recommended via npm)
 sudo npm i -g pnpm@9
 
-# Установка зависимостей проекта
+# Install project dependencies
 pnpm i
 
-# Сборка проекта
+# Build project
 pnpm run build
 ```
 
-### Структура frontend кода
+### Frontend code structure
 
-Главная точка входа - `src/index.tsx`:
+Main entry point is `src/index.tsx`:
 
 ```typescript
 import { definePlugin } from 'decky-frontend-lib'
 
 export default definePlugin((serverAPI: ServerAPI) => {
   return {
-    title: <div>Название плагина</div>,
+    title: <div>Plugin name</div>,
     content: <Content serverAPI={serverAPI} />,
     icon: <Icon />,
   }
 })
 ```
 
-### Взаимодействие с Backend
+### Backend interaction
 
-Используйте `ServerAPI` для вызова backend функций:
+Use `ServerAPI` to call backend functions:
 
 ```typescript
-// Вызов backend функции
+// Call backend function
 serverAPI!.callPluginMethod('my_backend_function', {
   parameter_a: 'Hello',
   parameter_b: 'World',
 })
 ```
 
-### Компоненты UI
+### UI components
 
-Используйте компоненты из `@decky/ui` для соответствия дизайну Steam Deck:
+Use components from `@decky/ui` to match Steam Deck design:
 
-- Компоненты основаны на React UI Steam Deck
-- Документация доступна в [decky-frontend-lib](https://github.com/SteamDeckHomebrew/decky-frontend-lib)
-- Примеры использования можно найти в шаблоне плагина
+- Components are based on Steam Deck React UI
+- Documentation is available at [decky-frontend-lib](https://github.com/SteamDeckHomebrew/decky-frontend-lib)
+- Usage examples can be found in the plugin template
 
-### Обновление библиотек
+### Updating libraries
 
-Если возникают ошибки сборки из-за устаревших библиотек:
+If build errors occur due to outdated libraries:
 
 ```bash
 pnpm update @decky/ui --latest
 ```
 
-### Пересборка после изменений
+### Rebuild after changes
 
-**Важно:** После каждого изменения frontend кода необходимо пересобирать:
+**Important:** After every frontend code change you must rebuild:
 
 ```bash
 pnpm run build
 ```
 
-Или используйте задачи VSCode/VSCodium: `setup`, `build`, `deploy`
+Or use VSCode/VSCodium tasks: `setup`, `build`, `deploy`
 
 ---
 
-## Backend разработка (Python)
+## Backend development (Python)
 
-### Структура backend кода
+### Backend code structure
 
-Все функции плагина определяются в классе `Plugin`:
+All plugin functions are defined in the `Plugin` class:
 
 ```python
 class Plugin:
-    # Backend функция, вызываемая из frontend
+    # Backend function called from frontend
     async def my_backend_function(self, parameter_a, parameter_b):
         print(f"{parameter_a} {parameter_b}")
         return {"result": "success"}
 
-    # Долгоживущий код, работает все время жизни плагина
+    # Long-running code, runs for plugin lifetime
     async def _main(self):
         pass
 
-    # Очистка при выгрузке плагина
+    # Cleanup on plugin unload
     async def _unload(self):
         pass
 ```
 
 ### SettingsManager
 
-Используйте `SettingsManager` для сохранения настроек в JSON файлы:
+Use `SettingsManager` to persist settings in JSON files:
 
 ```python
 from settings import SettingsManager
 import os
 
-# Получение директории настроек из переменной окружения
+# Get settings directory from environment variable
 settingsDir = os.environ["DECKY_PLUGIN_SETTINGS_DIR"]
 settings = SettingsManager(name="settings", settings_directory=settingsDir)
 settings.read()
@@ -223,17 +223,17 @@ class Plugin:
         settings.setSetting(key, value)
 ```
 
-**Важно:** Не используйте `localStorage` напрямую в React - используйте SettingsManager через backend.
+**Important:** Do not use `localStorage` directly in React — use SettingsManager via the backend.
 
-### Backend с бинарниками
+### Backend with binaries
 
-Если ваш плагин использует собственный backend с бинарниками:
+If your plugin uses a custom backend with binaries:
 
-1. **Расположение исходного кода**: `backend/src/`
-2. **Выходные бинарники**: `backend/out/` (создается при сборке)
-3. **CI автоматически создает папку `out`**, но рекомендуется создавать её в процессе сборки
+1. **Source location**: `backend/src/`
+2. **Output binaries**: `backend/out/` (created on build)
+3. **CI automatically creates the `out` folder**, but it is recommended to create it during the build process
 
-Пример Makefile:
+Example Makefile:
 
 ```makefile
 hello:
@@ -241,151 +241,151 @@ hello:
     gcc -o ./out/hello ./src/main.c
 ```
 
-**Критически важно:** Бинарники должны быть в `backend/out/`, иначе они не будут включены в дистрибутив.
+**Critical:** Binaries must be in `backend/out/`, otherwise they will not be included in the distribution.
 
-### Использование defaults/ для дополнительных файлов
+### Using defaults/ for additional files
 
-Папка `defaults/` используется для включения файлов, не являющихся частью стандартной сборки:
+The `defaults/` folder is used to include files that are not part of the standard build:
 
-- Python библиотеки
-- Конфигурационные файлы
-- Другие ресурсы, необходимые плагину
+- Python libraries
+- Configuration files
+- Other resources required by the plugin
 
-**Примечание:** Это временное решение. В будущем планируется добавить whitelist в `plugin.json`.
+**Note:** This is a temporary solution. A whitelist in `plugin.json` is planned for the future.
 
 ---
 
-## Сборка и распространение
+## Build and distribution
 
-### Структура zip-архива для распространения
+### Zip archive structure for distribution
 
 ```
 pluginname-v1.0.0.zip
 │
 └── pluginname/
-    ├── bin/              # Опционально: бинарники
+    ├── bin/              # Optional: binaries
     │   └── binary
-    ├── dist/             # [ОБЯЗАТЕЛЬНО]
-    │   └── index.js      # [ОБЯЗАТЕЛЬНО]
-    ├── package.json      # [ОБЯЗАТЕЛЬНО]
-    ├── plugin.json       # [ОБЯЗАТЕЛЬНО]
-    ├── main.py           # [ОБЯЗАТЕЛЬНО, если используется Python backend]
-    ├── README.md         # Рекомендуется
-    └── LICENSE(.md)      # [ОБЯЗАТЕЛЬНО]
+    ├── dist/             # [REQUIRED]
+    │   └── index.js      # [REQUIRED]
+    ├── package.json      # [REQUIRED]
+    ├── plugin.json       # [REQUIRED]
+    ├── main.py           # [REQUIRED if Python backend is used]
+    ├── README.md         # Recommended
+    └── LICENSE(.md)      # [REQUIRED]
 ```
 
-### Требования к лицензии
+### License requirements
 
-- Лицензия **обязательна** для публикации в Plugin Store
-- Если лицензия требует включения текста, он должен быть в корне репозитория
-- Стандартная практика: ваша лицензия сверху, оригинальная лицензия шаблона снизу
+- A license is **required** for Plugin Store publication
+- If the license requires including its text, it must be in the repository root
+- Common practice: your license on top, original template license below
 
-### Публикация в Plugin Store
+### Publishing to Plugin Store
 
-1. Следуйте инструкциям в [decky-plugin-database](https://github.com/SteamDeckHomebrew/decky-plugin-database)
-2. Откройте Pull Request, добавив ваш плагин как submodule
-3. Убедитесь, что все обязательные файлы присутствуют
-4. Проверьте, что версия в `package.json` обновлена
+1. Follow the instructions in [decky-plugin-database](https://github.com/SteamDeckHomebrew/decky-plugin-database)
+2. Open a Pull Request adding your plugin as a submodule
+3. Ensure all required files are present
+4. Verify that the version in `package.json` is updated
 
-### Установка через URL
+### Install via URL
 
-Плагины можно устанавливать через URL к zip-файлу:
+Plugins can be installed via URL to a zip file:
 
-- URL должен указывать на прямой доступ к zip-файлу
-- Установка через URL работает только в Desktop Mode (не в Game Mode)
+- URL must point to direct access to the zip file
+- Install via URL works only in Desktop Mode (not in Game Mode)
 
 ---
 
-## Безопасность и производительность
+## Security and performance
 
-### Безопасность
+### Security
 
-1. **Установка плагинов:**
+1. **Installing plugins:**
 
-   - Устанавливайте только из доверенных источников
-   - Используйте официальный Plugin Store
-   - Проверяйте отзывы перед установкой
+   - Install only from trusted sources
+   - Use the official Plugin Store
+   - Check reviews before installing
 
-2. **Разработка:**
+2. **Development:**
 
-   - Избегайте использования флага `"root"` без необходимости
-   - Валидируйте все пользовательские входные данные
-   - Используйте SettingsManager вместо прямого доступа к файловой системе
+   - Avoid using the `"root"` flag unless necessary
+   - Validate all user input
+   - Use SettingsManager instead of direct filesystem access
 
-3. **Распространение:**
-   - Включайте лицензию в репозиторий
-   - Используйте `remote_binary` для больших файлов
-   - Указывайте SHA256 хеши для удаленных бинарников
+3. **Distribution:**
+   - Include the license in the repository
+   - Use `remote_binary` for large files
+   - Provide SHA256 hashes for remote binaries
 
-### Производительность
+### Performance
 
-1. **Оптимизация кода:**
+1. **Code optimization:**
 
-   - Минимизируйте количество вызовов backend функций
-   - Используйте асинхронные операции где возможно
-   - Избегайте блокирующих операций в `_main()`
+   - Minimize backend function calls
+   - Use async operations where possible
+   - Avoid blocking operations in `_main()`
 
-2. **Размер плагина:**
+2. **Plugin size:**
 
-   - Используйте `remote_binary` для файлов > 10MB
-   - Оптимизируйте изображения и ресурсы
-   - Удаляйте неиспользуемые зависимости
+   - Use `remote_binary` for files > 10MB
+   - Optimize images and assets
+   - Remove unused dependencies
 
 3. **UI/UX:**
-   - Используйте компоненты из `@decky/ui` для нативного вида
-   - Следуйте дизайн-паттернам Steam Deck UI
-   - Тестируйте на реальном устройстве
+   - Use components from `@decky/ui` for native look
+   - Follow Steam Deck UI design patterns
+   - Test on a real device
 
 ---
 
-## Рекомендации по обновлениям
+## Update recommendations
 
-### Обновление Decky Loader и плагинов
+### Updating Decky Loader and plugins
 
-**Критически важно:**
+**Critical:**
 
-- **Всегда обновляйте Decky Loader и плагины ПЕРЕД обновлением Steam**
-- Обновления Steam могут сломать совместимость
-- Если используете Steam beta, используйте Decky prerelease для тестирования
+- **Always update Decky Loader and plugins BEFORE updating Steam**
+- Steam updates can break compatibility
+- If using Steam beta, use Decky prerelease for testing
 
-### Версионирование
+### Versioning
 
-1. Обновляйте `version` в `package.json` перед каждым PR
-2. Используйте семантическое версионирование (SemVer)
-3. Включайте changelog в описании обновлений
+1. Update `version` in `package.json` before every PR
+2. Use semantic versioning (SemVer)
+3. Include a changelog in update descriptions
 
-### Тестирование
+### Testing
 
-1. Тестируйте на реальном Steam Deck, а не только в эмуляторе
-2. Проверяйте совместимость с последней версией Decky Loader
-3. Тестируйте обновления перед публикацией
+1. Test on a real Steam Deck, not only in an emulator
+2. Verify compatibility with the latest Decky Loader version
+3. Test updates before publishing
 
 ---
 
-## Дополнительные ресурсы
+## Additional resources
 
-- [Официальный шаблон плагина](https://github.com/SteamDeckHomebrew/decky-plugin-template)
-- [Документация Decky Loader Wiki](https://wiki.deckbrew.xyz/en/plugin-dev/getting-started)
+- [Official plugin template](https://github.com/SteamDeckHomebrew/decky-plugin-template)
+- [Decky Loader Wiki documentation](https://wiki.deckbrew.xyz/en/plugin-dev/getting-started)
 - [decky-frontend-lib (@decky/ui)](https://github.com/SteamDeckHomebrew/decky-frontend-lib)
 - [Plugin Database](https://github.com/SteamDeckHomebrew/decky-plugin-database)
 - [Decky Loader Repository](https://github.com/SteamDeckHomebrew/decky-loader)
 
 ---
 
-## Чеклист перед публикацией
+## Pre-publication checklist
 
-- [ ] Все обязательные файлы присутствуют (`plugin.json`, `package.json`, `LICENSE`)
-- [ ] Версия в `package.json` обновлена
-- [ ] Плагин протестирован на реальном Steam Deck
-- [ ] Backend бинарники (если есть) находятся в `backend/out/`
-- [ ] Лицензия включена в репозиторий
-- [ ] README.md содержит описание и инструкции
-- [ ] Изображение для store в формате PNG
-- [ ] Все зависимости актуальны (`pnpm update @decky/ui --latest`)
-- [ ] Код соответствует стандартам сообщества
-- [ ] Плагин не требует root без необходимости
+- [ ] All required files are present (`plugin.json`, `package.json`, `LICENSE`)
+- [ ] Version in `package.json` is updated
+- [ ] Plugin tested on a real Steam Deck
+- [ ] Backend binaries (if any) are in `backend/out/`
+- [ ] License is included in the repository
+- [ ] README.md contains description and instructions
+- [ ] Store image is in PNG format
+- [ ] All dependencies are up to date (`pnpm update @decky/ui --latest`)
+- [ ] Code follows community standards
+- [ ] Plugin does not require root without necessity
 
 ---
 
-**Последнее обновление:** Январь 2026  
-**Источники:** Официальная документация Decky Loader, шаблоны плагинов, сообщество разработчиков
+**Last updated:** January 2026  
+**Sources:** Decky Loader official documentation, plugin templates, developer community

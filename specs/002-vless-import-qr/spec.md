@@ -3,13 +3,13 @@
 **Feature Branch**: `002-vless-import-qr`  
 **Created**: 2026-01-30  
 **Status**: Draft  
-**Input**: User description: "Я как пользователь хочу импортировать vless ссылку через удобную форму ввода. Иметь возможность отсканировать камерой телефона QR код, который откроет мне в браузере удобную форму ввода vless ссылки, нажать Paste -> Save и перейти к дальнейшей настройке подключения в плагине."
+**Input**: User description: "As a user I want to import a VLESS link via a convenient input form. I want to be able to scan a QR code with my phone camera that opens a convenient VLESS link input form in the browser, press Paste -> Save, and proceed to further connection setup in the plugin."
 
 ## Clarifications
 
 ### Session 2026-01-30
 
-- Q: Should the import page follow any specific visual design? → A: Yes — the import page MUST use a color design consistent with Steam UI (преемственный Steam UI).
+- Q: Should the import page follow any specific visual design? → A: Yes — the import page MUST use a color design consistent with Steam UI (visually consistent with Steam UI).
 - Q: In what order should plugin UI blocks appear on Steam Deck? → A: The QR code block MUST be displayed first (before any other plugin content).
 - Q: Which address should the QR code URL use so the phone can reach the import page? → A: The URL MUST use the Steam Deck's local network (LAN) address, not 127.0.0.1; the backend MUST determine the device's LAN IP (e.g. default route / first non-loopback) so that devices on the same WiFi can open the import page.
 - Q: How should frontend–backend communication and plugin structure be implemented after the UI-not-responding-to-backend debugging? → A: The current implementation is the correct approach: (1) Frontend uses the new Decky API: definePlugin from @decky/api with no arguments; backend calls via callable() from @decky/api, not decky-frontend-lib serverAPI. (2) Backend: plugin directory on sys.path; backend package with __init__.py (backend/, backend/src/); plugin name in plugin.json must match loader registration. (3) LAN IP for QR URL resolved by backend (e.g. socket + hostname -I + ip route fallbacks), not 127.0.0.1.
@@ -88,7 +88,7 @@ The user can reach the import page consistently: either by scanning the QR shown
 - **FR-006**: The system MUST validate the submitted value as a VLESS link on Save; if invalid, the system MUST reject the save, show a clear error, and allow the user to correct and retry.
 - **FR-007**: The import page MUST be usable on mobile browsers (e.g. after opening via QR scan): form, Paste, and Save MUST work without requiring desktop-only interactions.
 - **FR-008**: The import page MUST be accessible only over the local network (same host/port as the plugin); no requirement for public or internet-accessible import URL.
-- **FR-009**: The import page MUST use a color design consistent with Steam UI (преемственный Steam UI): palette, contrast, and overall look and feel must align with Steam / Steam Deck visual identity so the page feels part of the same experience.
+- **FR-009**: The import page MUST use a color design consistent with Steam UI (visually consistent with Steam UI): palette, contrast, and overall look and feel must align with Steam / Steam Deck visual identity so the page feels part of the same experience.
 
 ### Design Reference (for implementation)
 
