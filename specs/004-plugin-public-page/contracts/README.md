@@ -25,7 +25,7 @@ The single HTML page MUST expose the following structure so that spec FR-001, FR
 
 If the team provides an embeddable fragment (e.g. for Gist or blog):
 
-- **Format**: Either a stable URL to a fragment (e.g. `.../plugin-page/#features`) or a self-contained HTML snippet (no scripts that depend on host domain).
+- **Format**: Either a stable URL to a fragment (e.g. `.../pages/#features`) or a self-contained HTML snippet (no scripts that depend on host domain).
 - **Content**: Snippet MUST contain only public, non-sensitive content (FR-007). Expected fields: plugin name, one-sentence description, platform, and link to full page or install.
 - **Rendering**: When embedded in a context that supports iframe or script-based Gist embed, the fragment MUST render without errors and remain readable (FR-006).
 

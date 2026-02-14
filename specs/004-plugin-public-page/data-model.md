@@ -50,7 +50,7 @@ Any image or short visual used on the page.
 | style       | Steam Deck/SteamOS-aligned     | Dark, clean; no unauthorized logos (FR-009) |
 | format      | WebP with fallback preferred   | Web-appropriate; responsive if needed |
 
-**State**: Static files in `docs/plugin-page/assets/`. No state transitions; content is fixed at publish time.
+**State**: Static files in `pages/assets/`. No state transitions; content is fixed at publish time.
 
 ---
 

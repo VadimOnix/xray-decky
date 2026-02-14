@@ -136,10 +136,18 @@ xray-decky/
 ├── backend/               # Backend Python
 │   ├── src/              # Python source
 │   └── out/              # xray-core binary
+├── pages/                 # Public plugin homepage (GitHub Pages)
+│   ├── index.html
+│   ├── styles/
+│   └── assets/
 ├── main.py               # Backend entry point
 ├── plugin.json           # Plugin metadata
 └── package.json          # Package metadata
 ```
+
+### Public Plugin Page
+
+A static landing page lives in `pages/` and can be published via **GitHub Pages** (Settings → Pages → Deploy from branch → root `/`). The site will be at `https://&lt;owner&gt;.github.io/xray-decky/pages/`. See [specs/004-plugin-public-page/quickstart.md](specs/004-plugin-public-page/quickstart.md) for details.
 
 ## Configuration
 

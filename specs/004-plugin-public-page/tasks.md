@@ -13,9 +13,9 @@
 
 **Purpose**: Create folder structure and placeholder files for the static public page.
 
-- [x] T001 Create directory structure: `docs/plugin-page/`, `docs/plugin-page/styles/`, `docs/plugin-page/assets/`, `docs/plugin-page/assets/features/` per plan.md
-- [x] T002 [P] Add minimal `docs/plugin-page/index.html` with valid HTML5 document shell (doctype, html, head, body, charset, viewport)
-- [x] T003 [P] Add minimal `docs/plugin-page/styles/main.css` with empty mobile-first base (e.g. box-sizing, root font-size)
+- [x] T001 Create directory structure: `pages/`, `pages/styles/`, `pages/assets/`, `pages/assets/features/` per plan.md
+- [x] T002 [P] Add minimal `pages/index.html` with valid HTML5 document shell (doctype, html, head, body, charset, viewport)
+- [x] T003 [P] Add minimal `pages/styles/main.css` with empty mobile-first base (e.g. box-sizing, root font-size)
 
 ---
 
@@ -25,9 +25,9 @@
 
 **Independent Test**: Open index.html in a browser; see a dark-themed page with header, main, and footer regions; resize to 375px and 1280px and confirm layout responds.
 
-- [x] T004 Add semantic regions to `docs/plugin-page/index.html`: `<header>`, `<main>`, `<footer>`; ensure main contains placeholder sections for hero, features, install per contracts/README (page structure contract)
-- [x] T005 Add Steam Deck–inspired CSS variables and base styles to `docs/plugin-page/styles/main.css`: dark background (e.g. #1b2838), surface/card (e.g. #2a475e), accent (e.g. #66c0f4), typography (system-ui or single webfont), mobile-first base layout
-- [x] T006 Add responsive breakpoints to `docs/plugin-page/styles/main.css`: default for small viewport; `min-width` media queries for tablet (e.g. 768px) and desktop (e.g. 1280px) so layout and type scale
+- [x] T004 Add semantic regions to `pages/index.html`: `<header>`, `<main>`, `<footer>`; ensure main contains placeholder sections for hero, features, install per contracts/README (page structure contract)
+- [x] T005 Add Steam Deck–inspired CSS variables and base styles to `pages/styles/main.css`: dark background (e.g. #1b2838), surface/card (e.g. #2a475e), accent (e.g. #66c0f4), typography (system-ui or single webfont), mobile-first base layout
+- [x] T006 Add responsive breakpoints to `pages/styles/main.css`: default for small viewport; `min-width` media queries for tablet (e.g. 768px) and desktop (e.g. 1280px) so layout and type scale
 
 **Checkpoint**: Foundation ready—content (US1), visual refinement (US2), share/embed (US3), and media (US4) can proceed.
 
@@ -39,10 +39,10 @@
 
 **Independent Test**: Open the page; without reading external docs, state the plugin name, what it does, and for which platform; see 4–6 features and an install path or link.
 
-- [x] T007 [US1] Add plugin identity content to hero in `docs/plugin-page/index.html`: name (Xray Decky), one-sentence purpose, platform text (Steam Deck / Decky Loader), using data from plugin.json and README where applicable
-- [x] T008 [US1] Add features section to `docs/plugin-page/index.html`: 4–6 primary features (e.g. import VLESS, toggle connection, TUN mode, kill switch) as list or card blocks with titles and short descriptions per data-model
-- [x] T009 [US1] Add install section to `docs/plugin-page/index.html`: installation steps or a clear link to Plugin Store / README; ensure link is stable and has no user-specific paths (FR-002, FR-007)
-- [x] T010 [US1] Ensure hero, features, and install content are readable and links are accessible at 375px and 1280px using existing `docs/plugin-page/styles/main.css` breakpoints
+- [x] T007 [US1] Add plugin identity content to hero in `pages/index.html`: name (Xray Decky), one-sentence purpose, platform text (Steam Deck / Decky Loader), using data from plugin.json and README where applicable
+- [x] T008 [US1] Add features section to `pages/index.html`: 4–6 primary features (e.g. import VLESS, toggle connection, TUN mode, kill switch) as list or card blocks with titles and short descriptions per data-model
+- [x] T009 [US1] Add install section to `pages/index.html`: installation steps or a clear link to Plugin Store / README; ensure link is stable and has no user-specific paths (FR-002, FR-007)
+- [x] T010 [US1] Ensure hero, features, and install content are readable and links are accessible at 375px and 1280px using existing `pages/styles/main.css` breakpoints
 
 **Checkpoint**: User Story 1 is complete; a visitor can discover and understand the plugin and find install info.
 
@@ -54,9 +54,9 @@
 
 **Independent Test**: Show the page to someone familiar with Steam Deck/SteamOS and confirm the style is recognizable; verify layout and typography at 375px and 1280px.
 
-- [x] T011 [US2] Refine section and card styles in `docs/plugin-page/styles/main.css`: consistent spacing, rounded corners, subtle shadows, clear heading hierarchy for hero, features, install
-- [x] T012 [US2] Ensure hero area and feature blocks in `docs/plugin-page/index.html` use CSS classes that apply Steam Deck–style (dark theme, accent for links/emphasis) from `docs/plugin-page/styles/main.css`
-- [x] T013 [US2] Verify layout and typography scale in `docs/plugin-page/styles/main.css` at 375px, 768px, and 1280px without breaking (overflow, illegible text, or overlapping elements)
+- [x] T011 [US2] Refine section and card styles in `pages/styles/main.css`: consistent spacing, rounded corners, subtle shadows, clear heading hierarchy for hero, features, install
+- [x] T012 [US2] Ensure hero area and feature blocks in `pages/index.html` use CSS classes that apply Steam Deck–style (dark theme, accent for links/emphasis) from `pages/styles/main.css`
+- [x] T013 [US2] Verify layout and typography scale in `pages/styles/main.css` at 375px, 768px, and 1280px without breaking (overflow, illegible text, or overlapping elements)
 
 **Checkpoint**: User Story 2 is complete; the page has a cohesive Steam Deck/SteamOS visual identity and scales correctly.
 
@@ -68,9 +68,9 @@
 
 **Independent Test**: Copy the page URL (after deployment) and open in another session; confirm same content; if embedding, confirm snippet or fragment renders; audit content for no tokens/keys/paths.
 
-- [x] T014 [US3] Add fragment IDs to `docs/plugin-page/index.html` for deep linking and optional embed (e.g. `id="features"`, `id="install"`) per contracts/README embed snippet contract
+- [x] T014 [US3] Add fragment IDs to `pages/index.html` for deep linking and optional embed (e.g. `id="features"`, `id="install"`) per contracts/README embed snippet contract
 - [x] T015 [US3] Document stable URL and publish steps in `specs/004-plugin-public-page/quickstart.md` (or confirm existing quickstart.md) so implementers know how to achieve FR-005
-- [x] T016 [US3] Review `docs/plugin-page/index.html` and any embeddable content for FR-007/SC-005: no secrets, API keys, or user-specific paths; remove or replace if found
+- [x] T016 [US3] Review `pages/index.html` and any embeddable content for FR-007/SC-005: no secrets, API keys, or user-specific paths; remove or replace if found
 
 **Checkpoint**: User Story 3 is complete; page is shareable, optionally embeddable, and safe for public distribution.
 
@@ -82,9 +82,9 @@
 
 **Independent Test**: Load the page; confirm at least one hero image and feature-related visuals are present; confirm alt text and that assets are appropriate for web and rights.
 
-- [x] T017 [US4] Add at least one hero/header image under `docs/plugin-page/assets/` (e.g. hero.webp or hero.png), reference it in hero section of `docs/plugin-page/index.html` with `<img>` or `<picture>`, include non-empty `alt` text (FR-004, FR-008)
-- [x] T018 [US4] Add feature-related visuals under `docs/plugin-page/assets/features/` (icons or images per major feature), reference them in the features section of `docs/plugin-page/index.html` with meaningful `alt` (FR-004, SC-002)
-- [x] T019 [US4] Ensure all images in `docs/plugin-page/assets/` are web-appropriate (resolution, format, reasonable file size) and legally safe (original or permitted use); document source if needed (FR-009)
+- [x] T017 [US4] Add at least one hero/header image under `pages/assets/` (e.g. hero.webp or hero.png), reference it in hero section of `pages/index.html` with `<img>` or `<picture>`, include non-empty `alt` text (FR-004, FR-008)
+- [x] T018 [US4] Add feature-related visuals under `pages/assets/features/` (icons or images per major feature), reference them in the features section of `pages/index.html` with meaningful `alt` (FR-004, SC-002)
+- [x] T019 [US4] Ensure all images in `pages/assets/` are web-appropriate (resolution, format, reasonable file size) and legally safe (original or permitted use); document source if needed (FR-009)
 
 **Checkpoint**: User Story 4 is complete; the page has hero and feature media that match Steam Deck/SteamOS style and are suitable for web.
 
@@ -94,10 +94,10 @@
 
 **Purpose**: Accessibility, resilience when media fails, and quickstart validation.
 
-- [x] T020 Ensure every image in `docs/plugin-page/index.html` has meaningful `alt` text and that critical content (plugin name, purpose, install link) remains available when images fail to load (FR-008, edge cases)
-- [x] T021 Add fallback or placeholder behavior in `docs/plugin-page/index.html` or `docs/plugin-page/styles/main.css` for failed media (e.g. background color or text placeholder) so the page still communicates plugin identity
-- [x] T022 Verify critical content (plugin name, purpose, install link) is available with JavaScript disabled and with minimal CSS (progressive enhancement; satisfies spec edge case "very old or restricted browser") in `docs/plugin-page/index.html`
-- [x] T023 [P] Optional: Add responsive images in `docs/plugin-page/index.html` (e.g. `srcset` or `<picture>` with WebP + fallback) for hero and feature assets to improve performance per plan Performance Goals
+- [x] T020 Ensure every image in `pages/index.html` has meaningful `alt` text and that critical content (plugin name, purpose, install link) remains available when images fail to load (FR-008, edge cases)
+- [x] T021 Add fallback or placeholder behavior in `pages/index.html` or `pages/styles/main.css` for failed media (e.g. background color or text placeholder) so the page still communicates plugin identity
+- [x] T022 Verify critical content (plugin name, purpose, install link) is available with JavaScript disabled and with minimal CSS (progressive enhancement; satisfies spec edge case "very old or restricted browser") in `pages/index.html`
+- [x] T023 [P] Optional: Add responsive images in `pages/index.html` (e.g. `srcset` or `<picture>` with WebP + fallback) for hero and feature assets to improve performance per plan Performance Goals
 - [x] T024 Run through quickstart.md: preview at 375px and 1280px, verify no secrets, confirm install link works; fix any gaps
 
 ---
@@ -182,6 +182,6 @@ T013 Verify layout at breakpoints in main.css
 
 - [P] = safe to run in parallel (different files or independent changes).
 - [USn] = task belongs to that user story for traceability.
-- All paths are relative to repo root; use `docs/plugin-page/` as the page root.
+- All paths are relative to repo root; use `pages/` as the page root.
 - No automated test tasks: spec relies on manual visual and responsive checks.
 - Commit after each task or after each user story checkpoint.

@@ -26,7 +26,7 @@ _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
 This feature **adds a standalone static public page**; it does not change the Decky Loader plugin code, build, or distribution.
 
-- **I. Standardized Project Structure**: Plugin structure unchanged. Static page lives in a dedicated folder (e.g. `docs/plugin-page/`) so plugin `src/`, `backend/`, `dist/` remain as-is.
+- **I. Standardized Project Structure**: Plugin structure unchanged. Static page lives in a dedicated folder `pages/` so plugin `src/`, `backend/`, `dist/` remain as-is.
 - **II. Mandatory Metadata Files**: No change to plugin.json, package.json, LICENSE.
 - **III. Frontend Development Standards**: Plugin frontend (React/Decky) unchanged. Public page is separate static HTML/CSS (no React/Node required for the page itself).
 - **IV. Backend Development Patterns**: No backend for the public page.
@@ -53,22 +53,24 @@ specs/004-plugin-public-page/
 
 ### Source Code (repository root)
 
-Static public page lives under `docs/` to keep repo structure clear; no new top-level app.
+Static public page lives in `pages/` for GitHub Pages deployment (source: root).
 
 ```text
+pages/                    # Public landing page (this feature)
+├── index.html           # Single page, semantic sections
+├── styles/
+│   └── main.css         # Mobile-first, Steam Deck–style, minimal/no JS
+├── assets/              # Images: hero, feature icons/graphics
+│   ├── hero.*           # Hero/header image
+│   └── features/        # Per-feature visuals
+└── scripts/             # Optional build scripts (e.g. optimize-images.sh)
+
 docs/
-├── plugin-page/           # Public landing page (this feature)
-│   ├── index.html        # Single page, semantic sections
-│   ├── styles/
-│   │   └── main.css      # Mobile-first, Steam Deck–style, minimal/no JS
-│   └── assets/           # Images: hero, feature icons/graphics
-│       ├── hero.*        # Hero/header image
-│       └── features/     # Per-feature visuals
 ├── DEVELOPMENT.md
 └── RELEASING.md
 ```
 
-**Structure Decision**: One folder `docs/plugin-page/` with one HTML file, one main CSS file, and an assets subfolder. This keeps the page self-contained and easy to publish (e.g. GitHub Pages from `docs/` or copy to Gist). No build step required for basic delivery; optional minification can be added later.
+**Structure Decision**: One folder `pages/` with one HTML file, one main CSS file, and an assets subfolder. GitHub Pages: deploy from branch root → site at `https://<owner>.github.io/<repo>/pages/`. No build step required; optional minification available.
 
 ## Complexity Tracking
 
