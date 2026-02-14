@@ -1,0 +1,613 @@
+/* ===== Reset & Variables ===== */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+:root {
+  font-size: 16px;
+  --color-bg: #1b2838;
+  --color-bg-alt: #171a21;
+  --color-surface: #2a475e;
+  --color-surface-light: #345670;
+  --color-accent: #66c0f4;
+  --color-accent-hover: #8ad4ff;
+  --color-text: #c7d5e0;
+  --color-text-muted: #8f98a0;
+  --color-text-bright: #ffffff;
+  --color-success: #4caf50;
+  --color-border: rgba(102, 192, 244, 0.15);
+  --font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
+  scroll-behavior: smooth;
+  scroll-padding-top: 4rem;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-family);
+  background: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+a {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--color-accent-hover);
+  text-decoration: underline;
+}
+
+h1, h2, h3 {
+  color: var(--color-text-bright);
+  margin-top: 0;
+  line-height: 1.3;
+}
+
+code {
+  font-family: var(--font-mono);
+  background: var(--color-bg-alt);
+  padding: 0.15em 0.4em;
+  border-radius: var(--radius-sm);
+  font-size: 0.875em;
+  color: var(--color-accent);
+}
+
+pre {
+  background: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 1rem;
+  overflow-x: auto;
+  margin: 0.75rem 0;
+}
+
+pre code {
+  background: none;
+  padding: 0;
+  font-size: 0.8125rem;
+}
+
+/* ===== Navigation ===== */
+.site-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--color-bg-alt);
+  border-bottom: 1px solid var(--color-border);
+  backdrop-filter: blur(12px);
+}
+
+.nav-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.nav-brand {
+  font-weight: 700;
+  font-size: 1.125rem;
+  color: var(--color-text-bright);
+  text-decoration: none;
+}
+
+.nav-brand:hover {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+.nav-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.nav-links a {
+  display: inline-block;
+  padding: 0.35rem 0.7rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  transition: background 0.15s, color 0.15s;
+}
+
+.nav-links a:hover {
+  background: var(--color-surface);
+  color: var(--color-text-bright);
+  text-decoration: none;
+}
+
+.nav-github {
+  color: var(--color-accent) !important;
+}
+
+/* ===== Layout ===== */
+header, main, footer {
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+section {
+  margin-bottom: 3rem;
+}
+
+/* ===== Hero ===== */
+.hero {
+  text-align: center;
+  padding: 2rem 0;
+}
+
+.hero-image {
+  width: 100%;
+  max-width: 800px;
+  height: auto;
+  border-radius: var(--radius);
+  margin: 0 auto 1.5rem;
+  box-shadow: var(--shadow);
+}
+
+.hero h1 {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.02em;
+}
+
+.hero-purpose {
+  font-size: 1.125rem;
+  color: var(--color-text);
+  margin: 0 0 0.5rem;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.hero-platform {
+  font-size: 0.875rem;
+  color: var(--color-accent);
+  margin: 0 0 1.5rem;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* ===== Buttons ===== */
+.btn {
+  display: inline-block;
+  padding: 0.65rem 1.5rem;
+  border-radius: var(--radius);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.btn:hover {
+  text-decoration: none;
+  transform: translateY(-1px);
+}
+
+.btn-primary {
+  background: var(--color-accent);
+  color: var(--color-bg-alt);
+}
+
+.btn-primary:hover {
+  background: var(--color-accent-hover);
+  color: var(--color-bg-alt);
+}
+
+.btn-secondary {
+  background: var(--color-surface);
+  color: var(--color-text-bright);
+  border: 1px solid var(--color-border);
+}
+
+.btn-secondary:hover {
+  background: var(--color-surface-light);
+  color: var(--color-text-bright);
+}
+
+/* ===== Features ===== */
+.features h2 {
+  font-size: 1.5rem;
+  color: var(--color-accent);
+  margin-bottom: 1.25rem;
+}
+
+.feature-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.feature-card {
+  background: var(--color-surface);
+  padding: 1.25rem;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border);
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.feature-icon {
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+}
+
+.feature-text h3 {
+  font-size: 1rem;
+  margin: 0 0 0.25rem;
+  color: var(--color-accent);
+}
+
+.feature-text p {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: var(--color-text-muted);
+}
+
+/* ===== Install ===== */
+.install h2 {
+  font-size: 1.5rem;
+  color: var(--color-accent);
+  margin-bottom: 1.25rem;
+}
+
+.install-prereq {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.install-prereq h3 {
+  font-size: 1rem;
+  margin: 0 0 0.5rem;
+  color: var(--color-text-bright);
+}
+
+.install-prereq ul {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.install-prereq li {
+  margin-bottom: 0.25rem;
+  color: var(--color-text-muted);
+}
+
+.install-methods {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.install-method {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+}
+
+.install-method--primary {
+  border-color: var(--color-accent);
+  position: relative;
+}
+
+.install-method--primary::before {
+  content: "Recommended";
+  position: absolute;
+  top: -0.65rem;
+  left: 1rem;
+  background: var(--color-accent);
+  color: var(--color-bg-alt);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.1rem 0.5rem;
+  border-radius: 3px;
+}
+
+.install-method h3 {
+  font-size: 1rem;
+  margin: 0 0 0.75rem;
+  color: var(--color-text-bright);
+}
+
+.install-method ol {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.install-method li {
+  margin-bottom: 0.35rem;
+  color: var(--color-text-muted);
+}
+
+.tun-setup {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+}
+
+.tun-setup summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.tun-setup summary::-webkit-details-marker {
+  display: none;
+}
+
+.tun-setup summary h3 {
+  display: inline;
+  font-size: 1rem;
+  color: var(--color-accent);
+}
+
+.tun-setup summary::before {
+  content: "▸ ";
+  color: var(--color-accent);
+}
+
+.tun-setup[open] summary::before {
+  content: "▾ ";
+}
+
+.tun-setup ol {
+  padding-left: 1.25rem;
+}
+
+.tun-setup li {
+  margin-bottom: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+/* ===== Usage ===== */
+.usage h2 {
+  font-size: 1.5rem;
+  color: var(--color-accent);
+  margin-bottom: 1.25rem;
+}
+
+.usage-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.usage-step {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.step-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  color: var(--color-bg-alt);
+  font-weight: 700;
+  font-size: 1.125rem;
+}
+
+.usage-step h3 {
+  font-size: 1rem;
+  margin: 0 0 0.25rem;
+  color: var(--color-text-bright);
+}
+
+.usage-step p {
+  margin: 0 0 0.25rem;
+  color: var(--color-text-muted);
+  font-size: 0.9375rem;
+}
+
+.text-muted {
+  color: var(--color-text-muted);
+  font-size: 0.8125rem !important;
+}
+
+/* ===== Troubleshooting ===== */
+.troubleshooting h2 {
+  font-size: 1.5rem;
+  color: var(--color-accent);
+  margin-bottom: 1.25rem;
+}
+
+.faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.faq-item {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.faq-item summary {
+  padding: 1rem 1.25rem;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--color-text-bright);
+  list-style: none;
+}
+
+.faq-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq-item summary::before {
+  content: "▸ ";
+  color: var(--color-accent);
+}
+
+.faq-item[open] summary::before {
+  content: "▾ ";
+}
+
+.faq-item[open] summary {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.faq-item ul {
+  padding: 0.75rem 1.25rem 0.75rem 2.5rem;
+  margin: 0;
+}
+
+.faq-item li {
+  margin-bottom: 0.35rem;
+  color: var(--color-text-muted);
+}
+
+/* ===== Footer ===== */
+footer {
+  border-top: 1px solid var(--color-border);
+  margin-top: 2rem;
+  padding: 2rem 1rem;
+}
+
+.footer-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.footer-links {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.footer-links a {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}
+
+.footer-links a:hover {
+  color: var(--color-accent);
+}
+
+.footer-copy {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+/* ===== Tablet: 768px ===== */
+@media (min-width: 768px) {
+  :root {
+    font-size: 17px;
+  }
+
+  header, main {
+    max-width: 90%;
+    margin: 0 auto;
+  }
+
+  .hero h1 {
+    font-size: 2.5rem;
+  }
+
+  .feature-list {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+
+  .install-methods {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+
+  .install-method--primary {
+    grid-column: 1 / -1;
+  }
+
+  .usage-steps {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+  }
+
+  .usage-step {
+    flex-direction: column;
+    text-align: center;
+    align-items: center;
+  }
+}
+
+/* ===== Desktop: 1280px ===== */
+@media (min-width: 1280px) {
+  :root {
+    font-size: 18px;
+  }
+
+  header, main {
+    max-width: 1100px;
+  }
+
+  .hero {
+    padding: 2.5rem 0;
+  }
+
+  .hero h1 {
+    font-size: 2.75rem;
+  }
+
+  .feature-list {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.25rem;
+  }
+}
