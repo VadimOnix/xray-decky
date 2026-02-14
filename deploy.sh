@@ -6,7 +6,7 @@ pnpm run build
 
 echo "📦 Preparing files for deployment..."
 
-# Создаем временную директорию для деплоя
+# Create temporary directory for deploy
 TEMP_DIR=$(mktemp -d)
 PLUGIN_DIR="$TEMP_DIR/xray-decky"
 

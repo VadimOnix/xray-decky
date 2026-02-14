@@ -77,70 +77,70 @@ After acceptance, the page is in a secure context and the **Paste** button works
 
 ## Troubleshooting: ERR_CONNECTION_REFUSED
 
-Если QR показывает правильный URL (например `https://192.168.30.209:8765/import`), но в браузере на телефоне/ПК — «Не удается установить соединение» / ERR_CONNECTION_REFUSED, проверьте на **Steam Deck** (Desktop Mode → Konsole).
+If the QR shows the correct URL (e.g. `https://192.168.30.209:8765/import`) but the browser on phone/PC shows "Unable to connect" / ERR_CONNECTION_REFUSED, check on **Steam Deck** (Desktop Mode → Konsole).
 
-### 1. Сервер слушает порт
+### 1. Server is listening on the port
 
-Плагин должен быть запущен (Game Mode: открыт плагин Xray Decky хотя бы раз). На Deck выполните:
+The plugin must be running (Game Mode: open the Xray Decky plugin at least once). On the Deck run:
 
 ```bash
-# Есть ли процесс, слушающий порт 8765 (или ваш importServer.port)?
+# Is any process listening on port 8765 (or your importServer.port)?
 ss -tlnp | grep 8765
-# или
+# or
 ss -tlnp
 ```
 
-Ожидаемо: строка вида `LISTEN 0 128 0.0.0.0:8765 0.0.0.0:*` (или ваш порт). Если вывода нет — сервер импорта не запущен (плагин не загружен, папка `backend/static` отсутствует при деплое или порт занят).
+Expected: a line like `LISTEN 0 128 0.0.0.0:8765 0.0.0.0:*` (or your port). If there is no output — the import server is not running (plugin not loaded, `backend/static` missing on deploy, or port in use).
 
-**Если в выводе только `127.0.0.1:8765` и `[::1]:8765`, а не `0.0.0.0:8765`** — это не наш плагин. Наш сервер привязывается к `0.0.0.0`, чтобы принимать подключения из LAN. Значит порт 8765 занят другим процессом (слушает только localhost), а наш сервер при старте не смог занять порт (Address already in use). Либо запущена старая сборка. Действия:
+**If the output only shows `127.0.0.1:8765` and `[::1]:8765`, not `0.0.0.0:8765`** — that is not our plugin. Our server binds to `0.0.0.0` to accept connections from the LAN. So port 8765 is taken by another process (listening only on localhost), and our server failed to bind at startup (Address already in use). Or an old build is running. Steps:
 
-1. Узнать, какой процесс держит порт:
+1. Find which process holds the port:
    ```bash
    lsof -i :8765
-   # или (PID в последней колонке)
+   # or (PID in the last column)
    ss -tlnp | grep 8765
    ```
-2. Если это не наш плагин (не python/плагин Decky) — освободить порт или сменить порт плагина в настройках: в Decky Store/настройках плагина задать `importServer.port` = например **8766**, перезапустить плагин (выйти из настроек плагина и открыть снова).
-3. Если процесс — наш (python), но слушает 127.0.0.1 — переустановить/задеплоить последнюю сборку, где в `main.py` используется `TCPSite(runner, "0.0.0.0", port)`.
+2. If it is not our plugin (not python/Decky plugin) — free the port or change the plugin port in settings: in Decky Store/plugin settings set `importServer.port` = e.g. **8766**, restart the plugin (leave plugin settings and open again).
+3. If the process is ours (python) but listens on 127.0.0.1 — reinstall/redeploy the latest build where `main.py` uses `TCPSite(runner, "0.0.0.0", port)`.
 
-Дополнительно: если `curl http://127.0.0.1:8765/import` возвращает **404**, а не 200 — на порту отвечает не наша страница импорта (у нас GET `/import` отдаёт HTML). Значит на 8765 точно другой сервис; наш плагин тогда не слушает 8765 — см. пункты выше (сменить порт или освободить 8765).
+Also: if `curl http://127.0.0.1:8765/import` returns **404** instead of 200 — the responder on that port is not our import page (our GET `/import` serves HTML). So 8765 is definitely another service; our plugin is not listening on 8765 — see steps above (change port or free 8765).
 
-### 2. Доступ с самого Deck (localhost)
+### 2. Access from the Deck itself (localhost)
 
 ```bash
-# Замените 8765 на ваш порт при необходимости
+# Replace 8765 with your port if needed
 curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8765/import
 ```
 
-Ожидаемо: `200`. Если пусто или ошибка — сервер не отвечает даже локально.
+Expected: `200`. If empty or error — server does not respond even locally.
 
-### 3. Доступ по LAN IP с Deck
+### 3. Access via LAN IP from Deck
 
 ```bash
-# Замените 192.168.30.209 и 8765 на ваш IP и порт
+# Replace 192.168.30.209 and 8765 with your IP and port
 curl -s -o /dev/null -w "%{http_code}\n" http://192.168.30.209:8765/import
 ```
 
-Ожидаемо: `200`. Если localhost отвечает, а по LAN IP — нет, возможна маршрутизация/интерфейс (редко при bind 0.0.0.0).
+Expected: `200`. If localhost works but LAN IP does not, routing/interface may be the cause (rare when binding to 0.0.0.0).
 
-### 4. Фаервол на Steam Deck
+### 4. Firewall on Steam Deck
 
-SteamOS (Arch-based) может использовать **iptables** или **nftables**. Входящие подключения к порту импорта по умолчанию могут блокироваться.
+SteamOS (Arch-based) may use **iptables** or **nftables**. Incoming connections to the import port may be blocked by default.
 
-Проверка:
+Check:
 
 ```bash
-# Есть ли правила, ограничивающие входящие?
+# Are there rules restricting incoming traffic?
 sudo iptables -L INPUT -n -v 2>/dev/null || true
 sudo nft list ruleset 2>/dev/null | head -80
 ```
 
-Если фаервол разрешает только часть портов (например, SSH 22, Steam), добавьте правило для порта импорта (например 8765).
+If the firewall only allows certain ports (e.g. SSH 22, Steam), add a rule for the import port (e.g. 8765).
 
-**nftables** (если используется):
+**nftables** (if used):
 
 ```bash
-# Разрешить входящий TCP на порт 8765 (подставьте свой порт)
+# Allow incoming TCP on port 8765 (use your port)
 sudo nft add rule inet filter input tcp dport 8765 accept
 ```
 
@@ -150,15 +150,15 @@ sudo nft add rule inet filter input tcp dport 8765 accept
 sudo iptables -I INPUT -p tcp --dport 8765 -j ACCEPT
 ```
 
-Правило действует до перезагрузки. Для постоянного правила нужна настройка скрипта/юнита вашей системы (SteamOS может сбрасывать правила при обновлении).
+The rule lasts until reboot. For a persistent rule you need a script/unit for your system (SteamOS may reset rules on update).
 
-После добавления правила снова откройте в браузере `https://192.168.30.209:8765/import` (при первом заходе примите предупреждение о сертификате — см. раздел «First visit: certificate warning» выше).
+After adding the rule, open `https://192.168.30.209:8765/import` in the browser again (on first visit accept the certificate warning — see "First visit: certificate warning" above).
 
-### Кратко
+### Summary
 
-| Проверка | Команда | Ожидание |
-|----------|--------|----------|
-| Порт слушает | `ss -tlnp \| grep 8765` | Строка с 0.0.0.0:8765 |
-| Локально | `curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8765/import` | 200 |
-| По LAN с Deck | `curl -s -o /dev/null -w "%{http_code}\n" http://192.168.30.209:8765/import` | 200 |
-| Фаервол | Открыть TCP 8765 (nft/iptables) | После правила — браузер открывает страницу |
+| Check | Command | Expected |
+|-------|---------|----------|
+| Port listening | `ss -tlnp \| grep 8765` | Line with 0.0.0.0:8765 |
+| Local | `curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8765/import` | 200 |
+| LAN from Deck | `curl -s -o /dev/null -w "%{http_code}\n" http://192.168.30.209:8765/import` | 200 |
+| Firewall | Open TCP 8765 (nft/iptables) | After rule — browser opens the page |

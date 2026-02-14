@@ -3,7 +3,7 @@
 **Feature Branch**: `003-refactor-decky-ux`  
 **Created**: 2026-02-03  
 **Status**: Ready for publication  
-**Input**: User description: "требуется отрефакторить интерфейс плагина xray-decky в соответствии с лучшими практиками UX плагинов decky loader"
+**Input**: User description: "Refactor the xray-decky plugin interface in line with Decky Loader plugin UX best practices."
 
 **Delivered in branch** (same release): UI refactor per this spec; additionally shipped in this branch: System Proxy (GNOME/KDE gsettings/kwriteconfig5), TUN system route setup/removal (xray0, sockopt.interface), xray Reality client config and SOCKS/HTTP inbounds (ports 10808/10809), import page assets (favicons, webmanifest), and backend error codes for reset gating (NOT_CONNECTED, CONNECTION_ACTIVE).
 
