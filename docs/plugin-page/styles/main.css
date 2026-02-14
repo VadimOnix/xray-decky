@@ -260,12 +260,20 @@ section {
   align-items: flex-start;
 }
 
+.feature-card picture {
+  flex-shrink: 0;
+  width: 64px;
+  height: 64px;
+  display: block;
+}
+
 .feature-icon {
   width: 64px;
   height: 64px;
   flex-shrink: 0;
   border-radius: var(--radius-sm);
   object-fit: cover;
+  display: block;
 }
 
 .feature-text h3 {

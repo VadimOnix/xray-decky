@@ -25,7 +25,11 @@
   <!-- Hero -->
   <header>
     <section class="hero" aria-labelledby="hero-title">
-      <img src="assets/hero-banner.png" alt="Xray Decky — Steam Deck with secure proxy connection visualization" class="hero-image" width="1200" height="400">
+      <picture>
+        <source type="image/avif" srcset="assets/hero-banner-400w.avif 400w, assets/hero-banner-800w.avif 800w, assets/hero-banner-1200w.avif 1200w" sizes="(max-width: 800px) 100vw, 800px">
+        <source type="image/webp" srcset="assets/hero-banner-400w.webp 400w, assets/hero-banner-800w.webp 800w, assets/hero-banner-1200w.webp 1200w" sizes="(max-width: 800px) 100vw, 800px">
+        <img src="assets/hero-banner-800w.png" srcset="assets/hero-banner-800w.png 800w" sizes="(max-width: 800px) 100vw, 800px" alt="Xray Decky — Steam Deck with secure proxy connection visualization" class="hero-image" width="1200" height="400" fetchpriority="high">
+      </picture>
       <h1 id="hero-title">Xray Decky</h1>
       <p class="hero-purpose">VLESS proxy connections with Reality protocol support for Steam Deck.</p>
       <p class="hero-platform">Steam Deck &middot; Decky Loader &middot; Open Source</p>
@@ -42,28 +46,44 @@
       <h2 id="features-title">Features</h2>
       <ul class="feature-list">
         <li class="feature-card">
-          <img src="assets/features/import.png" alt="Import VLESS configuration icon" class="feature-icon" width="256" height="256">
+          <picture>
+            <source type="image/avif" srcset="assets/features/import-128w.avif 128w, assets/features/import-256w.avif 256w" sizes="64px">
+            <source type="image/webp" srcset="assets/features/import-128w.webp 128w, assets/features/import-256w.webp 256w" sizes="64px">
+            <img src="assets/features/import-256w.png" alt="Import VLESS configuration icon" class="feature-icon" width="256" height="256" loading="lazy">
+          </picture>
           <div class="feature-text">
             <h3>Import VLESS Configurations</h3>
             <p>Import VLESS configurations via URL — single node or subscription. Supports the standard <code>vless://</code> URL format with Reality protocol parameters.</p>
           </div>
         </li>
         <li class="feature-card">
-          <img src="assets/features/toggle.png" alt="Connection toggle icon" class="feature-icon" width="256" height="256">
+          <picture>
+            <source type="image/avif" srcset="assets/features/toggle-128w.avif 128w, assets/features/toggle-256w.avif 256w" sizes="64px">
+            <source type="image/webp" srcset="assets/features/toggle-128w.webp 128w, assets/features/toggle-256w.webp 256w" sizes="64px">
+            <img src="assets/features/toggle-256w.png" alt="Connection toggle icon" class="feature-icon" width="256" height="256" loading="lazy">
+          </picture>
           <div class="feature-text">
             <h3>Connection Toggle</h3>
             <p>Turn your proxy connection on or off with a single tap in the Quick Access menu. Real-time status: disconnected, connecting, connected, or error.</p>
           </div>
         </li>
         <li class="feature-card">
-          <img src="assets/features/tun.png" alt="TUN mode network tunnel icon" class="feature-icon" width="256" height="256">
+          <picture>
+            <source type="image/avif" srcset="assets/features/tun-128w.avif 128w, assets/features/tun-256w.avif 256w" sizes="64px">
+            <source type="image/webp" srcset="assets/features/tun-128w.webp 128w, assets/features/tun-256w.webp 256w" sizes="64px">
+            <img src="assets/features/tun-256w.png" alt="TUN mode network tunnel icon" class="feature-icon" width="256" height="256" loading="lazy">
+          </picture>
           <div class="feature-text">
             <h3>TUN Mode</h3>
             <p>Route all system traffic through the proxy with TUN mode. Works system-wide — every app and game goes through the tunnel. Requires one-time privilege setup.</p>
           </div>
         </li>
         <li class="feature-card">
-          <img src="assets/features/kill-switch.png" alt="Kill switch shield icon" class="feature-icon" width="256" height="256">
+          <picture>
+            <source type="image/avif" srcset="assets/features/kill-switch-128w.avif 128w, assets/features/kill-switch-256w.avif 256w" sizes="64px">
+            <source type="image/webp" srcset="assets/features/kill-switch-128w.webp 128w, assets/features/kill-switch-256w.webp 256w" sizes="64px">
+            <img src="assets/features/kill-switch-256w.png" alt="Kill switch shield icon" class="feature-icon" width="256" height="256" loading="lazy">
+          </picture>
           <div class="feature-text">
             <h3>Kill Switch</h3>
             <p>Optional kill switch blocks all network traffic if the proxy disconnects unexpectedly — your real IP is never exposed.</p>
