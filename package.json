@@ -9,6 +9,7 @@
     "lint": "pnpm run lint:eslint && pnpm run lint:prettier",
     "lint:eslint": "eslint .",
     "lint:prettier": "prettier --check 'src/**/*.{ts,tsx,js,json}' '*.{json,mjs}'",
+    "lint:ts": "tsc --noEmit",
     "lint:fix": "eslint . --fix && prettier --write 'src/**/*.{ts,tsx,js,json}' '*.{json,mjs}'",
     "format": "prettier --write 'src/**/*.{ts,tsx,js,json}' '*.{json,mjs}'",
     "test": "echo 'No frontend tests configured'",
