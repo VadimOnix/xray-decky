@@ -32,11 +32,11 @@ devDependencies:
     specifier: ^4.57.1
     version: 4.57.1
   '@types/react':
-    specifier: 19.1.1
-    version: 19.1.1
+    specifier: 19.2.14
+    version: 19.2.14
   '@types/react-dom':
     specifier: 19.1.11
-    version: 19.1.11(@types/react@19.1.1)
+    version: 19.1.11(@types/react@19.2.14)
   '@types/webpack':
     specifier: ^5.28.5
     version: 5.28.5
@@ -385,27 +385,11 @@ packages:
     dev: true
     optional: true
 
-  /@rollup/rollup-linux-x64-musl@4.57.0:
-    resolution: {integrity: sha512-XeatKzo4lHDsVEbm1XDHZlhYZZSQYym6dg2X/Ko0kSFgio+KXLsxwJQprnR48GvdIKDOpqWqssC3iBCjoMcMpw==}
-    cpu: [x64]
-    os: [linux]
-    requiresBuild: true
-    dev: true
-    optional: true
-
   /@rollup/rollup-linux-x64-musl@4.57.1:
     resolution: {integrity: sha512-HFps0JeGtuOR2convgRRkHCekD7j+gdAuXM+/i6kGzQtFhlCtQkpwtNzkNj6QhCDp7DRJ7+qC/1Vg2jt5iSOFw==}
     cpu: [x64]
     os: [linux]
     dev: true
-
-  /@rollup/rollup-linux-x64-musl@4.57.1:
-    resolution: {integrity: sha512-HFps0JeGtuOR2convgRRkHCekD7j+gdAuXM+/i6kGzQtFhlCtQkpwtNzkNj6QhCDp7DRJ7+qC/1Vg2jt5iSOFw==}
-    cpu: [x64]
-    os: [linux]
-    requiresBuild: true
-    dev: true
-    optional: true
 
   /@rollup/rollup-openbsd-x64@4.57.1:
     resolution: {integrity: sha512-H+hXEv9gdVQuDTgnqD+SQffoWoc0Of59AStSzTEj/feWTBAnSfSD3+Dql1ZruJQxmykT/JVY0dE8Ka7z0DH1hw==}
@@ -483,16 +467,16 @@ packages:
       undici-types: 7.16.0
     dev: true
 
-  /@types/react-dom@19.1.11(@types/react@19.1.1):
+  /@types/react-dom@19.1.11(@types/react@19.2.14):
     resolution: {integrity: sha512-3BKc/yGdNTYQVVw4idqHtSOcFsgGuBbMveKCOgF8wQ5QtrYOc3jDIlzg3jef04zcXFIHLelyGlj0T+BJ8+KN+w==}
     peerDependencies:
       '@types/react': ^19.0.0
     dependencies:
-      '@types/react': 19.1.1
+      '@types/react': 19.2.14
     dev: true
 
-  /@types/react@19.1.1:
-    resolution: {integrity: sha512-ePapxDL7qrgqSF67s0h9m412d9DbXyC1n59O2st+9rjuuamWsZuD2w55rqY12CbzsZ7uVXb5Nw0gEp9Z8MMutQ==}
+  /@types/react@19.2.14:
+    resolution: {integrity: sha512-ilcTH/UniCkMdtexkoCN0bI7pMcJDvmQFPvuPvmEaYA/NSfFTAgdUSLAoVjaRJm7+6PvcM+q1zYOwS4wTYMF9w==}
     dependencies:
       csstype: 3.2.3
     dev: true
