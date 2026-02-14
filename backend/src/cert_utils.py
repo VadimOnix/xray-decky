@@ -41,12 +41,20 @@ def ensure_cert_key(runtime_dir: Path) -> tuple[Path, Path]:
     env.pop("LD_PRELOAD", None)
 
     cmd = [
-        _openssl_binary(), "req", "-x509", "-newkey", "rsa:2048",
-        "-keyout", str(key_path),
-        "-out", str(cert_path),
-        "-days", "365",
+        _openssl_binary(),
+        "req",
+        "-x509",
+        "-newkey",
+        "rsa:2048",
+        "-keyout",
+        str(key_path),
+        "-out",
+        str(cert_path),
+        "-days",
+        "365",
         "-nodes",
-        "-subj", "/CN=localhost/O=Xray Decky Import",
+        "-subj",
+        "/CN=localhost/O=Xray Decky Import",
     ]
     result = subprocess.run(
         cmd,

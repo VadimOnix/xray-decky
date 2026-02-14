@@ -1,15 +1,15 @@
-import { FC, useState } from 'react'
-import { DialogButtonPrimary, Field, Toggle } from '@decky/ui'
-import { FaPowerOff } from 'react-icons/fa'
-import { HelpPopover } from './ui/HelpPopover'
-import type { DeactivateKillSwitchResponse, ToggleKillSwitchResponse } from '../services/api'
+import { FC, useState } from 'react';
+import { DialogButtonPrimary, Field, Toggle } from '@decky/ui';
+import { FaPowerOff } from 'react-icons/fa';
+import { HelpPopover } from './ui/HelpPopover';
+import type { DeactivateKillSwitchResponse, ToggleKillSwitchResponse } from '../services/api';
 
 interface KillSwitchToggleProps {
-  enabled: boolean
-  isActive: boolean
-  activatedAt?: number | null
-  onToggle: (enabled: boolean) => Promise<ToggleKillSwitchResponse>
-  onDeactivate: () => Promise<DeactivateKillSwitchResponse>
+  enabled: boolean;
+  isActive: boolean;
+  activatedAt?: number | null;
+  onToggle: (enabled: boolean) => Promise<ToggleKillSwitchResponse>;
+  onDeactivate: () => Promise<DeactivateKillSwitchResponse>;
 }
 
 export const KillSwitchToggle: FC<KillSwitchToggleProps> = ({
@@ -19,48 +19,48 @@ export const KillSwitchToggle: FC<KillSwitchToggleProps> = ({
   onToggle,
   onDeactivate,
 }) => {
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const leftDescriptionStyle = { display: 'block', textAlign: 'left' } as const
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const leftDescriptionStyle = { display: 'block', textAlign: 'left' } as const;
 
   const handleToggle = async (nextEnabled: boolean) => {
-    setError(null)
-    setLoading(true)
+    setError(null);
+    setLoading(true);
 
     try {
-      const result = await onToggle(nextEnabled)
+      const result = await onToggle(nextEnabled);
       if (!result.success) {
-        setError('Failed to toggle kill switch')
+        setError('Failed to toggle kill switch');
       }
     } catch (err) {
-      console.error('Toggle error:', err)
-      setError('Network error. Please check your connection and try again.')
+      console.error('Toggle error:', err);
+      setError('Network error. Please check your connection and try again.');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleDeactivate = async () => {
-    setError(null)
-    setLoading(true)
+    setError(null);
+    setLoading(true);
 
     try {
-      const result = await onDeactivate()
+      const result = await onDeactivate();
       if (!result.success) {
-        setError(result.error || 'Failed to deactivate kill switch')
+        setError(result.error || 'Failed to deactivate kill switch');
       }
     } catch (err) {
-      console.error('Deactivate error:', err)
-      setError('Network error. Please check your connection and try again.')
+      console.error('Deactivate error:', err);
+      setError('Network error. Please check your connection and try again.');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const formatTime = (timestamp: number | null): string => {
-    if (!timestamp) return ''
-    return new Date(timestamp * 1000).toLocaleString()
-  }
+    if (!timestamp) return '';
+    return new Date(timestamp * 1000).toLocaleString();
+  };
 
   return (
     <div style={{ padding: '10px' }}>
@@ -81,7 +81,9 @@ export const KillSwitchToggle: FC<KillSwitchToggleProps> = ({
         <Field
           label="Enable Kill Switch"
           description={
-            <span style={leftDescriptionStyle}>Blocks all traffic if the proxy disconnects unexpectedly.</span>
+            <span style={leftDescriptionStyle}>
+              Blocks all traffic if the proxy disconnects unexpectedly.
+            </span>
           }
           bottomSeparator="none"
           highlightOnFocus
@@ -106,12 +108,19 @@ export const KillSwitchToggle: FC<KillSwitchToggleProps> = ({
               <strong>⚠️ KILL SWITCH ACTIVE</strong>
             </p>
             <p style={{ marginTop: '5px' }}>
-              All system traffic is currently blocked. This happened because the proxy disconnected unexpectedly.
+              All system traffic is currently blocked. This happened because the proxy disconnected
+              unexpectedly.
             </p>
             {activatedAt && (
-              <p style={{ marginTop: '5px', fontSize: '12px' }}>Activated at: {formatTime(activatedAt)}</p>
+              <p style={{ marginTop: '5px', fontSize: '12px' }}>
+                Activated at: {formatTime(activatedAt)}
+              </p>
             )}
-            <DialogButtonPrimary onClick={handleDeactivate} disabled={loading} style={{ width: '100%' }}>
+            <DialogButtonPrimary
+              onClick={handleDeactivate}
+              disabled={loading}
+              style={{ width: '100%' }}
+            >
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
                 <FaPowerOff />
                 {loading ? 'Deactivating...' : 'Deactivate Kill Switch'}
@@ -135,7 +144,9 @@ export const KillSwitchToggle: FC<KillSwitchToggleProps> = ({
             <p>
               <strong>✓ Kill Switch Enabled</strong>
             </p>
-            <p style={{ marginTop: '5px' }}>Traffic will be blocked if the proxy disconnects unexpectedly.</p>
+            <p style={{ marginTop: '5px' }}>
+              Traffic will be blocked if the proxy disconnects unexpectedly.
+            </p>
           </div>
         )}
 
@@ -162,5 +173,5 @@ export const KillSwitchToggle: FC<KillSwitchToggleProps> = ({
         )}
       </div>
     </div>
-  )
-}
+  );
+};

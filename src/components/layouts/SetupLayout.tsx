@@ -1,15 +1,15 @@
-import { FC } from 'react'
-import { ConfigImport } from '../ConfigImport'
-import { QRImportBlock } from '../QRImportBlock'
-import { PanelSection, PanelSectionRow } from '../ui/primitives'
+import { FC } from 'react';
+import { ConfigImport } from '../ConfigImport';
+import { QRImportBlock } from '../QRImportBlock';
+import { PanelSection, PanelSectionRow } from '../ui/primitives';
 
 interface SetupLayoutProps {
-  vlessUrl: string
-  onVlessUrlChange: (value: string) => void
-  onSave: () => void
-  isSaving: boolean
-  error?: string | null
-  successMessage?: string | null
+  vlessUrl: string;
+  onVlessUrlChange: (value: string) => void;
+  onSave: () => void;
+  isSaving: boolean;
+  error?: string | null;
+  successMessage?: string | null;
 }
 
 export const SetupLayout: FC<SetupLayoutProps> = ({
@@ -37,5 +37,5 @@ export const SetupLayout: FC<SetupLayoutProps> = ({
         />
       </PanelSectionRow>
     </PanelSection>
-  )
-}
+  );
+};

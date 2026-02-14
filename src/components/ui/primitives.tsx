@@ -1,9 +1,9 @@
-import type { CSSProperties, ReactNode } from 'react'
-import { quickAccessMenuClasses } from '@decky/ui'
+import type { CSSProperties, ReactNode } from 'react';
+import { quickAccessMenuClasses } from '@decky/ui';
 
 interface PanelSectionProps {
-  title?: string
-  children: ReactNode
+  title?: string;
+  children: ReactNode;
 }
 
 export function PanelSection({ title, children }: PanelSectionProps) {
@@ -12,11 +12,11 @@ export function PanelSection({ title, children }: PanelSectionProps) {
       {title && <div className={quickAccessMenuClasses.PanelSectionTitle}>{title}</div>}
       {children}
     </div>
-  )
+  );
 }
 
 export function PanelSectionRow({ children }: { children: ReactNode }) {
-  return <div className={quickAccessMenuClasses.PanelSectionRow}>{children}</div>
+  return <div className={quickAccessMenuClasses.PanelSectionRow}>{children}</div>;
 }
 
 const helpButtonStyle: CSSProperties = {
@@ -33,12 +33,12 @@ const helpButtonStyle: CSSProperties = {
   lineHeight: 1,
   marginLeft: '6px',
   cursor: 'pointer',
-}
+};
 
 export function HelpIconButton({ label, onClick }: { label: string; onClick: () => void }) {
   return (
     <button type="button" aria-label={label} onClick={onClick} style={helpButtonStyle}>
       ?
     </button>
-  )
+  );
 }

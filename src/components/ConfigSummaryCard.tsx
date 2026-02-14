@@ -1,23 +1,23 @@
-import { FC } from 'react'
-import { Field } from '@decky/ui'
-import type { ConnectionConfigSummary } from '../types/ui'
+import { FC } from 'react';
+import { Field } from '@decky/ui';
+import type { ConnectionConfigSummary } from '../types/ui';
 
 interface ConfigSummaryCardProps {
-  summary: ConnectionConfigSummary
+  summary: ConnectionConfigSummary;
 }
 
 export const ConfigSummaryCard: FC<ConfigSummaryCardProps> = ({ summary }) => {
   if (!summary.exists) {
-    return null
+    return null;
   }
 
-  const statusText = summary.isValid ? 'Valid' : 'Invalid'
-  const leftDescriptionStyle = { display: 'block', textAlign: 'left' } as const
+  const statusText = summary.isValid ? 'Valid' : 'Invalid';
+  const leftDescriptionStyle = { display: 'block', textAlign: 'left' } as const;
   const cardStyle = {
     padding: '10px',
     backgroundColor: '#1e3a5f',
     borderRadius: '6px',
-  }
+  };
 
   return (
     <div style={cardStyle}>
@@ -44,7 +44,11 @@ export const ConfigSummaryCard: FC<ConfigSummaryCardProps> = ({ summary }) => {
         <Field
           label="Validation error"
           bottomSeparator="none"
-          description={<span style={{ ...leftDescriptionStyle, color: '#ff6b6b' }}>{summary.validationError}</span>}
+          description={
+            <span style={{ ...leftDescriptionStyle, color: '#ff6b6b' }}>
+              {summary.validationError}
+            </span>
+          }
         />
       )}
       {summary.source && (
@@ -55,5 +59,5 @@ export const ConfigSummaryCard: FC<ConfigSummaryCardProps> = ({ summary }) => {
         />
       )}
     </div>
-  )
-}
+  );
+};

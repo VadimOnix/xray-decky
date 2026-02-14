@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 
 class ConnectionStatus(Enum):
     """Connection status enumeration."""
+
     DISCONNECTED = "disconnected"
     CONNECTING = "connecting"
     CONNECTED = "connected"
@@ -25,7 +26,7 @@ class ConnectionStatus(Enum):
 class ConnectionState:
     """
     Manages the current connection state.
-    
+
     Tracks:
     - Connection status
     - Process information (xray-core PID)
@@ -33,7 +34,7 @@ class ConnectionState:
     - Error information
     - Active configuration
     """
-    
+
     def __init__(self):
         self.status: ConnectionStatus = ConnectionStatus.DISCONNECTED
         self.connected_at: Optional[float] = None
@@ -53,27 +54,27 @@ class ConnectionState:
             "bytesSent": self.bytes_sent,
             "bytesReceived": self.bytes_received,
         }
-        
+
         if self.connected_at:
             result["connectedAt"] = int(self.connected_at)
             if self.status == ConnectionStatus.CONNECTED:
                 result["uptime"] = int(time.time() - self.connected_at)
-        
+
         if self.disconnected_at:
             result["disconnectedAt"] = int(self.disconnected_at)
-        
+
         if self.error_message:
             result["errorMessage"] = self.error_message
-        
+
         if self.error_code:
             result["errorCode"] = self.error_code
-        
+
         if self.xray_process_id:
             result["processId"] = self.xray_process_id
-        
+
         if self.xray_config_path:
             result["configPath"] = self.xray_config_path
-        
+
         return result
 
     def set_connecting(self):
@@ -126,14 +127,14 @@ def get_connection_state() -> ConnectionState:
 def load_connection_state_from_settings(settings: "SettingsManager") -> None:
     """
     Load connection state from SettingsManager on plugin startup.
-    
+
     Args:
         settings: SettingsManager instance
     """
     try:
         saved_state = settings.getSetting("connectionState", {})
         status_str = saved_state.get("status", "disconnected")
-        
+
         # Map string status to enum
         status_map = {
             "disconnected": ConnectionStatus.DISCONNECTED,
@@ -142,9 +143,11 @@ def load_connection_state_from_settings(settings: "SettingsManager") -> None:
             "error": ConnectionStatus.ERROR,
             "blocked": ConnectionStatus.BLOCKED,
         }
-        
-        _connection_state.status = status_map.get(status_str, ConnectionStatus.DISCONNECTED)
-        
+
+        _connection_state.status = status_map.get(
+            status_str, ConnectionStatus.DISCONNECTED
+        )
+
         # Note: Process ID and config path are not persisted (recreated on restart)
         # Only status is persisted for UI restoration
     except Exception as e:

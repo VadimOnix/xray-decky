@@ -10,6 +10,7 @@ from typing import Dict, Optional, Any
 # Error code constants
 class ErrorCode:
     """Error code constants."""
+
     NO_CONFIG = "NO_CONFIG"
     INVALID_CONFIG = "INVALID_CONFIG"
     INVALID_URL = "INVALID_URL"
@@ -44,25 +45,27 @@ ERROR_MESSAGES: Dict[str, str] = {
 def get_error_message(error_code: str, default: Optional[str] = None) -> str:
     """
     Get user-friendly error message for an error code.
-    
+
     Args:
         error_code: Error code constant
         default: Default message if error code not found
-    
+
     Returns:
         User-friendly error message
     """
     return ERROR_MESSAGES.get(error_code, default or "An error occurred.")
 
 
-def create_error_response(error_code: str, custom_message: Optional[str] = None) -> Dict[str, Any]:
+def create_error_response(
+    error_code: str, custom_message: Optional[str] = None
+) -> Dict[str, Any]:
     """
     Create a standardized error response.
-    
+
     Args:
         error_code: Error code constant
         custom_message: Optional custom error message
-    
+
     Returns:
         Dictionary with success=False and error information
     """
@@ -77,10 +80,10 @@ def create_error_response(error_code: str, custom_message: Optional[str] = None)
 def create_success_response(data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """
     Create a standardized success response.
-    
+
     Args:
         data: Optional additional data to include
-    
+
     Returns:
         Dictionary with success=True and optional data
     """

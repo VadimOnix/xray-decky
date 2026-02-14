@@ -1,8 +1,8 @@
-import type { HelpTopic } from '../types/ui'
+import type { HelpTopic } from '../types/ui';
 
 export interface HelpContent {
-  title: string
-  body: string
+  title: string;
+  body: string;
 }
 
 const helpContent: Record<HelpTopic, HelpContent> = {
@@ -34,6 +34,6 @@ const helpContent: Record<HelpTopic, HelpContent> = {
     title: 'Kill switch',
     body: 'Blocks all traffic if the proxy disconnects unexpectedly. Enable only if you want strict leak prevention.',
   },
-}
+};
 
-export const getHelpContent = (topic: HelpTopic): HelpContent => helpContent[topic]
+export const getHelpContent = (topic: HelpTopic): HelpContent => helpContent[topic];

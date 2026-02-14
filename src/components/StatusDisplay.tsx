@@ -1,68 +1,73 @@
-import { FC } from 'react'
-import { Field } from '@decky/ui'
-import type { ConnectionStatus } from '../services/api'
+import { FC } from 'react';
+import { Field } from '@decky/ui';
+import type { ConnectionStatus } from '../services/api';
 
 interface StatusDisplayProps {
-  status: ConnectionStatus
-  errorMessage?: string | null
-  uptime?: number | null
-  connectedAt?: number | null
+  status: ConnectionStatus;
+  errorMessage?: string | null;
+  uptime?: number | null;
+  connectedAt?: number | null;
 }
 
-export const StatusDisplay: FC<StatusDisplayProps> = ({ status, errorMessage, uptime, connectedAt }) => {
-  const leftDescriptionStyle = { display: 'block', textAlign: 'left' } as const
+export const StatusDisplay: FC<StatusDisplayProps> = ({
+  status,
+  errorMessage,
+  uptime,
+  connectedAt,
+}) => {
+  const leftDescriptionStyle = { display: 'block', textAlign: 'left' } as const;
   const getStatusColor = (): string => {
     switch (status) {
       case 'connected':
-        return '#6bff6b'
+        return '#6bff6b';
       case 'connecting':
-        return '#ffd93d'
+        return '#ffd93d';
       case 'error':
-        return '#ff6b6b'
+        return '#ff6b6b';
       case 'blocked':
-        return '#ff6b6b'
+        return '#ff6b6b';
       default:
-        return '#aaa'
+        return '#aaa';
     }
-  }
+  };
 
   const getStatusText = (): string => {
     switch (status) {
       case 'connected':
-        return 'Connected'
+        return 'Connected';
       case 'connecting':
-        return 'Connecting...'
+        return 'Connecting...';
       case 'error':
-        return 'Error'
+        return 'Error';
       case 'blocked':
-        return 'Blocked (Kill Switch)'
+        return 'Blocked (Kill Switch)';
       default:
-        return 'Disconnected'
+        return 'Disconnected';
     }
-  }
+  };
 
   const formatUptime = (seconds?: number | null): string => {
-    if (!seconds) return ''
+    if (!seconds) return '';
 
-    const hours = Math.floor(seconds / 3600)
-    const minutes = Math.floor((seconds % 3600) / 60)
-    const secs = seconds % 60
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
 
     if (hours > 0) {
-      return `${hours}h ${minutes}m ${secs}s`
+      return `${hours}h ${minutes}m ${secs}s`;
     } else if (minutes > 0) {
-      return `${minutes}m ${secs}s`
+      return `${minutes}m ${secs}s`;
     } else {
-      return `${secs}s`
+      return `${secs}s`;
     }
-  }
+  };
 
   const cardStyle = {
     padding: '10px',
     backgroundColor: '#1b2a3a',
     borderRadius: '6px',
     marginBottom: '10px',
-  }
+  };
 
   const statusIndicator = (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
@@ -77,7 +82,7 @@ export const StatusDisplay: FC<StatusDisplayProps> = ({ status, errorMessage, up
       />
       <span style={{ fontWeight: 600 }}>{getStatusText()}</span>
     </span>
-  )
+  );
 
   return (
     <div style={cardStyle}>
@@ -98,7 +103,11 @@ export const StatusDisplay: FC<StatusDisplayProps> = ({ status, errorMessage, up
         <Field
           label="Connected at"
           bottomSeparator="none"
-          description={<span style={leftDescriptionStyle}>{new Date(connectedAt * 1000).toLocaleString()}</span>}
+          description={
+            <span style={leftDescriptionStyle}>
+              {new Date(connectedAt * 1000).toLocaleString()}
+            </span>
+          }
         />
       )}
 
@@ -106,7 +115,9 @@ export const StatusDisplay: FC<StatusDisplayProps> = ({ status, errorMessage, up
         <Field
           label="Error"
           bottomSeparator="none"
-          description={<span style={{ ...leftDescriptionStyle, color: '#ff6b6b' }}>{errorMessage}</span>}
+          description={
+            <span style={{ ...leftDescriptionStyle, color: '#ff6b6b' }}>{errorMessage}</span>
+          }
         />
       )}
 
@@ -122,5 +133,5 @@ export const StatusDisplay: FC<StatusDisplayProps> = ({ status, errorMessage, up
         />
       )}
     </div>
-  )
-}
+  );
+};

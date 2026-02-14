@@ -1,7 +1,7 @@
-import type { FC, ReactNode } from 'react'
+import type { FC, ReactNode } from 'react';
 
 interface OptionsBlockProps {
-  children: ReactNode
+  children: ReactNode;
 }
 
 export const OptionsBlock: FC<OptionsBlockProps> = ({ children }) => {
@@ -14,5 +14,5 @@ export const OptionsBlock: FC<OptionsBlockProps> = ({ children }) => {
     >
       {children}
     </div>
-  )
-}
+  );
+};

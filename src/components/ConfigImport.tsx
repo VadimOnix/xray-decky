@@ -1,17 +1,17 @@
-import { FC } from 'react'
-import { ButtonItem, TextField } from '@decky/ui'
-import { FaSave } from 'react-icons/fa'
-import { HelpPopover } from './ui/HelpPopover'
-import type { HelpTopic } from '../types/ui'
+import { FC } from 'react';
+import { ButtonItem, TextField } from '@decky/ui';
+import { FaSave } from 'react-icons/fa';
+import { HelpPopover } from './ui/HelpPopover';
+import type { HelpTopic } from '../types/ui';
 
 interface ConfigImportProps {
-  value: string
-  onChange: (value: string) => void
-  onSave: () => void
-  isSaving: boolean
-  error?: string | null
-  successMessage?: string | null
-  helpTopic?: HelpTopic
+  value: string;
+  onChange: (value: string) => void;
+  onSave: () => void;
+  isSaving: boolean;
+  error?: string | null;
+  successMessage?: string | null;
+  helpTopic?: HelpTopic;
 }
 
 export const ConfigImport: FC<ConfigImportProps> = ({
@@ -23,21 +23,25 @@ export const ConfigImport: FC<ConfigImportProps> = ({
   successMessage,
   helpTopic,
 }) => {
-  const labelText = isSaving ? 'Saving…' : 'Save configuration'
-  const leftDescriptionStyle = { display: 'block', textAlign: 'left' } as const
+  const labelText = isSaving ? 'Saving…' : 'Save configuration';
+  const leftDescriptionStyle = { display: 'block', textAlign: 'left' } as const;
 
   return (
     <div>
       <TextField
         label="VLESS link"
         description={
-          <span style={leftDescriptionStyle}>Paste or edit your VLESS link. We validate the link before saving.</span>
+          <span style={leftDescriptionStyle}>
+            Paste or edit your VLESS link. We validate the link before saving.
+          </span>
         }
         value={value}
         onChange={(event) => onChange(event.target.value)}
         disabled={isSaving}
         bShowClearAction
-        inlineControls={helpTopic ? <HelpPopover label="Help: VLESS link" topic={helpTopic} /> : undefined}
+        inlineControls={
+          helpTopic ? <HelpPopover label="Help: VLESS link" topic={helpTopic} /> : undefined
+        }
       />
 
       {error && (
@@ -72,7 +76,9 @@ export const ConfigImport: FC<ConfigImportProps> = ({
         <ButtonItem
           icon={<FaSave />}
           description={
-            <span style={leftDescriptionStyle}>Save the VLESS link and switch to the configured layout.</span>
+            <span style={leftDescriptionStyle}>
+              Save the VLESS link and switch to the configured layout.
+            </span>
           }
           onClick={onSave}
           disabled={isSaving || !value.trim()}
@@ -81,5 +87,5 @@ export const ConfigImport: FC<ConfigImportProps> = ({
         </ButtonItem>
       </div>
     </div>
-  )
-}
+  );
+};

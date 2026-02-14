@@ -1,24 +1,24 @@
-import { FC, useEffect, useMemo, useRef, useState } from 'react'
-import type { CSSProperties } from 'react'
-import { getHelpContent } from '../../utils/helpContent'
-import type { HelpTopic } from '../../types/ui'
-import { HelpIconButton } from './primitives'
+import { FC, useEffect, useMemo, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
+import { getHelpContent } from '../../utils/helpContent';
+import type { HelpTopic } from '../../types/ui';
+import { HelpIconButton } from './primitives';
 
 interface HelpPopoverProps {
-  topic: HelpTopic
-  label: string
+  topic: HelpTopic;
+  label: string;
 }
 
 export const HelpPopover: FC<HelpPopoverProps> = ({ topic, label }) => {
-  const [isOpen, setIsOpen] = useState(false)
-  const containerRef = useRef<HTMLSpanElement | null>(null)
-  const content = useMemo(() => getHelpContent(topic), [topic])
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLSpanElement | null>(null);
+  const content = useMemo(() => getHelpContent(topic), [topic]);
 
   const containerStyle: CSSProperties = {
     position: 'relative',
     display: 'inline-flex',
     alignItems: 'center',
-  }
+  };
 
   const popoverStyle: CSSProperties = {
     position: 'absolute',
@@ -32,7 +32,7 @@ export const HelpPopover: FC<HelpPopoverProps> = ({ topic, label }) => {
     maxWidth: '320px',
     zIndex: 20,
     boxShadow: '0 8px 24px rgba(0, 0, 0, 0.35)',
-  }
+  };
 
   const headerStyle: CSSProperties = {
     display: 'flex',
@@ -43,14 +43,14 @@ export const HelpPopover: FC<HelpPopoverProps> = ({ topic, label }) => {
     color: '#c7d5e0',
     fontSize: '13px',
     fontWeight: 600,
-  }
+  };
 
   const bodyStyle: CSSProperties = {
     color: '#c7d5e0',
     fontSize: '12px',
     lineHeight: 1.35,
     whiteSpace: 'normal',
-  }
+  };
 
   const closeButtonStyle: CSSProperties = {
     border: 'none',
@@ -60,39 +60,39 @@ export const HelpPopover: FC<HelpPopoverProps> = ({ topic, label }) => {
     fontSize: '12px',
     lineHeight: 1,
     padding: 0,
-  }
+  };
 
   const handleToggle = () => {
-    setIsOpen((prev) => !prev)
-  }
+    setIsOpen((prev) => !prev);
+  };
 
   useEffect(() => {
-    if (!isOpen) return
+    if (!isOpen) return;
 
     const handlePointerDown = (event: MouseEvent | TouchEvent) => {
-      if (!containerRef.current) return
+      if (!containerRef.current) return;
       if (event.target instanceof Node && containerRef.current.contains(event.target)) {
-        return
+        return;
       }
-      setIsOpen(false)
-    }
+      setIsOpen(false);
+    };
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        setIsOpen(false)
+        setIsOpen(false);
       }
-    }
+    };
 
-    document.addEventListener('mousedown', handlePointerDown)
-    document.addEventListener('touchstart', handlePointerDown)
-    document.addEventListener('keydown', handleKeyDown)
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('touchstart', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
 
     return () => {
-      document.removeEventListener('mousedown', handlePointerDown)
-      document.removeEventListener('touchstart', handlePointerDown)
-      document.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [isOpen])
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('touchstart', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen]);
 
   return (
     <span ref={containerRef} style={containerStyle}>
@@ -101,7 +101,12 @@ export const HelpPopover: FC<HelpPopoverProps> = ({ topic, label }) => {
         <div style={popoverStyle} role="dialog" aria-label={content.title}>
           <div style={headerStyle}>
             <span>{content.title}</span>
-            <button type="button" aria-label="Close help" style={closeButtonStyle} onClick={handleToggle}>
+            <button
+              type="button"
+              aria-label="Close help"
+              style={closeButtonStyle}
+              onClick={handleToggle}
+            >
               x
             </button>
           </div>
@@ -109,5 +114,5 @@ export const HelpPopover: FC<HelpPopoverProps> = ({ topic, label }) => {
         </div>
       )}
     </span>
-  )
-}
+  );
+};
