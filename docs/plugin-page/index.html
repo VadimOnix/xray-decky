@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Xray Decky — Decky Loader plugin for Steam Deck that enables VLESS proxy connections with Reality protocol support.">
+  <title>Xray Decky – VLESS Proxy for Steam Deck</title>
+  <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="site-nav" aria-label="Main navigation">
+    <div class="nav-inner">
+      <a href="#" class="nav-brand">Xray Decky</a>
+      <ul class="nav-links">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#install">Install</a></li>
+        <li><a href="#usage">Usage</a></li>
+        <li><a href="#troubleshooting">Help</a></li>
+        <li><a href="https://github.com/VadimOnix/xray-decky" class="nav-github" target="_blank" rel="noopener"><span class="nav-github-long">GitHub ↗</span><span class="nav-github-short">GitHub</span></a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <header>
+    <section class="hero" aria-labelledby="hero-title">
+      <picture>
+        <source type="image/avif" srcset="assets/hero-banner-400w.avif 400w, assets/hero-banner-800w.avif 800w, assets/hero-banner-1200w.avif 1200w" sizes="(max-width: 800px) 100vw, 800px">
+        <source type="image/webp" srcset="assets/hero-banner-400w.webp 400w, assets/hero-banner-800w.webp 800w, assets/hero-banner-1200w.webp 1200w" sizes="(max-width: 800px) 100vw, 800px">
+        <img src="assets/hero-banner-800w.png" srcset="assets/hero-banner-800w.png 800w" sizes="(max-width: 800px) 100vw, 800px" alt="Xray Decky — Steam Deck with secure proxy connection visualization" class="hero-image" width="1200" height="400" fetchpriority="high">
+      </picture>
+      <h1 id="hero-title">Xray Decky</h1>
+      <p class="hero-purpose">VLESS proxy connections with Reality protocol support for Steam Deck.</p>
+      <p class="hero-platform">Steam Deck &middot; Decky Loader &middot; Open Source</p>
+      <div class="hero-actions">
+        <a href="#install" class="btn btn-primary">Install Plugin</a>
+        <a href="https://github.com/VadimOnix/xray-decky" class="btn btn-secondary" target="_blank" rel="noopener">View on GitHub</a>
+      </div>
+    </section>
+  </header>
+
+  <main>
+    <!-- Features -->
+    <section class="features" id="features" aria-labelledby="features-title">
+      <h2 id="features-title">Features</h2>
+      <ul class="feature-list">
+        <li class="feature-card">
+          <picture>
+            <source type="image/avif" srcset="assets/features/import-128w.avif 128w, assets/features/import-256w.avif 256w" sizes="64px">
+            <source type="image/webp" srcset="assets/features/import-128w.webp 128w, assets/features/import-256w.webp 256w" sizes="64px">
+            <img src="assets/features/import-256w.png" alt="Import VLESS configuration icon" class="feature-icon" width="256" height="256" loading="lazy">
+          </picture>
+          <div class="feature-text">
+            <h3>Import VLESS Configurations</h3>
+            <p>Import VLESS configurations via URL — single node or subscription. Supports the standard <code>vless://</code> URL format with Reality protocol parameters.</p>
+          </div>
+        </li>
+        <li class="feature-card">
+          <picture>
+            <source type="image/avif" srcset="assets/features/toggle-128w.avif 128w, assets/features/toggle-256w.avif 256w" sizes="64px">
+            <source type="image/webp" srcset="assets/features/toggle-128w.webp 128w, assets/features/toggle-256w.webp 256w" sizes="64px">
+            <img src="assets/features/toggle-256w.png" alt="Connection toggle icon" class="feature-icon" width="256" height="256" loading="lazy">
+          </picture>
+          <div class="feature-text">
+            <h3>Connection Toggle</h3>
+            <p>Turn your proxy connection on or off with a single tap in the Quick Access menu. Real-time status: disconnected, connecting, connected, or error.</p>
+          </div>
+        </li>
+        <li class="feature-card">
+          <picture>
+            <source type="image/avif" srcset="assets/features/tun-128w.avif 128w, assets/features/tun-256w.avif 256w" sizes="64px">
+            <source type="image/webp" srcset="assets/features/tun-128w.webp 128w, assets/features/tun-256w.webp 256w" sizes="64px">
+            <img src="assets/features/tun-256w.png" alt="TUN mode network tunnel icon" class="feature-icon" width="256" height="256" loading="lazy">
+          </picture>
+          <div class="feature-text">
+            <h3>TUN Mode</h3>
+            <p>Route all system traffic through the proxy with TUN mode. Works system-wide — every app and game goes through the tunnel. Requires one-time privilege setup.</p>
+          </div>
+        </li>
+        <li class="feature-card">
+          <picture>
+            <source type="image/avif" srcset="assets/features/kill-switch-128w.avif 128w, assets/features/kill-switch-256w.avif 256w" sizes="64px">
+            <source type="image/webp" srcset="assets/features/kill-switch-128w.webp 128w, assets/features/kill-switch-256w.webp 256w" sizes="64px">
+            <img src="assets/features/kill-switch-256w.png" alt="Kill switch shield icon" class="feature-icon" width="256" height="256" loading="lazy">
+          </picture>
+          <div class="feature-text">
+            <h3>Kill Switch</h3>
+            <p>Optional kill switch blocks all network traffic if the proxy disconnects unexpectedly — your real IP is never exposed.</p>
+          </div>
+        </li>
+      </ul>
+    </section>
+
+    <!-- Installation -->
+    <section class="install" id="install" aria-labelledby="install-title">
+      <h2 id="install-title">Installation</h2>
+
+      <div class="install-prereq">
+        <h3>Prerequisites</h3>
+        <ul>
+          <li>Steam Deck with <a href="https://wiki.deckbrew.xyz/" target="_blank" rel="noopener">Decky Loader</a> installed</li>
+          <li>For TUN mode: one-time elevated privileges setup (see below)</li>
+        </ul>
+      </div>
+
+      <div class="install-methods">
+        <div class="install-method install-method--primary">
+          <h3>Option 1: Plugin Store (Recommended)</h3>
+          <ol>
+            <li>Open <strong>Decky Loader</strong> settings (Quick Access → ⋯)</li>
+            <li>Navigate to <strong>Plugin Store</strong></li>
+            <li>Search for <strong>"Xray Decky"</strong></li>
+            <li>Click <strong>Install</strong></li>
+          </ol>
+        </div>
+
+        <div class="install-method">
+          <h3>Option 2: Desktop Mode (One-Click)</h3>
+          <ol>
+            <li>Switch to Desktop Mode (Power menu → Desktop Mode)</li>
+            <li>Download <a href="https://raw.githubusercontent.com/VadimOnix/xray-decky/master/scripts/Install-Xray-Decky.desktop" target="_blank" rel="noopener">Install-Xray-Decky.desktop</a></li>
+            <li>Right-click → Properties → Permissions → enable "Is executable"</li>
+            <li>Double-click to run the installer</li>
+            <li>Switch back to Gaming Mode; the plugin appears in Quick Access (⋯)</li>
+          </ol>
+        </div>
+
+        <div class="install-method">
+          <h3>Option 3: Manual Install</h3>
+          <ol>
+            <li>Download the <a href="https://github.com/VadimOnix/xray-decky/releases/latest" target="_blank" rel="noopener">latest release</a> zip file</li>
+            <li>In Decky Loader → Settings → Developer → Install Plugin from URL</li>
+            <li>Enter the URL to the zip file</li>
+          </ol>
+        </div>
+      </div>
+
+      <details class="tun-setup">
+        <summary><h3>TUN Mode Setup (Optional)</h3></summary>
+        <p>TUN mode requires elevated privileges to create network interfaces. Without it, the plugin uses SOCKS proxy mode.</p>
+        <ol>
+          <li>
+            <strong>Enable Developer Mode</strong> (if not already):
+            <br>Go to Settings → System → Enable Developer Mode
+          </li>
+          <li>
+            <strong>Set up sudo exemption</strong>:
+            <br>Open Konsole (Desktop Mode) or SSH into your Steam Deck:
+            <pre><code>sudo nano /etc/sudoers.d/decky-tun</code></pre>
+            Add the following lines:
+            <pre><code>deck ALL=(ALL) NOPASSWD: /usr/bin/ip tuntap add mode tun *
+deck ALL=(ALL) NOPASSWD: /usr/bin/ip tuntap del mode tun *</code></pre>
+            Save (Ctrl+X, Y, Enter), then set permissions:
+            <pre><code>sudo chmod 0440 /etc/sudoers.d/decky-tun</code></pre>
+          </li>
+          <li>
+            <strong>Verify</strong>: Open the plugin in Decky Loader — it will automatically check for privileges.
+          </li>
+        </ol>
+      </details>
+    </section>
+
+    <!-- Usage -->
+    <section class="usage" id="usage" aria-labelledby="usage-title">
+      <h2 id="usage-title">Usage</h2>
+      <div class="usage-steps">
+        <div class="usage-step">
+          <span class="step-number">1</span>
+          <div>
+            <h3>Import Configuration</h3>
+            <p>Open the plugin in Decky Loader, enter your VLESS URL in the import field, and click Import. The configuration will be validated and stored.</p>
+            <p class="text-muted">VLESS URL format: <code>vless://uuid@host:port?params#name</code></p>
+          </div>
+        </div>
+        <div class="usage-step">
+          <span class="step-number">2</span>
+          <div>
+            <h3>Connect</h3>
+            <p>Use the connection toggle to turn the proxy on. Status shows in real-time: disconnected, connecting, connected, or error. Toggle off to disconnect.</p>
+          </div>
+        </div>
+        <div class="usage-step">
+          <span class="step-number">3</span>
+          <div>
+            <h3>Configure (Optional)</h3>
+            <p>Enable TUN mode for system-wide routing, or activate the kill switch for extra safety. Both are optional — the plugin works great with default settings.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Troubleshooting -->
+    <section class="troubleshooting" id="troubleshooting" aria-labelledby="troubleshooting-title">
+      <h2 id="troubleshooting-title">Troubleshooting</h2>
+      <div class="faq-list">
+        <details class="faq-item">
+          <summary>Connection fails</summary>
+          <ul>
+            <li>Verify your VLESS configuration URL is valid</li>
+            <li>Check network connectivity on your Steam Deck</li>
+            <li>Review error messages in the plugin UI</li>
+          </ul>
+        </details>
+        <details class="faq-item">
+          <summary>TUN mode not working</summary>
+          <ul>
+            <li>Verify privileges are set up correctly (see <a href="#install">TUN Mode Setup</a>)</li>
+            <li>Ensure the plugin has required permissions</li>
+            <li>Check Konsole for error messages</li>
+          </ul>
+        </details>
+        <details class="faq-item">
+          <summary>Kill switch is blocking all traffic</summary>
+          <ul>
+            <li>Reconnect the proxy to deactivate kill switch automatically</li>
+            <li>Or manually disable kill switch in the plugin settings</li>
+          </ul>
+        </details>
+        <details class="faq-item">
+          <summary>xray-core binary missing</summary>
+          <ul>
+            <li>Download from <a href="https://github.com/XTLS/Xray-core/releases" target="_blank" rel="noopener">Xray-core releases</a></li>
+            <li>Place in <code>backend/out/xray-core</code></li>
+            <li>Make executable: <code>chmod +x backend/out/xray-core</code></li>
+          </ul>
+        </details>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-links">
+        <a href="https://github.com/VadimOnix/xray-decky" target="_blank" rel="noopener">GitHub Repository</a>
+        <a href="https://github.com/VadimOnix/xray-decky/releases" target="_blank" rel="noopener">Releases</a>
+        <a href="https://github.com/VadimOnix/xray-decky/issues" target="_blank" rel="noopener">Report Issue</a>
+        <a href="https://wiki.deckbrew.xyz/" target="_blank" rel="noopener">Decky Loader Docs</a>
+        <a href="https://xtls.github.io/" target="_blank" rel="noopener">Xray-core Docs</a>
+      </div>
+      <p class="footer-copy">Xray Decky &middot; MIT License &middot; Made for Steam Deck</p>
+    </div>
+  </footer>
+</body>
+</html>
