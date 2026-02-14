@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-We release patches for security vulnerabilities for the latest release branch.
+We release patches for security vulnerabilities for the latest release (trunk-based development on `master`).
 
 | Version | Supported          |
 | ------- | ------------------ |

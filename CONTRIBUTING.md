@@ -168,6 +168,7 @@ If you work on TUN mode, the Deck user needs NOPASSWD for `ip tuntap add/del`. S
 
 ## Code and PR guidelines
 
+- The project uses **trunk-based development**; the only long-lived branch is `master`. Open pull requests against `master`.
 - Follow the existing code style (TypeScript/React in `src/`, Python in `backend/`).
 - For UI: use components and patterns from `@decky/ui` and `@decky/api` (see [Decky plugin template](https://github.com/SteamDeckHomebrew/decky-plugin-template)).
 - Run `pnpm run build` before submitting; ensure the plugin loads and works on the Deck.
