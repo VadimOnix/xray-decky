@@ -40,6 +40,7 @@ build/
 __pycache__/
 *.pyc
 .venv/
+.venv-lint/
 venv/
 *.egg-info/
 
