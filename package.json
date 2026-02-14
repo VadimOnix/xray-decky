@@ -6,7 +6,12 @@
   "scripts": {
     "build": "rollup -c",
     "watch": "rollup -c -w",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "pnpm run lint:eslint && pnpm run lint:prettier",
+    "lint:eslint": "eslint .",
+    "lint:prettier": "prettier --check 'src/**/*.{ts,tsx,js,json}' '*.{json,mjs}'",
+    "lint:fix": "eslint . --fix && prettier --write 'src/**/*.{ts,tsx,js,json}' '*.{json,mjs}'",
+    "format": "prettier --write 'src/**/*.{ts,tsx,js,json}' '*.{json,mjs}'",
+    "test": "echo 'No frontend tests configured'",
     "deploy": "./deploy.sh",
     "deploy:simple": "pnpm run build && rsync -avz --delete --progress --timeout=30 --partial -e 'ssh -o ServerAliveInterval=10 -o ServerAliveCountMax=3' dist/ package.json plugin.json main.py LICENSE.md backend/src/ backend/static/ steamdeck:/home/deck/homebrew/plugins/xray-decky/",
     "package": "./package-and-deploy.sh",
@@ -32,12 +37,19 @@
   "devDependencies": {
     "@decky/rollup": "^1.0.2",
     "@decky/ui": "^4.11.0",
+    "@eslint/js": "^9.39.2",
     "@rollup/rollup-linux-x64-musl": "^4.57.1",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.1.11",
     "@types/webpack": "^5.28.5",
+    "eslint": "^9.39.2",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "prettier": "^3.8.1",
     "rollup": "^4.57.1",
-    "typescript": "^5.6.2"
+    "typescript": "^5.6.2",
+    "typescript-eslint": "^8.55.0"
   },
   "dependencies": {
     "@decky/api": "^1.1.3",

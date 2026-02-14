@@ -7,8 +7,8 @@ on:
     branches: [ master ]
 
 jobs:
-  lint-frontend:
-    name: Lint Frontend
+  lint-frontend-eslint:
+    name: Lint Frontend (ESLint)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -20,7 +20,22 @@ jobs:
           node-version: '18'
           cache: 'pnpm'
       - run: pnpm install
-      - run: pnpm run lint
+      - run: pnpm run lint:eslint
+
+  lint-frontend-prettier:
+    name: Lint Frontend (Prettier)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '18'
+          cache: 'pnpm'
+      - run: pnpm install
+      - run: pnpm run lint:prettier
 
   test-frontend:
     name: Test Frontend
