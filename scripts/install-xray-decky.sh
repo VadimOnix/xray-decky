@@ -55,7 +55,7 @@ main() {
   echo "Downloading latest release..."
   local tmpdir
   tmpdir=$(mktemp -d)
-  trap 'rm -rf "${tmpdir}"' EXIT
+  trap 'rm -rf "${tmpdir:?}"' EXIT
 
   if ! curl -sSLo "${tmpdir}/plugin.zip" "${zip_url}"; then
     err "Download failed"
@@ -63,7 +63,7 @@ main() {
   fi
 
   echo "Extracting to ${PLUGINS_DIR}/${PLUGIN_NAME}..."
-  rm -rf "${PLUGINS_DIR}/${PLUGIN_NAME}"
+  rm -rf "${PLUGINS_DIR:?}/${PLUGIN_NAME:?}"
   unzip -o -q "${tmpdir}/plugin.zip" -d "${PLUGINS_DIR}"
   # Zip contains xray-decky/ subdir, so we get PLUGINS_DIR/xray-decky/
 
