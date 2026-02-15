@@ -35,7 +35,8 @@ check_deps() {
 }
 
 get_latest_zip_url() {
-  curl -sSL "${REPO_API}" | grep -E '"browser_download_url".*xray-decky.*\.zip"' | head -1 | sed -n 's/.*"browser_download_url": *"\([^"]*\)".*/\1/p'
+  # Avoid pipefail exit when grep finds no match (e.g. API error/rate limit)
+  curl -sSL "${REPO_API}" | grep -E '"browser_download_url".*xray-decky.*\.zip"' | head -1 | sed -n 's/.*"browser_download_url": *"\([^"]*\)".*/\1/p' || true
 }
 
 main() {
@@ -55,7 +56,7 @@ main() {
   echo "Downloading latest release..."
   local tmpdir
   tmpdir=$(mktemp -d)
-  trap 'rm -rf "${tmpdir:?}"' EXIT
+  trap '[[ -n "${tmpdir:-}" && -d "${tmpdir}" ]] && rm -rf "${tmpdir}"' EXIT
 
   if ! curl -sSLo "${tmpdir}/plugin.zip" "${zip_url}"; then
     err "Download failed"
@@ -63,12 +64,15 @@ main() {
   fi
 
   echo "Extracting to ${PLUGINS_DIR}/${PLUGIN_NAME}..."
-  rm -rf "${PLUGINS_DIR:?}/${PLUGIN_NAME:?}"
-  unzip -o -q "${tmpdir}/plugin.zip" -d "${PLUGINS_DIR}"
-  # Zip contains xray-decky/ subdir, so we get PLUGINS_DIR/xray-decky/
+  # Unzip to tmpdir (user-writable), then install to plugins dir with sudo (often root-owned on Deck)
+  unzip -o -q "${tmpdir}/plugin.zip" -d "${tmpdir}"
+  sudo rm -rf "${PLUGINS_DIR:?}/${PLUGIN_NAME:?}"
+  sudo cp -r "${tmpdir}/${PLUGIN_NAME}" "${PLUGINS_DIR}/"
+  # So Decky (running as current user) can read the plugin
+  sudo chown -R "$(whoami):" "${PLUGINS_DIR}/${PLUGIN_NAME}" 2>/dev/null || true
 
   if [[ -f "${PLUGINS_DIR}/${PLUGIN_NAME}/bin/xray-core" ]]; then
-    chmod +x "${PLUGINS_DIR}/${PLUGIN_NAME}/bin/xray-core"
+    sudo chmod +x "${PLUGINS_DIR}/${PLUGIN_NAME}/bin/xray-core"
   fi
 
   echo "Restarting plugin loader..."
