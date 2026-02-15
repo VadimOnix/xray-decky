@@ -734,22 +734,22 @@ class Plugin:
                     connection_state.set_error(error_msg, error_code)
                     return create_error_response(error_code, error_msg)
 
-                # TUN: policy routing via fwmark - xray outbound uses table 100, rest uses xray0
+                # TUN: setup system routing + system proxy.
+                # NOTE: xray-core does not natively support TUN inbound, so
+                # the TUN interface won't be created by xray. Route setup may
+                # fail, but the SOCKS/HTTP proxy is still functional.
                 if tun_mode:
                     route_result = await tun_manager.setup_system_route()
                     if not route_result.get("success"):
-                        await xray_manager.stop()
-                        connection_state.set_error(
-                            f"TUN route failed: {route_result.get('error', 'Unknown')}",
-                            ErrorCode.UNKNOWN_ERROR,
-                        )
-                        return create_error_response(
-                            ErrorCode.UNKNOWN_ERROR,
-                            f"Could not set TUN route: {route_result.get('error', 'Unknown')}",
+                        # TUN route failed — log but don't kill the connection.
+                        # SOCKS proxy on 10808 and HTTP proxy on 10809 are still
+                        # available and the connection is usable.
+                        print(
+                            f"Xray Decky Plugin: TUN route failed (SOCKS proxy still works): "
+                            f"{route_result.get('error', 'Unknown')}"
                         )
 
-                    # Auto-enable System Proxy when TUN mode is active
-                    # This ensures all applications use the proxy (gsettings for GTK/Qt apps)
+                    # Auto-enable System Proxy (gsettings for GTK/Qt apps)
                     proxy_result = await system_proxy_manager.set_system_proxy(
                         socks_port=10808, http_port=10809
                     )
@@ -759,7 +759,7 @@ class Plugin:
                         system_proxy_pref["autoEnabled"] = True  # Mark as auto-enabled
                         system_proxy_pref["lastEnabledAt"] = int(time.time())
                         settings.setSetting("systemProxy", system_proxy_pref)
-                    # Note: Don't fail connection if system proxy fails - TUN still works
+                    # Note: Don't fail connection if system proxy fails
 
                 # Update connection state
                 process_id = result.get("processId")
