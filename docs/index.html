@@ -146,13 +146,9 @@
           </li>
           <li>
             <strong>Set up sudo exemption</strong>:
-            <br>Open Konsole (Desktop Mode) or SSH into your Steam Deck:
-            <pre><code>sudo nano /etc/sudoers.d/decky-tun</code></pre>
-            Add the following lines:
-            <pre><code>deck ALL=(ALL) NOPASSWD: /usr/bin/ip tuntap add mode tun *
-deck ALL=(ALL) NOPASSWD: /usr/bin/ip tuntap del mode tun *</code></pre>
-            Save (Ctrl+X, Y, Enter), then set permissions:
-            <pre><code>sudo chmod 0440 /etc/sudoers.d/decky-tun</code></pre>
+            <br>Open Konsole (Desktop Mode) or SSH, copy the block below, paste, enter your sudo password when prompted — done.
+            <pre><code>echo 'deck ALL=(ALL) NOPASSWD: /usr/bin/ip tuntap add mode tun *
+deck ALL=(ALL) NOPASSWD: /usr/bin/ip tuntap del mode tun *' | sudo tee /etc/sudoers.d/decky-tun && sudo chmod 0440 /etc/sudoers.d/decky-tun</code></pre>
           </li>
           <li>
             <strong>Verify</strong>: Open the plugin in Decky Loader — it will automatically check for privileges.
