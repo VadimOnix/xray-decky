@@ -177,7 +177,8 @@ class XrayManager:
             }
 
             # Routing: TUN inbound -> proxy (VLESS); private IPs bypass via direct
-            # SOCKS/HTTP inbounds also route to proxy
+            # SOCKS/HTTP inbounds also route to proxy.
+            # Requires geoip.dat alongside the xray-core binary (shipped in release).
             config["routing"] = {
                 "domainStrategy": "IPIfNonMatch",
                 "rules": [
@@ -194,12 +195,12 @@ class XrayManager:
                 ],
             }
 
-            # Add TUN inbound (xray-core will create TUN interface)
-            # Xray docs: name, MTU, userLevel. Xray does NOT auto-modify system routing.
+            # TUN inbound — supported since xray-core v26.1.23.
+            # xray-core creates the TUN interface; no settings required.
+            # System routing must still be set up externally (tun_manager).
             config["inbounds"].append(
                 {
                     "protocol": "tun",
-                    "settings": {"name": "xray0", "MTU": 1500},
                     "tag": "tun",
                 }
             )
@@ -252,12 +253,13 @@ class XrayManager:
 
             if self.process.returncode is not None:
                 # Process exited immediately (error)
+                # xray-core outputs startup errors to stdout (not stderr),
+                # so read both streams to capture the actual error message.
                 stderr = await self.process.stderr.read()
-                error_msg = (
-                    stderr.decode("utf-8", errors="ignore")
-                    if stderr
-                    else "Unknown error"
-                )
+                stdout = await self.process.stdout.read()
+                stderr_text = stderr.decode("utf-8", errors="ignore").strip() if stderr else ""
+                stdout_text = stdout.decode("utf-8", errors="ignore").strip() if stdout else ""
+                error_msg = stderr_text or stdout_text or "Unknown error"
                 return {
                     "success": False,
                     "error": f"xray-core process failed to start: {error_msg}",

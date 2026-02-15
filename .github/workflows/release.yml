@@ -6,7 +6,6 @@ on:
       - 'v*'
 
 env:
-  XRAY_VERSION: "v1.8.4"
   PLUGIN_NAME: "xray-decky"
 
 jobs:
@@ -32,14 +31,28 @@ jobs:
           pnpm install
           pnpm run build
 
-      - name: Download xray-core
+      - name: Download xray-core (latest release)
         run: |
+          # Fetch the latest stable xray-core release tag from GitHub API
+          XRAY_VERSION=$(curl -s https://api.github.com/repos/XTLS/Xray-core/releases/latest | jq -r .tag_name)
+          echo "Using xray-core ${XRAY_VERSION}"
+
           XRAY_ZIP="Xray-linux-64.zip"
           wget -q "https://github.com/XTLS/Xray-core/releases/download/${XRAY_VERSION}/${XRAY_ZIP}" -O /tmp/xray.zip
           unzip -o /tmp/xray.zip -d /tmp/xray-extract
+
           mkdir -p xray-bin
           mv /tmp/xray-extract/xray xray-bin/xray-core
           chmod +x xray-bin/xray-core
+
+          # geoip.dat & geosite.dat are included in the xray-core release zip
+          # and are required for routing rules that use geoip:private / geosite:*
+          cp /tmp/xray-extract/geoip.dat  xray-bin/
+          cp /tmp/xray-extract/geosite.dat xray-bin/
+
+          echo "xray-core version: $(./xray-bin/xray-core version | head -1)"
+          echo "Geo files: $(ls -lh xray-bin/geoip.dat xray-bin/geosite.dat)"
+
           rm -rf /tmp/xray.zip /tmp/xray-extract
 
       - name: Package plugin
@@ -60,9 +73,11 @@ jobs:
           cp backend/src/*.py "$PLUGIN_DIR/backend/src/"
           cp -r backend/static "$PLUGIN_DIR/backend/"
 
-          # xray-core binary
+          # xray-core binary + geo data files
           mkdir -p "$PLUGIN_DIR/bin"
-          cp xray-bin/xray-core "$PLUGIN_DIR/bin/"
+          cp xray-bin/xray-core   "$PLUGIN_DIR/bin/"
+          cp xray-bin/geoip.dat   "$PLUGIN_DIR/bin/"
+          cp xray-bin/geosite.dat "$PLUGIN_DIR/bin/"
 
           # Create ZIP with xray-decky/ as root
           cd release

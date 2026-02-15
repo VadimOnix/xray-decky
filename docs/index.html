@@ -74,8 +74,8 @@
             <img src="assets/features/tun-256w.png" alt="TUN mode network tunnel icon" class="feature-icon" width="256" height="256" loading="lazy">
           </picture>
           <div class="feature-text">
-            <h3>TUN Mode</h3>
-            <p>Route all system traffic through the proxy with TUN mode. Works system-wide — every app and game goes through the tunnel. Requires one-time privilege setup.</p>
+            <h3>TUN Mode <span style="font-size:.75em;color:var(--accent)">(Recommended)</span></h3>
+            <p>Route all system traffic through the proxy with TUN mode. <strong>Highly recommended for Gaming Mode</strong> — Steam does not respect SOCKS proxy settings, so TUN is the only reliable way to proxy game and system traffic. No extra setup required; just enable it in the plugin.</p>
           </div>
         </li>
         <li class="feature-card">
@@ -136,25 +136,12 @@
         </div>
       </div>
 
-      <details class="tun-setup">
-        <summary><h3>TUN Mode Setup (Optional)</h3></summary>
-        <p>TUN mode requires elevated privileges to create network interfaces. Without it, the plugin uses SOCKS proxy mode.</p>
-        <ol>
-          <li>
-            <strong>Enable Developer Mode</strong> (if not already):
-            <br>Go to Settings → System → Enable Developer Mode
-          </li>
-          <li>
-            <strong>Set up sudo exemption</strong>:
-            <br>Open Konsole (Desktop Mode) or SSH, copy the block below, paste, enter your sudo password when prompted — done.
-            <pre><code>echo 'deck ALL=(ALL) NOPASSWD: /usr/bin/ip tuntap add mode tun *
-deck ALL=(ALL) NOPASSWD: /usr/bin/ip tuntap del mode tun *' | sudo tee /etc/sudoers.d/decky-tun && sudo chmod 0440 /etc/sudoers.d/decky-tun</code></pre>
-          </li>
-          <li>
-            <strong>Verify</strong>: Open the plugin in Decky Loader — it will automatically check for privileges.
-          </li>
-        </ol>
-      </details>
+      <div class="tun-setup" style="margin-top:1.5rem">
+        <h3>TUN Mode <span style="font-size:.75em;color:var(--accent)">(Recommended for Gaming Mode)</span></h3>
+        <p>In Gaming Mode, Steam does not respect system SOCKS proxy settings — games and most system services ignore it. <strong>TUN mode creates a virtual network interface that routes all system traffic through the proxy</strong>, making it the only reliable way to proxy traffic in Gaming Mode.</p>
+        <p>No extra setup is required — just enable TUN in the plugin settings. The plugin runs with elevated privileges and handles everything automatically.</p>
+        <p class="text-muted">Without TUN, the plugin falls back to SOCKS proxy mode, which works well in Desktop Mode but may not cover games and system services in Gaming Mode.</p>
+      </div>
     </section>
 
     <!-- Usage -->
@@ -179,8 +166,8 @@ deck ALL=(ALL) NOPASSWD: /usr/bin/ip tuntap del mode tun *' | sudo tee /etc/sudo
         <div class="usage-step">
           <span class="step-number">3</span>
           <div>
-            <h3>Configure (Optional)</h3>
-            <p>Enable TUN mode for system-wide routing, or activate the kill switch for extra safety. Both are optional — the plugin works great with default settings.</p>
+            <h3>Enable TUN Mode (Recommended)</h3>
+            <p>Enable TUN mode in the plugin settings for reliable system-wide routing — especially important in Gaming Mode, where SOCKS proxy is not enough. Optionally, activate the kill switch for extra safety.</p>
           </div>
         </div>
       </div>

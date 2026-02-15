@@ -6,7 +6,7 @@ Decky Loader plugin for Steam Deck that enables VLESS proxy connections with Rea
 
 - **Import VLESS Configurations** — via URL (single node or subscription)
 - **Connection Toggle** — turn proxy on/off from Quick Access
-- **TUN Mode** — system-wide traffic routing (optional, requires one-time setup)
+- **TUN Mode** — system-wide traffic routing, **recommended for Gaming Mode**
 - **Kill Switch** — block traffic when proxy disconnects (optional)
 
 ## Installation
@@ -17,14 +17,9 @@ Decky Loader plugin for Steam Deck that enables VLESS proxy connections with Rea
 - **Desktop Mode (one-click):** Download [Install-Xray-Decky.desktop](https://raw.githubusercontent.com/VadimOnix/xray-decky/master/scripts/Install-Xray-Decky.desktop), set executable (Properties → Permissions), double-click to run. See [scripts/README.md](scripts/README.md).
 - **Manual:** Download [latest release](https://github.com/VadimOnix/xray-decky/releases/latest) zip → Decky Loader → Settings → Developer → Install Plugin from URL → paste zip URL.
 
-**TUN mode (optional):** Enable Developer Mode (Settings → System), then in Konsole paste the block below and enter sudo password when prompted:
+**TUN mode (recommended):** In Gaming Mode, Steam does not respect system SOCKS proxy settings — games and most system services ignore it. TUN mode creates a virtual network interface that routes **all** system traffic through the proxy, making it the only reliable way to proxy traffic in Gaming Mode. Enable TUN in the plugin settings; no extra setup is required.
 
-```bash
-echo 'deck ALL=(ALL) NOPASSWD: /usr/bin/ip tuntap add mode tun *
-deck ALL=(ALL) NOPASSWD: /usr/bin/ip tuntap del mode tun *' | sudo tee /etc/sudoers.d/decky-tun && sudo chmod 0440 /etc/sudoers.d/decky-tun
-```
-
-Without TUN, the plugin uses SOCKS proxy mode.
+Without TUN, the plugin falls back to SOCKS proxy mode, which works in Desktop Mode but may not cover games and system services in Gaming Mode.
 
 **Usage, troubleshooting, more:** [GitHub Pages docs](https://vadimonix.github.io/xray-decky/).
 
