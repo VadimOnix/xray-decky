@@ -3,6 +3,8 @@
 Auto-generated from all feature plans. Last updated: 2026-01-26
 
 ## Active Technologies
+- HTML5, CSS3; optional minimal JavaScript (ES5+ or ES module) only when necessary + None for core page (vanilla); optional no-JS build tool (e.g. copy/minify) only if needed (004-plugin-public-page)
+- N/A (static content) (004-plugin-public-page)
 
 - Python 3.x (backend), TypeScript (frontend), Node.js v16.14+ (build) + decky-frontend-lib, @decky/ui, SettingsManager (Decky), aiohttp (backend HTTP server for import page) (002-vless-import-qr)
 - SettingsManager (vlessConfig key); no new storage (002-vless-import-qr)
@@ -31,10 +33,10 @@ cd src [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLO
 TypeScript (frontend), Python 3.x (backend): Follow standard conventions
 
 ## Recent Changes
+- 004-plugin-public-page: Added HTML5, CSS3; optional minimal JavaScript (ES5+ or ES module) only when necessary + None for core page (vanilla); optional no-JS build tool (e.g. copy/minify) only if needed
 
 - 003-refactor-decky-ux: Added TypeScript/React (frontend), Python 3.x (backend) + `@decky/ui` (SteamOS-styled UI components), `@decky/api` (callables/events), `qrcode.react` (QR), existing backend modules for xray/TUN/kill-switch managemen
 - 002-vless-import-qr: Added Python 3.x (asyncio), TypeScript/Reac + aiohttp (HTTPS with ssl.SSLContext), cryptography (or openssl subprocess for cert generation), @decky/api (callable, addEventListener), qrcode.reac
-- 002-vless-import-qr: Added Python 3.x (backend), TypeScript/React (frontend) + aiohttp (backend HTTP server), @decky/api (frontend entry and backend calls), qrcode.react (frontend QR), SettingsManager (persistence)
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->
