@@ -1,6 +1,6 @@
 {
   "name": "xray-decky",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Decky Loader plugin for VLESS proxy connections with Reality protocol support",
   "type": "module",
   "scripts": {
