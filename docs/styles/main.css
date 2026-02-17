@@ -9,10 +9,10 @@
   --color-bg-alt: #171a21;
   --color-surface: #2a475e;
   --color-surface-light: #345670;
-  --color-accent: #66c0f4;
-  --color-accent-hover: #8ad4ff;
+  --color-accent: #7fc9f7;
+  --color-accent-hover: #a3dbfa;
   --color-text: #c7d5e0;
-  --color-text-muted: #8f98a0;
+  --color-text-muted: #adb8c4;
   --color-text-bright: #ffffff;
   --color-success: #4caf50;
   --color-border: rgba(102, 192, 244, 0.15);
@@ -43,12 +43,14 @@ img {
 
 a {
   color: var(--color-accent);
-  text-decoration: none;
+  text-decoration: underline;
+  text-decoration-color: rgba(127, 201, 247, 0.5);
+  text-underline-offset: 0.15em;
 }
 
 a:hover {
   color: var(--color-accent-hover);
-  text-decoration: underline;
+  text-decoration-color: currentColor;
 }
 
 h1, h2, h3 {
@@ -88,7 +90,7 @@ pre code {
   z-index: 100;
   background: var(--color-bg-alt);
   border-bottom: 1px solid var(--color-border);
-  backdrop-filter: blur(12px);
+  /* Avoid backdrop-filter: heavy compositing work; solid bg performs better for TBT/INP */
 }
 
 .nav-inner {
@@ -129,17 +131,25 @@ pre code {
   border-radius: var(--radius-sm);
   font-size: 0.875rem;
   color: var(--color-text-muted);
+  text-decoration: underline;
+  text-decoration-color: rgba(173, 184, 196, 0.6);
+  text-underline-offset: 0.15em;
   transition: background 0.15s, color 0.15s;
 }
 
 .nav-links a:hover {
   background: var(--color-surface);
   color: var(--color-text-bright);
-  text-decoration: none;
+  text-decoration-color: currentColor;
 }
 
 .nav-github {
   color: var(--color-accent) !important;
+  text-decoration-color: rgba(127, 201, 247, 0.7) !important;
+}
+
+.nav-github:hover {
+  text-decoration-color: currentColor !important;
 }
 
 .nav-github-short {
@@ -181,6 +191,15 @@ header, main, footer {
 
 section {
   margin-bottom: 3rem;
+}
+
+/* Defer layout/paint for below-the-fold sections to reduce main-thread work (TBT/INP) */
+section.features,
+section.install,
+section.usage,
+section.troubleshooting {
+  content-visibility: auto;
+  contain-intrinsic-block-size: 400px;
 }
 
 /* ===== Hero ===== */
@@ -288,6 +307,7 @@ section {
   display: flex;
   gap: 1rem;
   align-items: flex-start;
+  contain: layout style;
 }
 
 .feature-card picture {
@@ -361,6 +381,7 @@ section {
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
   padding: 1.25rem;
+  contain: layout style;
 }
 
 .install-method--primary {
@@ -458,6 +479,7 @@ section {
   display: flex;
   gap: 1rem;
   align-items: flex-start;
+  contain: layout style;
 }
 
 .step-number {
@@ -509,6 +531,7 @@ section {
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
   overflow: hidden;
+  contain: layout style;
 }
 
 .faq-item summary {
