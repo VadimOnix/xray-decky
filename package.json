@@ -38,7 +38,7 @@
   "devDependencies": {
     "@decky/rollup": "^1.0.2",
     "@decky/ui": "^4.11.0",
-    "@eslint/js": "^9.39.2",
+    "@eslint/js": "^9.39.3",
     "@rollup/rollup-linux-x64-musl": "^4.57.1",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
