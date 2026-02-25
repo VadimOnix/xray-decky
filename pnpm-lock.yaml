@@ -32,8 +32,8 @@ devDependencies:
     specifier: ^9.39.2
     version: 9.39.2
   '@rollup/rollup-linux-x64-musl':
-    specifier: ^4.57.1
-    version: 4.57.1
+    specifier: ^4.59.0
+    version: 4.59.0
   '@types/react':
     specifier: 19.2.14
     version: 19.2.14
@@ -664,6 +664,14 @@ packages:
 
   /@rollup/rollup-linux-x64-musl@4.57.1:
     resolution: {integrity: sha512-HFps0JeGtuOR2convgRRkHCekD7j+gdAuXM+/i6kGzQtFhlCtQkpwtNzkNj6QhCDp7DRJ7+qC/1Vg2jt5iSOFw==}
+    cpu: [x64]
+    os: [linux]
+    requiresBuild: true
+    dev: true
+    optional: true
+
+  /@rollup/rollup-linux-x64-musl@4.59.0:
+    resolution: {integrity: sha512-2UdiwS/9cTAx7qIUZB/fWtToJwvt0Vbo0zmnYt7ED35KPg13Q0ym1g442THLC7VyI6JfYTP4PiSOWyoMdV2/xg==}
     cpu: [x64]
     os: [linux]
     dev: true
