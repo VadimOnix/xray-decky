@@ -5,6 +5,7 @@ This module provides the Plugin class that serves as the backend entry point
 for the Decky Loader plugin. All backend methods are defined here.
 """
 
+import asyncio
 import os
 import sys
 import ssl
@@ -109,17 +110,34 @@ settings = SettingsManager(name="settings", settings_directory=settings_dir)
 settings.read()
 
 
-# Resolve xray-core path: deployed uses bin/, dev uses backend/out/
+def _persistent_xray_dir(plugin_dir: Path) -> Path:
+    """
+    Writable directory that survives reboots / SteamOS system updates, used to
+    (re)download xray-core when the plugin's bundled bin/ is wiped. Prefers
+    DECKY_PLUGIN_RUNTIME_DIR (persistent data dir, where TLS certs also live);
+    falls back to the plugin's own bin/ when not running under Decky.
+    """
+    runtime_dir = os.environ.get("DECKY_PLUGIN_RUNTIME_DIR", "")
+    if runtime_dir:
+        return Path(runtime_dir) / "bin"
+    return plugin_dir / "bin"
+
+
+# Resolve xray-core path: deployed uses bin/, dev uses backend/out/, and a
+# persistent runtime dir is used as a self-healing download location because
+# SteamOS may wipe the plugin's bin/ on reboot (immutable FS / atomic updates).
 def _resolve_xray_path(plugin_dir: Path) -> str:
-    for candidate in (
+    candidates = [
         plugin_dir / "bin" / "xray-core",
         plugin_dir / "backend" / "out" / "xray-core",
-    ):
+        _persistent_xray_dir(plugin_dir) / "xray-core",
+    ]
+    for candidate in candidates:
         if candidate.exists():
             return str(candidate)
-    return str(
-        plugin_dir / "backend" / "out" / "xray-core"
-    )  # fallback for clearer error
+    # Nothing present yet: point at the persistent location where xray-core will
+    # be downloaded on startup (see Plugin._ensure_xray_binary).
+    return str(_persistent_xray_dir(plugin_dir) / "xray-core")
 
 
 # Initialize XrayManager, TUNManager, KillSwitch, and SystemProxyManager
@@ -143,6 +161,11 @@ class Plugin:
         Called when the plugin is loaded.
         """
         print("Xray Decky Plugin: Backend initialized")
+
+        # Ensure the xray-core binary is present. On SteamOS the plugin's bin/
+        # can be wiped on reboot/system update, so re-download it if missing.
+        await self._ensure_xray_binary()
+
         # Load connection state from settings
         from backend.src.connection_manager import load_connection_state_from_settings
 
@@ -235,6 +258,76 @@ class Plugin:
             print(
                 "Xray Decky Plugin: backend/static not found, import server not started"
             )
+
+    async def _ensure_xray_binary(self) -> Dict[str, Any]:
+        """
+        Ensure the xray-core binary (and geo data files) exist, downloading them
+        if missing. Runs the blocking download in a thread so the event loop is
+        not stalled. Never raises: a failed download is logged and the existing
+        BINARY_NOT_FOUND error path handles a missing binary when the user
+        actually tries to connect.
+        """
+        try:
+            from backend.src.xray_downloader import ensure_xray_binary
+
+            binary_path = Path(xray_manager.xray_binary_path)
+            loop = asyncio.get_running_loop()
+            result = await loop.run_in_executor(
+                None, ensure_xray_binary, binary_path
+            )
+
+            if result.get("success"):
+                # Re-point the manager at the actual binary location, which may
+                # have moved to the persistent download dir.
+                new_path = result.get("path")
+                if new_path:
+                    xray_manager.xray_binary_path = new_path
+                if result.get("alreadyPresent"):
+                    print(
+                        f"Xray Decky Plugin: xray-core present at {xray_manager.xray_binary_path}"
+                    )
+                else:
+                    print(
+                        f"Xray Decky Plugin: Downloaded xray-core {result.get('version')} "
+                        f"to {xray_manager.xray_binary_path}"
+                    )
+            else:
+                print(
+                    f"Xray Decky Plugin: xray-core not available: {result.get('error')}"
+                )
+            return result
+        except Exception as e:
+            print(f"Xray Decky Plugin: Failed to ensure xray-core binary: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "errorCode": "ENSURE_BINARY_ERROR",
+            }
+
+    async def redownload_xray_binary(self) -> Dict[str, Any]:
+        """
+        Force a (re)download of the xray-core binary into the persistent runtime
+        directory, even if a copy already exists. Useful for manual recovery.
+        """
+        try:
+            from backend.src.xray_downloader import download_xray
+
+            target_dir = _persistent_xray_dir(PLUGIN_DIR)
+            loop = asyncio.get_running_loop()
+            result = await loop.run_in_executor(None, download_xray, target_dir)
+            if result.get("success") and result.get("path"):
+                xray_manager.xray_binary_path = result["path"]
+                print(
+                    f"Xray Decky Plugin: Re-downloaded xray-core {result.get('version')} "
+                    f"to {xray_manager.xray_binary_path}"
+                )
+            return result
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e),
+                "errorCode": "ENSURE_BINARY_ERROR",
+            }
 
     async def _unload(self):
         """
