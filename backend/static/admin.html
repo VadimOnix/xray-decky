@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#171a21" />
+    <meta name="color-scheme" content="dark" />
+    <title>Xray Decky – Admin Panel</title>
+    <link rel="icon" type="image/x-icon" href="/import/static/assets/image/favicon.ico" />
+    <link rel="icon" type="image/svg+xml" href="/import/static/assets/image/favicon.svg" />
+    <link rel="apple-touch-icon" href="/import/static/assets/image/apple-touch-icon.png" />
+    <link rel="stylesheet" href="/admin/static/admin.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div class="brand">
+          <span class="brand-glyph" aria-hidden="true"></span>
+          <span class="brand-name">XRAY <em>DECKY</em></span>
+        </div>
+        <div id="status-pill" class="status-pill" data-status="unknown">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span id="status-pill-text">Connecting…</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="page">
+      <!-- Shown until a valid token is provided -->
+      <section id="locked" class="card locked" hidden>
+        <h2>Pairing required</h2>
+        <p>
+          This panel is protected by a per-install token. Open the plugin on your Steam Deck and
+          scan the <strong>Admin panel</strong> QR code from the Options tab, or paste the token
+          below.
+        </p>
+        <form id="token-form" class="token-form">
+          <input
+            id="token-input"
+            type="password"
+            placeholder="Admin token"
+            autocomplete="off"
+            aria-label="Admin token"
+          />
+          <button type="submit" class="btn btn-primary">Unlock</button>
+        </form>
+        <p id="token-error" class="form-error" role="alert" hidden></p>
+      </section>
+
+      <div id="panel" hidden>
+        <!-- Hero: connection -->
+        <section class="card hero" aria-labelledby="hero-title">
+          <div class="hero-status">
+            <div id="status-orb" class="status-orb" data-status="unknown" aria-hidden="true">
+              <span class="orb-core"></span>
+            </div>
+            <div class="hero-text">
+              <h1 id="hero-title" class="hero-state">Loading…</h1>
+              <p id="hero-sub" class="hero-sub">Fetching current status</p>
+            </div>
+          </div>
+          <div class="hero-actions">
+            <button id="connect-btn" class="btn btn-play" disabled>
+              <span id="connect-btn-label">Connect</span>
+            </button>
+            <button id="unblock-btn" class="btn btn-danger" hidden>Unblock traffic</button>
+          </div>
+        </section>
+
+        <div class="grid">
+          <!-- Server card -->
+          <section class="card" aria-labelledby="server-title">
+            <div class="card-head">
+              <h2 id="server-title" class="card-title">Server</h2>
+              <span id="server-protocol" class="chip chip-accent" hidden></span>
+            </div>
+            <div id="server-empty" class="empty-note">
+              No configuration imported yet. Use the import form to add one.
+            </div>
+            <dl id="server-info" class="kv" hidden>
+              <div class="kv-row">
+                <dt>Name</dt>
+                <dd id="server-name">—</dd>
+              </div>
+              <div class="kv-row">
+                <dt>Address</dt>
+                <dd id="server-address" class="mono">—</dd>
+              </div>
+              <div class="kv-row">
+                <dt>Transport</dt>
+                <dd><span id="server-network" class="chip">tcp</span></dd>
+              </div>
+              <div class="kv-row">
+                <dt>Security</dt>
+                <dd><span id="server-security" class="chip">none</span></dd>
+              </div>
+              <div class="kv-row">
+                <dt>Imported</dt>
+                <dd id="server-imported">—</dd>
+              </div>
+            </dl>
+          </section>
+
+          <!-- Options card -->
+          <section class="card" aria-labelledby="options-title">
+            <div class="card-head">
+              <h2 id="options-title" class="card-title">Options</h2>
+            </div>
+            <div class="option-row">
+              <div class="option-text">
+                <span class="option-name">TUN mode</span>
+                <span class="option-desc">Route all system traffic through the proxy</span>
+              </div>
+              <label class="switch">
+                <input id="tun-toggle" type="checkbox" role="switch" aria-label="TUN mode" />
+                <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+              </label>
+            </div>
+            <div class="option-row">
+              <div class="option-text">
+                <span class="option-name">Kill switch</span>
+                <span class="option-desc">Block all traffic if the proxy drops unexpectedly</span>
+              </div>
+              <label class="switch">
+                <input
+                  id="killswitch-toggle"
+                  type="checkbox"
+                  role="switch"
+                  aria-label="Kill switch"
+                />
+                <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+              </label>
+            </div>
+            <p id="options-note" class="option-note" hidden></p>
+          </section>
+
+          <!-- Import card -->
+          <section class="card" aria-labelledby="import-title">
+            <div class="card-head">
+              <h2 id="import-title" class="card-title">Import configuration</h2>
+            </div>
+            <p class="card-sub">
+              Paste a <span class="mono">vless://</span>, <span class="mono">vmess://</span>,
+              <span class="mono">trojan://</span> or <span class="mono">ss://</span> link, or a
+              subscription.
+            </p>
+            <form id="import-form" class="import-form">
+              <input
+                id="import-input"
+                type="text"
+                placeholder="vless:// / vmess:// / trojan:// / ss://"
+                autocomplete="off"
+                aria-label="Share link"
+              />
+              <button type="submit" id="import-btn" class="btn btn-primary">Save</button>
+            </form>
+            <p id="import-msg" class="form-error" role="alert" hidden></p>
+          </section>
+        </div>
+      </div>
+    </main>
+
+    <div id="toast" class="toast" role="status" hidden></div>
+
+    <script src="/admin/static/admin.js"></script>
+  </body>
+</html>

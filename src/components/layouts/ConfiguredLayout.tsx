@@ -3,6 +3,7 @@ import { FC, useCallback, useEffect, useState } from 'react';
 import { Focusable } from '@decky/ui';
 import { FaPlug, FaInfoCircle, FaSlidersH } from 'react-icons/fa';
 import type { IconType } from 'react-icons';
+import { AdminPanelBlock } from '../AdminPanelBlock';
 import { ConfigSummaryCard } from '../ConfigSummaryCard';
 import { ConnectionToggle } from '../ConnectionToggle';
 import { KillSwitchToggle } from '../KillSwitchToggle';
@@ -256,6 +257,9 @@ export const ConfiguredLayout: FC<ConfiguredLayoutProps> = ({
           </PanelSectionRow>
           <PanelSectionRow>
             <ResetConfigurationButton disabled={isResetDisabled} onReset={onResetConfig} />
+          </PanelSectionRow>
+          <PanelSectionRow>
+            <AdminPanelBlock helpTopic="options.admin_panel" />
           </PanelSectionRow>
         </>
       )}

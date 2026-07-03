@@ -34,6 +34,10 @@ const helpContent: Record<HelpTopic, HelpContent> = {
     title: 'Kill switch',
     body: 'Blocks all traffic if the proxy disconnects unexpectedly. Enable only if you want strict leak prevention.',
   },
+  'options.admin_panel': {
+    title: 'Admin panel',
+    body: 'Full management UI in a browser on the same LAN. The QR code embeds a per-install access token - do not share it.',
+  },
 };
 
 export const getHelpContent = (topic: HelpTopic): HelpContent => helpContent[topic];
