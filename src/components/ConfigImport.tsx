@@ -29,10 +29,10 @@ export const ConfigImport: FC<ConfigImportProps> = ({
   return (
     <div>
       <TextField
-        label="VLESS link"
+        label="Share link"
         description={
           <span style={leftDescriptionStyle}>
-            Paste or edit your VLESS link. We validate the link before saving.
+            Paste a vless://, vmess://, trojan:// or ss:// link. We validate it before saving.
           </span>
         }
         value={value}
@@ -40,7 +40,7 @@ export const ConfigImport: FC<ConfigImportProps> = ({
         disabled={isSaving}
         bShowClearAction
         inlineControls={
-          helpTopic ? <HelpPopover label="Help: VLESS link" topic={helpTopic} /> : undefined
+          helpTopic ? <HelpPopover label="Help: share link" topic={helpTopic} /> : undefined
         }
       />
 

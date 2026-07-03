@@ -82,10 +82,10 @@ if str(PLUGIN_DIR) not in sys.path:
 
 from settings import SettingsManager
 from backend.src.config_parser import (
-    validate_vless_url,
-    parse_vless_url,
-    parse_subscription_url,
-    build_vless_config,
+    validate_share_link,
+    parse_share_link,
+    parse_subscription,
+    build_profile_config,
 )
 from backend.src.error_codes import (
     ErrorCode,
@@ -400,10 +400,11 @@ class Plugin:
     # VLESS Configuration Management
     async def import_vless_config(self, url: str) -> Dict[str, Any]:
         """
-        Import and validate a VLESS configuration URL.
+        Import and validate a proxy share link.
 
         Args:
-            url: VLESS URL string (vless://... or base64 subscription)
+            url: Share link (vless://, vmess://, trojan://, ss://)
+                or base64 subscription
 
         Returns:
             {
@@ -414,20 +415,20 @@ class Plugin:
         """
         try:
             # Validate URL format
-            is_valid, error_msg = validate_vless_url(url)
+            is_valid, error_msg = validate_share_link(url)
             if not is_valid:
                 return create_error_response(ErrorCode.INVALID_URL, error_msg)
 
             # Try parsing as single node first
-            parsed = parse_vless_url(url)
+            parsed = parse_share_link(url)
             config_type = "single"
 
             # If not single node, try subscription
             if not parsed:
-                parsed_configs = parse_subscription_url(url)
+                parsed_configs = parse_subscription(url)
                 if not parsed_configs:
                     return create_error_response(
-                        ErrorCode.INVALID_URL, "Failed to parse VLESS URL"
+                        ErrorCode.INVALID_URL, "Failed to parse share link"
                     )
 
                 # For subscription, use first node (can be extended later)
@@ -440,7 +441,7 @@ class Plugin:
                     )
 
             # Build complete config
-            config = build_vless_config(parsed, url, config_type)
+            config = build_profile_config(parsed, url, config_type)
             config["lastValidatedAt"] = int(time.time())
 
             # Store in SettingsManager
@@ -524,7 +525,7 @@ class Plugin:
                     "error": "Missing source URL",
                 }
 
-            is_valid, error_msg = validate_vless_url(source_url)
+            is_valid, error_msg = validate_share_link(source_url)
             config["isValid"] = is_valid
             config["lastValidatedAt"] = int(time.time())
 

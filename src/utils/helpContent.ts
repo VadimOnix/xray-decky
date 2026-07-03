@@ -15,8 +15,8 @@ const helpContent: Record<HelpTopic, HelpContent> = {
     body: 'Open the import URL from a device on the same local network.',
   },
   'setup.vless_link': {
-    title: 'VLESS link',
-    body: 'Paste your vless:// link or subscription. Invalid links are rejected and do not overwrite a valid config.',
+    title: 'Share link',
+    body: 'Paste a vless://, vmess://, trojan:// or ss:// link, or a subscription. Invalid links are rejected and do not overwrite a valid config.',
   },
   'configured.status': {
     title: 'Status meanings',

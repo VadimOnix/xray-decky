@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Full xray protocol coverage for imports (roadmap Phase 1): in addition to
+  VLESS, the plugin now imports and connects **VMess** (`vmess://` base64-JSON),
+  **Trojan** (`trojan://`) and **Shadowsocks** (`ss://`, SIP002 + legacy base64 +
+  2022 ciphers; SIP003 plugin links are rejected as unsupported by xray-core).
+- Full transport coverage in the share-link parser and config generator:
+  **WebSocket now honors `path`/`host`** (previously hardcoded to `/`), plus
+  **gRPC** (`serviceName`, `authority`, `multiMode`), **HTTPUpgrade**, **XHTTP**
+  (`path`, `host`, `mode`; `splithttp` alias normalized), **mKCP**
+  (`headerType`, `seed`) and TCP with HTTP header obfuscation.
+- Proper TLS parameters from share links: SNI, ALPN, uTLS `fingerprint`,
+  `allowInsecure`; REALITY links now also honor `spx` (spiderX). VLESS
+  Encryption strings (`encryption=mlkem768x25519plus…`) are passed through.
+- Standard subscription payloads (base64 of newline-delimited share links) are
+  now accepted alongside the legacy base64 JSON-array format.
+- IPv6 server addresses in share links (`vless://uuid@[2001:db8::1]:443`).
+- Sane config defaults in all modes: sniffing
+  (`destOverride: ["http","tls","quic"]`) on all inbounds and
+  `geoip:private → direct` bypass routing (previously TUN-only).
+
+### Changed
+
+- UUID validation now accepts any RFC-4122 UUID in canonical form (previously
+  UUIDv4 only, which rejected links from panels that emit v1/v5/v7 UUIDs).
+- Import UI texts (QAM help + web import page) now describe all supported
+  share-link schemes instead of VLESS only.
+
 - Auto-recover the xray-core binary: on startup the plugin checks for the
   xray-core binary and geo data files and re-downloads them into a persistent
   runtime directory if missing. This fixes connections breaking after a reboot

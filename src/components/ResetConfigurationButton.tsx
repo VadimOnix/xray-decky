@@ -18,7 +18,7 @@ export const ResetConfigurationButton: FC<ResetConfigurationButtonProps> = ({
   const labelText = loading ? 'Resetting…' : 'Reset configuration';
   const description = disabled
     ? 'Disconnect before resetting configuration.'
-    : 'Clears the saved VLESS link and returns to setup.';
+    : 'Clears the saved proxy link and returns to setup.';
 
   const handleReset = async () => {
     setError(null);

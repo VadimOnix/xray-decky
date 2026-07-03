@@ -86,7 +86,7 @@ export const QRImportBlock: FC<QRImportBlockProps> = ({ helpTopicQr, helpTopicLa
         {helpTopicQr && <HelpPopover label="Help: QR import" topic={helpTopicQr} />}
       </div>
       <p style={{ color: '#8f98a0', marginBottom: '12px' }}>
-        Scan with your phone or open the link below to import your VLESS configuration.
+        Scan with your phone or open the link below to import your proxy configuration.
       </p>
 
       {/* QR code section */}

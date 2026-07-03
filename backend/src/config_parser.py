@@ -1,185 +1,494 @@
 """
-VLESS Configuration Parser
+Share-link parser for xray-supported protocols.
 
-Parses and validates VLESS URLs (single node or subscription).
+Parses and validates share links (VLESS, VMess, Trojan, Shadowsocks) and
+base64 subscriptions into a protocol-agnostic profile dictionary consumed
+by xray_manager to generate the xray-core config.
 """
 
-import re
 import base64
+import binascii
 import json
+import re
 import urllib.parse
-from typing import Dict, Any, Optional, List
+from ipaddress import ip_address
+from typing import Any, Dict, List, Optional, Tuple
 from uuid import UUID
 
 
-# VLESS URL pattern: vless://uuid@host:port?params#name
-VLESS_URL_PATTERN = re.compile(
-    r"^vless://([a-f0-9-]{36})@([^:]+):(\d+)(\?[^#]*)?(#.*)?$", re.IGNORECASE
+SUPPORTED_SCHEMES = ("vless", "vmess", "trojan", "ss")
+
+# Legacy transport names normalized to what current xray-core expects.
+_NETWORK_ALIASES = {"raw": "tcp", "mkcp": "kcp", "splithttp": "xhttp"}
+
+_HOSTNAME_PATTERN = re.compile(
+    r"^[a-z0-9]([a-z0-9\-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9\-]{0,61}[a-z0-9])?)*$",
+    re.IGNORECASE,
 )
+_IPV4_SHAPE = re.compile(r"^(\d{1,3}\.){3}\d{1,3}$")
+_BASE64_CHARS = re.compile(r"^[A-Za-z0-9+/_=\-\s]+$")
 
 
 def validate_uuid(uuid_string: str) -> bool:
-    """
-    Validate UUID v4 format.
-
-    Args:
-        uuid_string: UUID string to validate
-
-    Returns:
-        True if valid UUID v4, False otherwise
-    """
+    """Accept any RFC-4122 UUID (panels emit non-v4 UUIDs) in canonical form."""
     try:
-        uuid_obj = UUID(uuid_string, version=4)
-        return str(uuid_obj).lower() == uuid_string.lower()
-    except (ValueError, AttributeError):
+        parsed = UUID(uuid_string)
+    except (ValueError, AttributeError, TypeError):
         return False
+    # Require the canonical dashed form: xray treats non-canonical strings
+    # as custom IDs (mapped to UUIDv5), which would silently mismatch.
+    return str(parsed) == uuid_string.lower()
 
 
 def validate_port(port: int) -> bool:
-    """
-    Validate port number.
-
-    Args:
-        port: Port number to validate
-
-    Returns:
-        True if port is in valid range (1-65535), False otherwise
-    """
+    """Port must be an integer in 1-65535."""
     try:
-        port_int = int(port)
-        return 1 <= port_int <= 65535
+        return 1 <= int(port) <= 65535
     except (ValueError, TypeError):
         return False
 
 
 def validate_hostname(hostname: str) -> bool:
-    """
-    Basic hostname/IP validation.
-
-    Args:
-        hostname: Hostname or IP address to validate
-
-    Returns:
-        True if hostname looks valid, False otherwise
-    """
+    """Accept hostnames, IPv4 and IPv6 addresses."""
     if not hostname or len(hostname) > 253:
         return False
 
-    # Basic IP address validation (IPv4)
-    ipv4_pattern = re.compile(r"^(\d{1,3}\.){3}\d{1,3}$")
-    if ipv4_pattern.match(hostname):
-        parts = hostname.split(".")
-        return all(0 <= int(part) <= 255 for part in parts)
+    try:
+        ip_address(hostname)
+        return True
+    except ValueError:
+        pass
 
-    # Basic hostname validation (simplified)
-    hostname_pattern = re.compile(
-        r"^[a-z0-9]([a-z0-9\-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9\-]{0,61}[a-z0-9])?)*$",
-        re.IGNORECASE,
-    )
-    return bool(hostname_pattern.match(hostname))
+    # Looks like an IPv4 address but failed to parse (e.g. 1.2.3.999):
+    # reject instead of falling through to the hostname check.
+    if _IPV4_SHAPE.match(hostname):
+        return False
+
+    return bool(_HOSTNAME_PATTERN.match(hostname))
 
 
-def parse_vless_url(url: str) -> Optional[Dict[str, Any]]:
-    """
-    Parse a single VLESS URL into components.
-
-    Args:
-        url: VLESS URL string (vless://uuid@host:port?params#name)
-
-    Returns:
-        Dictionary with parsed components, or None if invalid
-    """
-    match = VLESS_URL_PATTERN.match(url.strip())
-    if not match:
+def _decode_base64(text: str) -> Optional[str]:
+    """Tolerant base64 decode (standard + URL-safe, missing padding OK)."""
+    if not text or not isinstance(text, str):
         return None
+    text = text.strip()
+    if not text or not _BASE64_CHARS.match(text):
+        return None
+    compact = re.sub(r"\s+", "", text)
+    padded = compact + "=" * (-len(compact) % 4)
+    for altchars in (None, b"-_"):
+        try:
+            # validate=True so URL-safe input never mis-decodes with the
+            # standard alphabet (invalid characters raise instead of being
+            # silently discarded).
+            return base64.b64decode(padded, altchars=altchars, validate=True).decode(
+                "utf-8"
+            )
+        except (binascii.Error, ValueError, UnicodeDecodeError):
+            continue
+    return None
 
-    uuid_str = match.group(1)
-    host = match.group(2)
-    port_str = match.group(3)
-    params_str = match.group(4) or ""
-    name_fragment = match.group(5) or ""
 
-    # Validate UUID
+def _parse_query(query: str) -> Dict[str, str]:
+    """Parse a query string into a flat dict (last value wins)."""
+    params: Dict[str, str] = {}
+    for key, value in urllib.parse.parse_qsl(query, keep_blank_values=True):
+        params[key] = value
+    return params
+
+
+def _normalize_network(network: str) -> str:
+    network = (network or "tcp").lower()
+    return _NETWORK_ALIASES.get(network, network)
+
+
+def _is_truthy(value: Optional[str]) -> bool:
+    return (value or "").lower() in ("1", "true", "yes")
+
+
+def _transport_from_params(network: str, params: Dict[str, str]) -> Dict[str, Any]:
+    """Extract transport-specific settings from share-link query params."""
+    transport: Dict[str, Any] = {}
+
+    if network in ("ws", "httpupgrade", "xhttp"):
+        if params.get("path"):
+            transport["path"] = params["path"]
+        if params.get("host"):
+            transport["host"] = params["host"]
+        if network == "xhttp" and params.get("mode"):
+            transport["mode"] = params["mode"]
+    elif network == "grpc":
+        service_name = params.get("serviceName") or params.get("path")
+        if service_name:
+            transport["serviceName"] = service_name
+        if params.get("authority"):
+            transport["authority"] = params["authority"]
+        if params.get("mode") == "multi":
+            transport["multiMode"] = True
+    elif network == "kcp":
+        if params.get("headerType"):
+            transport["headerType"] = params["headerType"]
+        if params.get("seed"):
+            transport["seed"] = params["seed"]
+    elif network == "tcp":
+        if params.get("headerType") and params["headerType"] != "none":
+            transport["headerType"] = params["headerType"]
+            if params.get("host"):
+                transport["host"] = params["host"]
+            if params.get("path"):
+                transport["path"] = params["path"]
+
+    return transport
+
+
+def _tls_from_params(params: Dict[str, str]) -> Dict[str, Any]:
+    """Extract tlsSettings fields from share-link query params."""
+    tls: Dict[str, Any] = {}
+    if params.get("sni"):
+        tls["serverName"] = params["sni"]
+    if params.get("alpn"):
+        alpn = [a.strip() for a in params["alpn"].split(",") if a.strip()]
+        if alpn:
+            tls["alpn"] = alpn
+    if params.get("fp"):
+        tls["fingerprint"] = params["fp"]
+    if _is_truthy(params.get("allowInsecure")) or _is_truthy(params.get("insecure")):
+        tls["allowInsecure"] = True
+    return tls
+
+
+def _reality_from_params(params: Dict[str, str]) -> Dict[str, Any]:
+    """Extract client-side realitySettings fields (never server-side keys)."""
+    reality: Dict[str, Any] = {}
+    public_key = params.get("pbk") or params.get("publicKey")
+    if public_key:
+        reality["publicKey"] = public_key
+    short_id = params.get("sid") or params.get("shortId")
+    if short_id:
+        reality["shortId"] = short_id
+    server_name = params.get("sni") or params.get("serverName")
+    if server_name:
+        reality["serverName"] = server_name
+    fingerprint = params.get("fp") or params.get("fingerprint")
+    if fingerprint:
+        reality["fingerprint"] = fingerprint
+    if params.get("spx"):
+        reality["spiderX"] = params["spx"]
+    return reality
+
+
+def _split_url(url: str):
+    """urlsplit that validates host/port; returns None on any parse failure."""
+    try:
+        parts = urllib.parse.urlsplit(url)
+        host = parts.hostname
+        port = parts.port
+    except ValueError:
+        return None
+    if not host or port is None:
+        return None
+    if not validate_hostname(host) or not validate_port(port):
+        return None
+    return parts, host, port
+
+
+def _parse_vless(url: str) -> Optional[Dict[str, Any]]:
+    split = _split_url(url)
+    if not split:
+        return None
+    parts, host, port = split
+
+    uuid_str = urllib.parse.unquote(parts.username or "")
     if not validate_uuid(uuid_str):
         return None
 
-    # Validate port
-    try:
-        port = int(port_str)
-        if not validate_port(port):
-            return None
-    except ValueError:
-        return None
+    params = _parse_query(parts.query)
+    network = _normalize_network(params.get("type") or params.get("network"))
+    security = (params.get("security") or "none").lower()
 
-    # Validate hostname
-    if not validate_hostname(host):
-        return None
-
-    # Parse query parameters
-    params = {}
-    if params_str.startswith("?"):
-        params_str = params_str[1:]
-
-    if params_str:
-        for param in params_str.split("&"):
-            if "=" in param:
-                key, value = param.split("=", 1)
-                params[urllib.parse.unquote(key)] = urllib.parse.unquote(value)
-
-    # Extract name from fragment
-    name = None
-    if name_fragment.startswith("#"):
-        name = urllib.parse.unquote(name_fragment[1:])
-
-    return {
+    profile: Dict[str, Any] = {
+        "protocol": "vless",
         "uuid": uuid_str.lower(),
         "address": host,
         "port": port,
-        "params": params,
-        "name": name,
+        "network": network,
+        "security": security,
+        "encryption": params.get("encryption") or "none",
+    }
+    if params.get("flow"):
+        profile["flow"] = params["flow"]
+
+    transport = _transport_from_params(network, params)
+    if transport:
+        profile["transport"] = transport
+
+    if security == "tls":
+        tls = _tls_from_params(params)
+        if tls:
+            profile["tlsConfig"] = tls
+    elif security == "reality":
+        reality = _reality_from_params(params)
+        if reality:
+            profile["realityConfig"] = reality
+
+    if parts.fragment:
+        profile["name"] = urllib.parse.unquote(parts.fragment)
+    return profile
+
+
+def _parse_trojan(url: str) -> Optional[Dict[str, Any]]:
+    split = _split_url(url)
+    if not split:
+        return None
+    parts, host, port = split
+
+    password = urllib.parse.unquote(parts.username or "")
+    if not password:
+        return None
+
+    params = _parse_query(parts.query)
+    network = _normalize_network(params.get("type") or params.get("network"))
+    # Trojan is TLS-based; share links usually omit the security param.
+    security = (params.get("security") or "tls").lower()
+
+    profile: Dict[str, Any] = {
+        "protocol": "trojan",
+        "password": password,
+        "address": host,
+        "port": port,
+        "network": network,
+        "security": security,
     }
 
+    transport = _transport_from_params(network, params)
+    if transport:
+        profile["transport"] = transport
 
-def parse_subscription_url(url: str) -> List[Dict[str, Any]]:
+    if security == "tls":
+        tls = _tls_from_params(params)
+        if tls:
+            profile["tlsConfig"] = tls
+    elif security == "reality":
+        reality = _reality_from_params(params)
+        if reality:
+            profile["realityConfig"] = reality
+
+    if parts.fragment:
+        profile["name"] = urllib.parse.unquote(parts.fragment)
+    return profile
+
+
+def _ss_credentials(parts) -> Optional[Tuple[str, str]]:
+    """Resolve SIP002 userinfo into (method, password)."""
+    if parts.password is not None:
+        # Plain percent-encoded "method:password" (Shadowsocks 2022 style).
+        return (
+            urllib.parse.unquote(parts.username or ""),
+            urllib.parse.unquote(parts.password),
+        )
+    decoded = _decode_base64(urllib.parse.unquote(parts.username or ""))
+    if decoded and ":" in decoded:
+        method, password = decoded.split(":", 1)
+        return method, password
+    return None
+
+
+def _parse_ss(url: str) -> Optional[Dict[str, Any]]:
+    body = url[len("ss://"):]
+    fragment = ""
+    if "#" in body:
+        body, fragment = body.split("#", 1)
+    name = urllib.parse.unquote(fragment) if fragment else None
+
+    if "@" in body:
+        # SIP002: ss://userinfo@host:port[/][?plugin=...]
+        split = _split_url("ss://" + body)
+        if not split:
+            return None
+        parts, host, port = split
+        credentials = _ss_credentials(parts)
+        if not credentials:
+            return None
+        method, password = credentials
+        params = _parse_query(parts.query)
+        if params.get("plugin"):
+            # SIP003 plugins (obfs, v2ray-plugin) are not supported by xray-core.
+            return None
+    else:
+        # Legacy: ss://base64(method:password@host:port)
+        decoded = _decode_base64(body)
+        if not decoded or "@" not in decoded or ":" not in decoded:
+            return None
+        userinfo, hostport = decoded.rsplit("@", 1)
+        if ":" not in userinfo or ":" not in hostport:
+            return None
+        method, password = userinfo.split(":", 1)
+        host, port_str = hostport.rsplit(":", 1)
+        try:
+            port = int(port_str)
+        except ValueError:
+            return None
+        if not validate_hostname(host) or not validate_port(port):
+            return None
+
+    if not method or not password:
+        return None
+
+    profile: Dict[str, Any] = {
+        "protocol": "shadowsocks",
+        "method": method.lower(),
+        "password": password,
+        "address": host,
+        "port": port,
+        "network": "tcp",
+        "security": "none",
+    }
+    if name:
+        profile["name"] = name
+    return profile
+
+
+def _parse_vmess(url: str) -> Optional[Dict[str, Any]]:
+    decoded = _decode_base64(url[len("vmess://"):])
+    if not decoded:
+        return None
+    try:
+        data = json.loads(decoded)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(data, dict):
+        return None
+
+    uuid_str = str(data.get("id") or "")
+    if not validate_uuid(uuid_str):
+        return None
+
+    host = str(data.get("add") or "")
+    if not validate_hostname(host):
+        return None
+    try:
+        port = int(data.get("port") or 0)
+    except (ValueError, TypeError):
+        return None
+    if not validate_port(port):
+        return None
+
+    network = _normalize_network(str(data.get("net") or "tcp"))
+    tls_field = str(data.get("tls") or "").lower()
+    security = "tls" if tls_field in ("tls", "1", "true") else "none"
+
+    try:
+        alter_id = int(data.get("aid") or 0)
+    except (ValueError, TypeError):
+        alter_id = 0
+
+    profile: Dict[str, Any] = {
+        "protocol": "vmess",
+        "uuid": uuid_str.lower(),
+        "address": host,
+        "port": port,
+        "network": network,
+        "security": security,
+        "alterId": alter_id,
+        "vmessSecurity": str(data.get("scy") or "auto"),
+    }
+
+    # v2rayN-style JSON carries transport fields at the top level.
+    params: Dict[str, str] = {}
+    if data.get("path"):
+        params["path"] = str(data["path"])
+    if data.get("host"):
+        params["host"] = str(data["host"])
+    if data.get("type") and str(data["type"]) != "none":
+        params["headerType"] = str(data["type"])
+    if network == "grpc" and data.get("path"):
+        params["serviceName"] = str(data["path"])
+    transport = _transport_from_params(network, params)
+    if transport:
+        profile["transport"] = transport
+
+    if security == "tls":
+        tls: Dict[str, Any] = {}
+        if data.get("sni"):
+            tls["serverName"] = str(data["sni"])
+        if data.get("alpn"):
+            alpn = [a.strip() for a in str(data["alpn"]).split(",") if a.strip()]
+            if alpn:
+                tls["alpn"] = alpn
+        if data.get("fp"):
+            tls["fingerprint"] = str(data["fp"])
+        if tls:
+            profile["tlsConfig"] = tls
+
+    if data.get("ps"):
+        profile["name"] = str(data["ps"])
+    return profile
+
+
+def parse_share_link(url: str) -> Optional[Dict[str, Any]]:
     """
-    Parse a subscription URL (base64-encoded JSON array).
+    Parse a single share link into a profile dictionary.
 
-    Args:
-        url: Base64-encoded JSON array of VLESS URLs
+    Supported schemes: vless://, vmess://, trojan://, ss://
 
     Returns:
-        List of parsed VLESS configurations, empty list if invalid
+        Profile dictionary, or None if the link is invalid/unsupported.
     """
-    try:
-        # Decode base64
-        decoded_bytes = base64.b64decode(url)
-        decoded_str = decoded_bytes.decode("utf-8")
+    if not url or not isinstance(url, str):
+        return None
+    url = url.strip()
 
-        # Parse JSON
-        configs = json.loads(decoded_str)
+    if url.lower().startswith("vless://"):
+        return _parse_vless(url)
+    if url.lower().startswith("vmess://"):
+        return _parse_vmess(url)
+    if url.lower().startswith("trojan://"):
+        return _parse_trojan(url)
+    if url.lower().startswith("ss://"):
+        return _parse_ss(url)
+    return None
 
-        if not isinstance(configs, list):
-            return []
 
-        # Parse each VLESS URL in the array
-        parsed_configs = []
-        for config_url in configs:
-            if isinstance(config_url, str):
-                parsed = parse_vless_url(config_url)
-                if parsed:
-                    parsed_configs.append(parsed)
+def parse_subscription(text: str) -> List[Dict[str, Any]]:
+    """
+    Parse a base64 subscription payload into a list of profiles.
 
-        return parsed_configs
-    except (base64.binascii.Error, json.JSONDecodeError, UnicodeDecodeError, TypeError):
+    Supports the de facto standard (base64 of newline-delimited share links)
+    and the legacy format (base64 of a JSON array of links).
+    """
+    decoded = _decode_base64(text)
+    if decoded is None:
         return []
 
+    # Legacy: JSON array of share links.
+    try:
+        items = json.loads(decoded)
+        if isinstance(items, list):
+            profiles = []
+            for item in items:
+                if isinstance(item, str):
+                    parsed = parse_share_link(item)
+                    if parsed:
+                        profiles.append(parsed)
+            return profiles
+    except json.JSONDecodeError:
+        pass
 
-def validate_vless_url(url: str) -> tuple[bool, Optional[str]]:
+    # Standard: newline-delimited share links.
+    if "://" in decoded:
+        profiles = []
+        for line in decoded.splitlines():
+            parsed = parse_share_link(line.strip())
+            if parsed:
+                profiles.append(parsed)
+        return profiles
+
+    return []
+
+
+def validate_share_link(url: str) -> Tuple[bool, Optional[str]]:
     """
-    Validate a VLESS URL (single node or subscription).
-
-    Args:
-        url: VLESS URL to validate
+    Validate a share link (single node or base64 subscription).
 
     Returns:
         Tuple of (is_valid, error_message)
@@ -189,79 +498,47 @@ def validate_vless_url(url: str) -> tuple[bool, Optional[str]]:
 
     url = url.strip()
 
-    # Try parsing as single node first
-    parsed = parse_vless_url(url)
-    if parsed:
+    if parse_share_link(url):
         return True, None
 
-    # Try parsing as subscription
-    parsed_configs = parse_subscription_url(url)
-    if parsed_configs:
+    if parse_subscription(url):
         return True, None
 
-    # If neither works, return error
+    if "://" in url:
+        scheme = url.split("://", 1)[0].lower()
+        if scheme not in SUPPORTED_SCHEMES:
+            return (
+                False,
+                f"Unsupported protocol '{scheme}'. "
+                "Supported: vless, vmess, trojan, ss",
+            )
+
     return (
         False,
-        "Invalid VLESS URL format. Expected vless://uuid@host:port?params#name or base64 subscription",
+        "Invalid share link. Expected vless://, vmess://, trojan://, ss:// "
+        "or a base64 subscription",
     )
 
 
-def build_vless_config(
+def build_profile_config(
     parsed: Dict[str, Any], source_url: str, config_type: str
 ) -> Dict[str, Any]:
     """
-    Build a complete VLESSConfig dictionary from parsed components.
+    Build the stored profile config from a parsed share link.
 
     Args:
-        parsed: Parsed URL components
+        parsed: Profile dictionary from parse_share_link/parse_subscription
         source_url: Original source URL
         config_type: 'single' or 'subscription'
 
     Returns:
-        Complete VLESSConfig dictionary
+        Complete profile dictionary ready for SettingsManager.
     """
     import time
 
-    config = {
-        "sourceUrl": source_url,
-        "configType": config_type,
-        "uuid": parsed["uuid"],
-        "address": parsed["address"],
-        "port": parsed["port"],
-        "importedAt": int(time.time()),
-        "isValid": True,
-    }
-
-    # Extract optional fields from params
-    params = parsed.get("params", {})
-    if "flow" in params:
-        config["flow"] = params["flow"]
-    if "encryption" in params:
-        config["encryption"] = params["encryption"]
-    if "type" in params or "network" in params:
-        config["network"] = params.get("type") or params.get("network")
-    if "security" in params:
-        config["security"] = params["security"]
-
-    # Extract Reality-specific fields
-    if config.get("security") == "reality":
-        reality_config = {}
-        if "pbk" in params or "publicKey" in params:
-            reality_config["publicKey"] = params.get("pbk") or params.get("publicKey")
-        if "sid" in params or "shortId" in params:
-            reality_config["shortId"] = params.get("sid") or params.get("shortId")
-        if "sni" in params or "serverName" in params:
-            reality_config["serverName"] = params.get("sni") or params.get("serverName")
-        if "fp" in params or "fingerprint" in params:
-            reality_config["fingerprint"] = params.get("fp") or params.get(
-                "fingerprint"
-            )
-
-        if reality_config:
-            config["realityConfig"] = reality_config
-
-    # Extract name
-    if parsed.get("name"):
-        config["name"] = parsed["name"]
-
+    config = dict(parsed)
+    config["sourceUrl"] = source_url
+    config["configType"] = config_type
+    config["importedAt"] = int(time.time())
+    config["isValid"] = True
     return config
