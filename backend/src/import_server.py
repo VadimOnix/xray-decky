@@ -1,7 +1,8 @@
 """
-Import HTTP server for VLESS link import via web form.
+Import HTTP server for proxy share-link import via web form.
 
-Serves GET /import (HTML form), GET /import/static/* (CSS/JS), POST /import (validate and store VLESS).
+Serves GET /import (HTML form), GET /import/static/* (CSS/JS),
+POST /import (validate and store the share link).
 Contract: specs/002-vless-import-qr/contracts/import-http-api.md
 """
 
@@ -12,10 +13,10 @@ from typing import Awaitable, Callable, Optional
 from aiohttp import web
 
 from .config_parser import (
-    validate_vless_url,
-    parse_vless_url,
-    parse_subscription_url,
-    build_vless_config,
+    validate_share_link,
+    parse_share_link,
+    parse_subscription,
+    build_profile_config,
 )
 
 
@@ -36,7 +37,7 @@ def create_import_app(
 
     async def post_import(request: web.Request) -> web.Response:
         """
-        POST /import — accept VLESS link (form or JSON), validate, store in SettingsManager.
+        POST /import — accept a share link (form or JSON), validate, store in SettingsManager.
         Returns 200 JSON on success; 400/500 with { success: false, error: "..." } on failure.
         Invalid or empty link: 400, no overwrite of vlessConfig.
         """
@@ -76,27 +77,27 @@ def create_import_app(
                 status=400,
             )
 
-        is_valid, error_msg = validate_vless_url(link)
+        is_valid, error_msg = validate_share_link(link)
         if not is_valid:
             return web.json_response(
-                {"success": False, "error": error_msg or "Invalid VLESS URL format"},
+                {"success": False, "error": error_msg or "Invalid share link format"},
                 status=400,
             )
 
         try:
-            parsed = parse_vless_url(link)
+            parsed = parse_share_link(link)
             config_type = "single"
             if not parsed:
-                parsed_configs = parse_subscription_url(link)
+                parsed_configs = parse_subscription(link)
                 if not parsed_configs:
                     return web.json_response(
-                        {"success": False, "error": "Failed to parse VLESS URL"},
+                        {"success": False, "error": "Failed to parse share link"},
                         status=400,
                     )
                 parsed = parsed_configs[0]
                 config_type = "subscription"
 
-            config = build_vless_config(parsed, link, config_type)
+            config = build_profile_config(parsed, link, config_type)
             config["lastValidatedAt"] = int(time.time())
 
             settings.setSetting("vlessConfig", config)

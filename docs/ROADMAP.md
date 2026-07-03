@@ -41,7 +41,7 @@ Known defects and tech debt (from the code audit):
 | 1 | **Kill switch never removes its iptables rules** — `_remove_rule()` is a no-op stub; deactivation resets Python state only, the kernel `OUTPUT -j DROP` rule can persist and block all traffic | `backend/src/kill_switch.py` |
 | 2 | Contradictory TUN assumptions — `main.py` claims xray has no native TUN, `xray_manager.py` claims native TUN since v26.1.23; route setup is best-effort | `main.py` / `xray_manager.py` |
 | 3 | No xray-core version pinning — release workflow and the runtime self-heal downloader independently fetch *latest*; bundled and re-downloaded versions can drift | `.github/workflows/release.yml`, `backend/src/xray_downloader.py` |
-| 4 | UUID validation requires UUIDv4 specifically; many panels emit non-v4 UUIDs | `backend/src/config_parser.py` |
+| 4 | ~~UUID validation requires UUIDv4 specifically; many panels emit non-v4 UUIDs~~ (fixed: any RFC-4122 UUID) | `backend/src/config_parser.py` |
 | 5 | No process supervisor — a crashed xray is only noticed on the next 2s status poll; no auto-restart | `backend/src/xray_manager.py` |
 | 6 | SOCKS/HTTP ports 10808/10809 hardcoded | throughout |
 
@@ -99,7 +99,8 @@ Facts that shape the plan:
 - **Process supervision**: `await process.wait()` in a background task → immediate
   crash detection, bounded auto-restart with backoff, kill-switch engagement on
   crash (not on next poll).
-- **Relax UUID validation** to any RFC-4122 UUID.
+- **Relax UUID validation** to any RFC-4122 UUID. _(done — canonical dashed form
+  of any UUID version is accepted)_
 - **Network safety net**: a `recover.sh` shipped with the plugin + full cleanup in
   `_unload`/`_uninstall` (routes, iptables/nft rules, system proxy). Lesson learned
   from ToMoon.
@@ -114,21 +115,26 @@ Facts that shape the plan:
 
 *Goal: any mainstream xray share link imports and works.*
 
-- **Complete the share-link parser and config generator** for VLESS:
+- **Complete the share-link parser and config generator** for VLESS: _(done)_
   - Transports: RAW/TCP, **WS (honor path/host/headers)**, **gRPC**, **HTTPUpgrade**,
-    **XHTTP** (`mode`, `path`, `host`), mKCP.
+    **XHTTP** (`mode`, `path`, `host`), mKCP. _(done, incl. `splithttp`/`raw`/`mkcp`
+    alias normalization and IPv6 hosts)_
   - Security: proper `tlsSettings` (SNI, ALPN, `allowInsecure`, uTLS `fingerprint`),
-    REALITY (already present), **VLESS Encryption** (`encryption=mlkem768x25519plus…`).
+    REALITY (already present, now with `spiderX`), **VLESS Encryption**
+    (`encryption=mlkem768x25519plus…` passthrough). _(done)_
 - **Add the other xray-native protocols**: **VMess** (`vmess://` base64-JSON),
-  **Trojan** (`trojan://`), **Shadowsocks** (`ss://`, incl. 2022 ciphers). These are
-  pure config-generator work — same core, same lifecycle. WireGuard outbound is
-  optional stretch.
+  **Trojan** (`trojan://`), **Shadowsocks** (`ss://`, incl. 2022 ciphers). _(done;
+  SIP003 plugin links are rejected as unsupported by xray-core)_ WireGuard outbound
+  is optional stretch.
 - **Sane defaults in the generated config**: sniffing
-  (`destOverride: ["http","tls","quic"]`), routing with geosite/geoip
-  (private → direct; optional "bypass region" preset), `domainStrategy`, **fakedns**
-  for TUN mode, no mux for Vision/REALITY.
+  (`destOverride: ["http","tls","quic"]`) and geoip private → direct now apply in
+  all modes _(done)_. _Remaining:_ optional "bypass region" preset, **fakedns**
+  for TUN mode.
 - Make SOCKS/HTTP inbound ports configurable.
-- Property-based tests for the parser (round-trip share-link ↔ config).
+- Property-based tests for the parser (round-trip share-link ↔ config); unit
+  coverage for all protocols/transports exists in `backend/tests/`.
+- Standard base64 newline-delimited subscription payloads already parse (the
+  multi-server storage/UI part remains Phase 2; today the first node is used).
 
 **Exit criteria:** links exported from v2rayN / Throne / Hiddify / marzban-style
 panels for VLESS/VMess/Trojan/SS import and connect without manual editing.
