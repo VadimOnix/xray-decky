@@ -1,31 +1,68 @@
 """
 Kill Switch - Blocks all traffic when proxy disconnects unexpectedly
 
-Uses iptables rules to block all outgoing traffic except xray-core process.
+Uses a dedicated iptables chain (XRAY_KILLSWITCH) hooked into OUTPUT so that
+the rules can always be removed cleanly, even after a plugin reload or crash
+where the in-memory state is gone. When activated, blocks all outgoing traffic
+except loopback and the xray-core process.
 """
 
 import asyncio
 import time
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Tuple
+
+# Dedicated chain name. Keeping our rules in their own chain means teardown is a
+# surgical flush+delete that never touches the user's own firewall rules, and is
+# idempotent: deactivate() works even if we no longer know which rules we added
+# (e.g. after the plugin was reloaded while the kill switch was active).
+CHAIN = "XRAY_KILLSWITCH"
+
+# How many times to retry removing the OUTPUT->CHAIN jump. A previous session
+# that crashed before cleanup could have left more than one jump in place.
+_MAX_JUMP_DELETES = 10
 
 
 class KillSwitch:
     """
-    Manages kill switch functionality using iptables.
+    Manages kill switch functionality using a dedicated iptables chain.
 
-    When activated, blocks all outgoing traffic except xray-core process.
+    When activated, blocks all outgoing traffic except loopback and xray-core.
     """
 
     def __init__(self):
         """Initialize KillSwitch."""
         self.is_active: bool = False
         self.activated_at: Optional[float] = None
-        self.rule_ids: List[str] = []
         self.xray_process_id: Optional[int] = None
+
+    async def _run(self, args: List[str]) -> Tuple[int, str]:
+        """
+        Run an iptables command.
+
+        Args:
+            args: iptables arguments (without the leading "iptables")
+
+        Returns:
+            Tuple of (returncode, stderr text). returncode 127 means the
+            iptables binary was not found.
+        """
+        try:
+            process = await asyncio.create_subprocess_exec(
+                "iptables",
+                *args,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            _, stderr = await process.communicate()
+            return process.returncode or 0, stderr.decode("utf-8", errors="ignore")
+        except FileNotFoundError:
+            return 127, "iptables command not found"
+        except Exception as e:  # pragma: no cover - defensive
+            return 1, str(e)
 
     async def activate(self, xray_process_id: int) -> Dict[str, Any]:
         """
-        Activate kill switch - block all traffic except xray-core.
+        Activate kill switch - block all traffic except loopback and xray-core.
 
         Args:
             xray_process_id: Process ID of xray-core to allow
@@ -39,15 +76,35 @@ class KillSwitch:
                 self.xray_process_id = xray_process_id
                 return {"success": True, "message": "Kill switch already active"}
 
-            self.xray_process_id = xray_process_id
+            # Always start from a clean slate: a prior session may have left the
+            # chain or an OUTPUT jump behind. Ignore errors here (nothing to
+            # remove is the normal case).
+            await self._teardown()
 
-            # Apply iptables rules
-            # Rule 1: Allow xray-core process
-            rule1_result = await self._apply_rule(
+            # Create the dedicated chain and make sure it is empty.
+            await self._run(["-N", CHAIN])  # may already exist; flush handles it
+            rc, err = await self._run(["-F", CHAIN])
+            if rc != 0:
+                await self._teardown()
+                return {
+                    "success": False,
+                    "error": f"Failed to initialize kill switch chain: {err}",
+                    "errorCode": "IPTABLES_FAILED",
+                }
+
+            # Rules inside the chain, in order:
+            #   1. Always allow loopback (SOCKS/HTTP inbounds live on 127.0.0.1).
+            #   2. Allow the xray-core process itself so the tunnel stays up.
+            #   3. Drop everything else.
+            # NOTE: the --pid-owner match is a known limitation (removed from
+            # newer kernels' xt_owner); replacing it with a uid/cgroup or
+            # interface-based match is tracked in the roadmap (Phase 0) and needs
+            # on-device validation. This change only fixes rule *removal*.
+            chain_rules = [
+                ["-A", CHAIN, "-o", "lo", "-j", "ACCEPT"],
                 [
-                    "iptables",
                     "-A",
-                    "OUTPUT",
+                    CHAIN,
                     "-m",
                     "owner",
                     "--pid-owner",
@@ -55,37 +112,39 @@ class KillSwitch:
                     "-j",
                     "ACCEPT",
                 ],
-                f"xray-allow-{xray_process_id}",
-            )
+                ["-A", CHAIN, "-j", "DROP"],
+            ]
+            for rule in chain_rules:
+                rc, err = await self._run(rule)
+                if rc != 0:
+                    await self._teardown()
+                    return {
+                        "success": False,
+                        "error": f"Failed to apply kill switch rule: {err}",
+                        "errorCode": "IPTABLES_FAILED",
+                    }
 
-            if not rule1_result["success"]:
-                return {
-                    "success": False,
-                    "error": f"Failed to apply allow rule: {rule1_result.get('error')}",
-                    "errorCode": "IPTABLES_FAILED",
-                }
-
-            # Rule 2: Block all other traffic
-            rule2_result = await self._apply_rule(
-                ["iptables", "-A", "OUTPUT", "-j", "DROP"], "kill-switch-block-all"
-            )
-
-            if not rule2_result["success"]:
-                # Cleanup first rule if second failed
-                await self._remove_rule(f"xray-allow-{xray_process_id}")
-                return {
-                    "success": False,
-                    "error": f"Failed to apply block rule: {rule2_result.get('error')}",
-                    "errorCode": "IPTABLES_FAILED",
-                }
+            # Hook the chain into OUTPUT, avoiding a duplicate jump if one exists.
+            rc, _ = await self._run(["-C", "OUTPUT", "-j", CHAIN])
+            if rc != 0:
+                rc, err = await self._run(["-I", "OUTPUT", "1", "-j", CHAIN])
+                if rc != 0:
+                    await self._teardown()
+                    return {
+                        "success": False,
+                        "error": f"Failed to hook kill switch into OUTPUT: {err}",
+                        "errorCode": "IPTABLES_FAILED",
+                    }
 
             self.is_active = True
             self.activated_at = time.time()
-            self.rule_ids = [f"xray-allow-{xray_process_id}", "kill-switch-block-all"]
+            self.xray_process_id = xray_process_id
 
             return {"success": True, "activatedAt": int(self.activated_at)}
 
         except Exception as e:
+            # Best-effort cleanup so we never leave a half-applied DROP in place.
+            await self._teardown()
             return {
                 "success": False,
                 "error": f"Failed to activate kill switch: {str(e)}",
@@ -94,22 +153,20 @@ class KillSwitch:
 
     async def deactivate(self) -> Dict[str, Any]:
         """
-        Deactivate kill switch - remove iptables rules.
+        Deactivate kill switch - remove the chain and its OUTPUT hook.
+
+        Safe to call at any time, including after a plugin reload when the
+        in-memory rule state was lost: teardown targets the named chain, not
+        tracked rule numbers.
 
         Returns:
             Dictionary with deactivation result
         """
         try:
-            if not self.is_active:
-                return {"success": True, "message": "Kill switch not active"}
-
-            # Remove rules in reverse order
-            for rule_id in reversed(self.rule_ids):
-                await self._remove_rule(rule_id)
+            await self._teardown()
 
             self.is_active = False
             self.activated_at = None
-            self.rule_ids = []
             self.xray_process_id = None
 
             return {"success": True}
@@ -121,67 +178,22 @@ class KillSwitch:
                 "errorCode": "KILL_SWITCH_ERROR",
             }
 
-    async def _apply_rule(self, command: List[str], rule_id: str) -> Dict[str, Any]:
+    async def _teardown(self) -> None:
         """
-        Apply an iptables rule.
+        Remove every OUTPUT->CHAIN jump and delete the chain itself.
 
-        Args:
-            command: iptables command as list
-            rule_id: Identifier for the rule
-
-        Returns:
-            Dictionary with result
+        Idempotent: missing chain / missing jump are treated as success. This is
+        the operation that actually unblocks traffic, so it must never raise.
         """
-        try:
-            process = await asyncio.create_subprocess_exec(
-                *command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
-            )
+        # Remove all jumps from OUTPUT (there may be duplicates from a prior run).
+        for _ in range(_MAX_JUMP_DELETES):
+            rc, _ = await self._run(["-D", "OUTPUT", "-j", CHAIN])
+            if rc != 0:
+                break
 
-            await process.wait()
-
-            if process.returncode == 0:
-                return {"success": True, "ruleId": rule_id}
-            else:
-                stderr = await process.stderr.read()
-                error_msg = (
-                    stderr.decode("utf-8", errors="ignore")
-                    if stderr
-                    else "Unknown error"
-                )
-                return {"success": False, "error": error_msg}
-
-        except FileNotFoundError:
-            return {"success": False, "error": "iptables command not found"}
-        except Exception as e:
-            return {"success": False, "error": str(e)}
-
-    async def _remove_rule(self, rule_id: str) -> Dict[str, Any]:
-        """
-        Remove an iptables rule.
-
-        Args:
-            rule_id: Identifier for the rule to remove
-
-        Returns:
-            Dictionary with result
-        """
-        try:
-            # Try to remove rule (may not exist, that's OK)
-            # We'll try different methods to find and remove the rule
-
-            # Method 1: Try to remove by rule number (if we tracked it)
-            # For now, we'll use a simpler approach: remove all our rules
-
-            # Note: In production, you'd want to track rule numbers more carefully
-            # This is a simplified implementation
-
-            return {"success": True}
-
-        except Exception as e:
-            # Don't fail deactivation if rule removal fails
-            # Log the error but continue
-            print(f"Warning: Failed to remove iptables rule {rule_id}: {e}")
-            return {"success": True}  # Return success to allow cleanup to continue
+        # Flush and delete the chain. Ignore errors (chain may not exist).
+        await self._run(["-F", CHAIN])
+        await self._run(["-X", CHAIN])
 
     def get_status(self) -> Dict[str, Any]:
         """
@@ -194,5 +206,5 @@ class KillSwitch:
             "isActive": self.is_active,
             "activatedAt": int(self.activated_at) if self.activated_at else None,
             "processId": self.xray_process_id,
-            "ruleIds": self.rule_ids.copy(),
+            "chain": CHAIN,
         }

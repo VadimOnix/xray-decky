@@ -14,6 +14,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   runtime directory if missing. This fixes connections breaking after a reboot
   on SteamOS, where the plugin's bundled `bin/` can be wiped by the immutable
   filesystem / atomic system updates.
+- Project roadmap (`docs/ROADMAP.md`) covering full xray protocol coverage,
+  multi-server subscriptions, a LAN web admin panel, and a multi-core path for
+  Hysteria2/TUIC.
+- Pinned xray-core version: the bundled release and the runtime self-heal
+  downloader now read the same `backend/src/xray_version.json`, so they can no
+  longer drift. The pin includes an optional `sha256` that both the release
+  workflow and the downloader verify when set.
+
+### Fixed
+
+- Kill switch now actually removes its firewall rules on deactivation. Rules
+  are kept in a dedicated `XRAY_KILLSWITCH` iptables chain, so teardown is
+  reliable, idempotent, and survives a plugin reload — previously the removal
+  step was a no-op that could leave the system's traffic blocked. Loopback is
+  always allowed while the switch is active.
 
 ## [1.0.0] - 2026-02-14
 
