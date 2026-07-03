@@ -20,6 +20,7 @@ tools (see cert_utils.py for the same approach). Extraction uses the stdlib
 ``zipfile`` module so no external ``unzip`` is required.
 """
 
+import hashlib
 import json
 import os
 import shutil
@@ -37,12 +38,53 @@ GEO_FILES = ("geoip.dat", "geosite.dat")
 # Name of the binary inside the official release archive.
 ARCHIVE_BINARY_NAME = "xray"
 
-# Used only when the GitHub API is unreachable (e.g. rate limited / offline).
-# Must be a release that supports the TUN inbound (>= v26.1.23, see xray_manager).
+# Pinned version metadata lives next to this module so the release workflow and
+# the runtime downloader share a single source of truth (no drift between the
+# bundled binary and a re-downloaded one).
+_VERSION_FILE = Path(__file__).resolve().parent / "xray_version.json"
+
+# Last-resort version if xray_version.json is missing or unparseable. Must be a
+# release that supports the TUN inbound (>= v26.1.23, see xray_manager).
 FALLBACK_XRAY_VERSION = "v26.1.23"
 
-# Network timeouts (seconds).
-_API_TIMEOUT = 20
+
+def _load_pin() -> Dict[str, Any]:
+    """
+    Read the pinned metadata (repo, asset, version, optional sha256).
+
+    Returns an empty dict on any problem, including a file that parses to a
+    non-object (bare string / list), so callers always get a ``.get()``-able
+    value and fall back cleanly.
+    """
+    try:
+        with open(_VERSION_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, ValueError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def pinned_version() -> str:
+    """The pinned xray-core release tag, or the hardcoded fallback."""
+    return str(_load_pin().get("version") or FALLBACK_XRAY_VERSION)
+
+
+def pinned_sha256() -> Optional[str]:
+    """Expected sha256 of the release asset, or None when unset."""
+    value = _load_pin().get("sha256")
+    return str(value).lower() if value else None
+
+
+def _sha256(path: Path) -> str:
+    """Compute the sha256 hex digest of a file."""
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+# Network timeout (seconds) for the release download.
 _DOWNLOAD_TIMEOUT = 300
 
 
@@ -64,28 +106,6 @@ def geo_files_present(directory: Path) -> bool:
     """True if both geoip.dat and geosite.dat exist in directory."""
     directory = Path(directory)
     return all((directory / name).is_file() for name in GEO_FILES)
-
-
-def fetch_latest_version() -> Optional[str]:
-    """
-    Return the latest xray-core release tag (e.g. "v26.1.23"), or None if the
-    GitHub API cannot be reached or parsed.
-    """
-    try:
-        result = subprocess.run(
-            ["curl", "-sSL", f"https://api.github.com/repos/{XRAY_REPO}/releases/latest"],
-            capture_output=True,
-            text=True,
-            timeout=_API_TIMEOUT,
-            env=_clean_env(),
-        )
-        if result.returncode == 0 and result.stdout:
-            tag = json.loads(result.stdout).get("tag_name")
-            if tag:
-                return str(tag)
-    except Exception:
-        pass
-    return None
 
 
 def _download_file(url: str, dest: Path) -> bool:
@@ -133,8 +153,9 @@ def download_xray(target_dir: Path, version: Optional[str] = None) -> Dict[str, 
 
     Args:
         target_dir: Writable directory to install the binary and geo files into.
-        version: Release tag to download. If None, the latest release is used
-                 (falling back to FALLBACK_XRAY_VERSION when the API is down).
+        version: Release tag to download. If None, the pinned version from
+                 xray_version.json is used (falling back to
+                 FALLBACK_XRAY_VERSION when that file is unreadable).
 
     Returns:
         Result dict with ``success`` and either ``version``/``path`` or
@@ -150,21 +171,46 @@ def download_xray(target_dir: Path, version: Optional[str] = None) -> Dict[str, 
             "errorCode": "TARGET_DIR_ERROR",
         }
 
-    resolved_version = version or fetch_latest_version() or FALLBACK_XRAY_VERSION
-    url = (
-        f"https://github.com/{XRAY_REPO}/releases/download/"
-        f"{resolved_version}/{XRAY_ASSET}"
-    )
+    # Read the pin once so repo/asset/version/sha256 all come from one file
+    # state (no drift between the workflow's bundle and this download, and no
+    # chance of checking a version against a mismatched sha if the file changes
+    # mid-call).
+    pin = _load_pin()
+    repo = pin.get("repo") or XRAY_REPO
+    asset = pin.get("asset") or XRAY_ASSET
+    resolved_version = version or pin.get("version") or FALLBACK_XRAY_VERSION
+
+    # Only verify the pinned checksum when we are actually downloading the pinned
+    # version. An explicit `version` override refers to a different asset whose
+    # hash the pin does not describe, so verifying it would always fail.
+    expected_sha = None
+    if version is None:
+        sha = pin.get("sha256")
+        expected_sha = str(sha).lower() if sha else None
+
+    url = f"https://github.com/{repo}/releases/download/{resolved_version}/{asset}"
 
     tmp_dir = Path(tempfile.mkdtemp(prefix="xray-dl-"))
     try:
-        zip_path = tmp_dir / XRAY_ASSET
+        zip_path = tmp_dir / asset
         if not _download_file(url, zip_path):
             return {
                 "success": False,
                 "error": f"Failed to download {url}",
                 "errorCode": "DOWNLOAD_FAILED",
             }
+
+        if expected_sha:
+            actual_sha = _sha256(zip_path)
+            if actual_sha != expected_sha:
+                return {
+                    "success": False,
+                    "error": (
+                        f"Checksum mismatch for {asset}: "
+                        f"expected {expected_sha}, got {actual_sha}"
+                    ),
+                    "errorCode": "CHECKSUM_MISMATCH",
+                }
 
         try:
             _extract(zip_path, target_dir)

@@ -357,9 +357,12 @@ class Plugin:
             await xray_manager.stop()
             connection_state.set_disconnected()
 
-        # Deactivate kill switch if active
-        if kill_switch.get_status().get("isActive", False):
-            await kill_switch.deactivate()
+        # Deactivate kill switch unconditionally. deactivate() is idempotent and
+        # safe to call even when the in-memory state says inactive: after a
+        # plugin reload a fresh KillSwitch reports isActive=False while the
+        # firewall chain may still be live, so gating on that flag would leave a
+        # DROP rule blocking the whole system after unload/uninstall.
+        await kill_switch.deactivate()
 
     # SettingsManager wrapper methods
     async def settings_read(self) -> Dict[str, Any]:
@@ -922,6 +925,14 @@ class Plugin:
                         kill_switch_pref["isActive"] = True
                         kill_switch_pref["activatedAt"] = int(time.time())
                         connection_state.set_blocked()
+                    else:
+                        # Fail loud: the switch could not engage, so traffic is
+                        # NOT blocked. Surface it instead of silently failing open.
+                        kill_switch_pref["isActive"] = False
+                        print(
+                            "Warning: kill switch failed to activate on "
+                            f"unexpected disconnect: {kill_result.get('error')}"
+                        )
                     settings.setSetting("killSwitch", kill_switch_pref)
                     settings.commit()
 
@@ -989,6 +1000,12 @@ class Plugin:
                         connection_state.set_blocked()
                         settings.setSetting("killSwitch", kill_switch_pref)
                         settings.commit()
+                    else:
+                        # Fail loud: switch did not engage; traffic is not blocked.
+                        print(
+                            "Warning: kill switch failed to activate after "
+                            f"process death: {kill_result.get('error')}"
+                        )
 
                 # Cleanup TUN route if was active
                 tun_pref = settings.getSetting("tunMode", {})

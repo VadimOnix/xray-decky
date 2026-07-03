@@ -31,14 +31,27 @@ jobs:
           pnpm install
           pnpm run build
 
-      - name: Download xray-core (latest release)
+      - name: Download xray-core (pinned release)
         run: |
-          # Fetch the latest stable xray-core release tag from GitHub API
-          XRAY_VERSION=$(curl -s https://api.github.com/repos/XTLS/Xray-core/releases/latest | jq -r .tag_name)
-          echo "Using xray-core ${XRAY_VERSION}"
+          # Read the pinned version from the single source of truth shared with
+          # the runtime downloader (backend/src/xray_downloader.py), so the
+          # bundled binary and any re-downloaded one can never drift.
+          VERSION_FILE="backend/src/xray_version.json"
+          XRAY_REPO=$(jq -r '.repo' "$VERSION_FILE")
+          XRAY_ASSET=$(jq -r '.asset' "$VERSION_FILE")
+          XRAY_VERSION=$(jq -r '.version' "$VERSION_FILE")
+          XRAY_SHA256=$(jq -r '.sha256 // empty' "$VERSION_FILE")
+          echo "Using xray-core ${XRAY_VERSION} (${XRAY_REPO})"
 
-          XRAY_ZIP="Xray-linux-64.zip"
-          wget -q "https://github.com/XTLS/Xray-core/releases/download/${XRAY_VERSION}/${XRAY_ZIP}" -O /tmp/xray.zip
+          wget -q "https://github.com/${XRAY_REPO}/releases/download/${XRAY_VERSION}/${XRAY_ASSET}" -O /tmp/xray.zip
+
+          # Verify the checksum when the pin provides one.
+          if [ -n "$XRAY_SHA256" ]; then
+            echo "${XRAY_SHA256}  /tmp/xray.zip" | sha256sum -c -
+          else
+            echo "No sha256 pinned; skipping checksum verification"
+          fi
+
           unzip -o /tmp/xray.zip -d /tmp/xray-extract
 
           mkdir -p xray-bin
@@ -71,6 +84,8 @@ jobs:
           cp backend/__init__.py "$PLUGIN_DIR/backend/" 2>/dev/null || echo "# Backend package" > "$PLUGIN_DIR/backend/__init__.py"
           cp backend/src/__init__.py "$PLUGIN_DIR/backend/src/" 2>/dev/null || echo "# Backend src package" > "$PLUGIN_DIR/backend/src/__init__.py"
           cp backend/src/*.py "$PLUGIN_DIR/backend/src/"
+          # Pinned-version metadata, read at runtime by the self-heal downloader.
+          cp backend/src/*.json "$PLUGIN_DIR/backend/src/"
           cp -r backend/static "$PLUGIN_DIR/backend/"
 
           # xray-core binary + geo data files

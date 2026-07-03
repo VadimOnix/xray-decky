@@ -204,7 +204,7 @@ interface KillSwitchPreference {
   // Blocking information
   blockedUntil?: number // Timestamp until which traffic is blocked
   iptablesRulesApplied?: boolean // Whether iptables rules are active
-  ruleIds?: string[] // iptables rule identifiers for cleanup
+  chain?: string // Dedicated firewall chain holding the rules (XRAY_KILLSWITCH)
 }
 ```
 
