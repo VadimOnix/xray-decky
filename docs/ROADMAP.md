@@ -173,22 +173,30 @@ pointing at it.
 
 - **Evolve the existing aiohttp import server** (HTTPS, self-signed cert — already
   built) into `admin/`:
-  - **REST API** (`/api/v1/…`): profiles CRUD, subscriptions, connect/disconnect,
-    TUN/kill-switch toggles, status, latency tests.
+  - **REST API** (`/api/v1/…`): _first cut done_ — status, connect/disconnect,
+    TUN/kill-switch toggles + unblock, share-link import, all token-guarded and
+    credential-redacting. _Remaining:_ profiles CRUD, subscriptions, latency tests.
   - **WebSocket** channel: live connection state, traffic speed, log tail.
-  - **Static SPA** (reuse the existing React/TS toolchain; second rollup entry
-    point) served from the same origin: dashboard (status + speed graph), server
-    list with latency test, subscription manager, settings, log viewer,
-    diagnostics (routes, TUN state, core version).
+  - **Static SPA**: _first cut done_ — no-build vanilla SPA
+    (`backend/static/admin.{html,css,js}`) styled after the Steam UI design
+    language (Steam dark palette, Play-style action button, SteamOS toggles,
+    ≥44px touch targets, visible focus rings, `prefers-reduced-motion`):
+    dashboard with live status, server summary, options, import. _Remaining:_
+    server list with latency, subscription manager, speed graph, log viewer,
+    diagnostics.
 - **Security model** (copy DeckyClash's defaults):
-  - Random per-install token, required for API and page access; shown in QAM as a
-    QR code / short pairing URL.
+  - Random per-install token, required for API access; shown in QAM as a QR
+    code / pairing URL. _(done — token in `X-Admin-Token` header or `?token=`,
+    constant-time compare, page strips it from the address bar)_
   - Bind `127.0.0.1` by default; **explicit "Allow LAN access" toggle** in QAM to
-    bind `0.0.0.0`.
+    bind `0.0.0.0`. _(remaining — server currently binds `0.0.0.0` like the
+    import page, mitigated by the token)_
   - Keep HTTPS (already needed for phone clipboard access); rate-limit auth
-    attempts; CSRF-safe (token header, not cookies).
+    attempts; CSRF-safe (token header, not cookies). _(HTTPS + header token done;
+    rate-limiting remaining)_
 - QAM becomes: connect toggle, server picker, status/speed, TUN/kill-switch, and
-  "Open admin panel" QR. The old single-purpose import page folds into the panel.
+  "Open admin panel" QR _(QR done)_. The old single-purpose import page folds
+  into the panel.
 
 **Exit criteria:** scan QR from phone → authenticated panel → manage everything
 without Desktop Mode.

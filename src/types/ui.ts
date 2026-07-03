@@ -9,7 +9,8 @@ export type HelpTopic =
   | 'configured.status'
   | 'configured.reset'
   | 'options.tun_mode'
-  | 'options.kill_switch';
+  | 'options.kill_switch'
+  | 'options.admin_panel';
 
 export interface ConnectionConfigSummary {
   exists: boolean;

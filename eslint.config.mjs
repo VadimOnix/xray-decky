@@ -8,6 +8,22 @@ import eslintConfigPrettier from 'eslint-config-prettier/flat';
 export default [
   { ignores: ['dist/', 'node_modules/', '*.config.js', '*.config.mjs'] },
   eslint.configs.recommended,
+  {
+    // No-build browser scripts served by the embedded web server.
+    files: ['backend/static/**/*.js'],
+    languageOptions: {
+      sourceType: 'script',
+      globals: {
+        window: 'readonly',
+        document: 'readonly',
+        fetch: 'readonly',
+        sessionStorage: 'readonly',
+        URLSearchParams: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+      },
+    },
+  },
   ...tseslint.configs.recommended,
   {
     files: ['**/*.{ts,tsx}'],

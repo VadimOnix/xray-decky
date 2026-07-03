@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **LAN web admin panel** (roadmap Phase 3, first cut): `https://<deck>:<port>/admin`
+  served by the existing embedded HTTPS server. Steam-UI-styled dashboard
+  (dark Steam palette, big touch/gamepad-friendly controls, SteamOS-style
+  toggles, focus rings, reduced-motion support) with live status, server
+  summary, connect/disconnect, TUN and kill-switch toggles, kill-switch
+  unblock, and share-link import.
+- Admin REST API (`/api/v1/status|connection|tun|killswitch|
+  killswitch/deactivate|import`) guarded by a random per-install token
+  (`X-Admin-Token` header or `?token=`); credentials (UUIDs/passwords) are
+  never exposed by the API.
+- QAM Options tab now shows an **Admin panel QR code** (URL with the pairing
+  token embedded) via the new `get_admin_panel_url` backend method.
+
 - Full xray protocol coverage for imports (roadmap Phase 1): in addition to
   VLESS, the plugin now imports and connects **VMess** (`vmess://` base64-JSON),
   **Trojan** (`trojan://`) and **Shadowsocks** (`ss://`, SIP002 + legacy base64 +

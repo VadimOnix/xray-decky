@@ -98,6 +98,7 @@ from backend.src.tun_manager import TUNManager
 from backend.src.kill_switch import KillSwitch
 from backend.src.system_proxy import SystemProxyManager
 from backend.src.import_server import create_import_app
+from backend.src.admin_api import ensure_admin_token, register_admin_routes
 from backend.src.cert_utils import ensure_cert_key
 from aiohttp import web
 
@@ -215,6 +216,22 @@ class Plugin:
                 try:
                     import_app = create_import_app(
                         settings, static_dir, on_vless_saved=_notify_vless_saved
+                    )
+                    # Admin panel shares the same app (port + TLS cert).
+                    register_admin_routes(
+                        import_app,
+                        settings=settings,
+                        static_dir=static_dir,
+                        handlers={
+                            "get_connection_status": self.get_connection_status,
+                            "toggle_connection": self.toggle_connection,
+                            "get_vless_config": self.get_vless_config,
+                            "import_config": self.import_vless_config,
+                            "toggle_tun_mode": self.toggle_tun_mode,
+                            "toggle_kill_switch": self.toggle_kill_switch,
+                            "deactivate_kill_switch": self.deactivate_kill_switch,
+                        },
+                        token=ensure_admin_token(settings),
                     )
                     runner = web.AppRunner(import_app)
                     await runner.setup()
@@ -493,6 +510,29 @@ class Plugin:
         except Exception as e:
             return create_error_response(
                 ErrorCode.UNKNOWN_ERROR, f"Failed to get import URL: {str(e)}"
+            )
+
+    async def get_admin_panel_url(self) -> Dict[str, Any]:
+        """
+        Get URL for the LAN admin panel (for QR code), including the
+        per-install access token as a query parameter.
+
+        Returns:
+            { 'baseUrl': 'https://{lan_ip}:{port}', 'path': '/admin', 'token': str }
+        """
+        try:
+            import_server_config = settings.getSetting("importServer", {"port": 8765})
+            port = int(import_server_config.get("port", 8765))
+            port = max(1024, min(65535, port))
+            local_ip = _get_lan_ip()
+            return {
+                "baseUrl": f"https://{local_ip}:{port}",
+                "path": "/admin",
+                "token": ensure_admin_token(settings),
+            }
+        except Exception as e:
+            return create_error_response(
+                ErrorCode.UNKNOWN_ERROR, f"Failed to get admin panel URL: {str(e)}"
             )
 
     async def validate_vless_config(self) -> Dict[str, Any]:

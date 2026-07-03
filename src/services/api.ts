@@ -126,6 +126,12 @@ export interface ImportServerUrlResponse {
   path: string;
 }
 
+export interface AdminPanelUrlResponse {
+  baseUrl: string;
+  path: string;
+  token: string;
+}
+
 // Backend method handles using callable (new API)
 // callable<[arg types], returnType>("method_name")
 
@@ -170,3 +176,4 @@ export const getSystemProxyStatus = callable<[], SystemProxyStatusResponse>(
 );
 
 export const getImportServerUrl = callable<[], ImportServerUrlResponse>('get_import_server_url');
+export const getAdminPanelUrl = callable<[], AdminPanelUrlResponse>('get_admin_panel_url');
