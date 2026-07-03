@@ -98,12 +98,14 @@ Facts that shape the plan:
   no-ops), and make route setup failure a hard, user-visible error in TUN mode.
 - **Process supervision**: `await process.wait()` in a background task → immediate
   crash detection, bounded auto-restart with backoff, kill-switch engagement on
-  crash (not on next poll).
+  crash (not on next poll). _(done — `backend/src/supervisor.py`; crash loops give
+  up after 3 unstable episodes, stable runs reset the counter)_
 - **Relax UUID validation** to any RFC-4122 UUID. _(done — canonical dashed form
   of any UUID version is accepted)_
 - **Network safety net**: a `recover.sh` shipped with the plugin + full cleanup in
   `_unload`/`_uninstall` (routes, iptables/nft rules, system proxy). Lesson learned
-  from ToMoon.
+  from ToMoon. _(done — `scripts/recover.sh` ships in the plugin folder; `_uninstall`
+  restores the network unconditionally)_
 - **Suspend/resume + Wi-Fi roaming handling**: reconnect xray and re-apply routes
   after resume (Steam Deck suspends constantly; this is a top real-world failure
   source for proxy plugins).

@@ -28,6 +28,8 @@ cp backend/src/*.py "$PLUGIN_DIR/backend/src/"
 # Pinned-version metadata, read at runtime by the self-heal downloader.
 cp backend/src/*.json "$PLUGIN_DIR/backend/src/"
 cp -r backend/static "$PLUGIN_DIR/backend/"
+# Network recovery script (run manually if the Deck loses connectivity)
+cp scripts/recover.sh "$PLUGIN_DIR/"
 
 echo "🚀 Deploying to Steam Deck..."
 rsync -avz --delete --progress \

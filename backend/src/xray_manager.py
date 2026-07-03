@@ -373,15 +373,22 @@ class XrayManager:
             if self.process is None:
                 return {"success": True, "message": "No process running"}
 
-            # Terminate process
-            self.process.terminate()
+            # Terminate process (it may already have exited, e.g. after a
+            # crash handled by the supervisor — that's not an error).
+            try:
+                self.process.terminate()
+            except ProcessLookupError:
+                pass
 
             # Wait for process to terminate (with timeout)
             try:
                 await asyncio.wait_for(self.process.wait(), timeout=5.0)
             except asyncio.TimeoutError:
                 # Force kill if process doesn't terminate
-                self.process.kill()
+                try:
+                    self.process.kill()
+                except ProcessLookupError:
+                    pass
                 await self.process.wait()
 
             # Cleanup config file

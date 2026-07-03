@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Process supervisor** (roadmap Phase 0): a crashed xray-core is now
+  detected the moment it exits (not on the next status poll). The kill
+  switch engages immediately (fail closed) when enabled, then the process is
+  auto-restarted with exponential backoff (1s/2s/4s); TUN routes are
+  re-applied and the auto-engaged kill switch is lifted on success. Repeated
+  crash loops give up cleanly after 3 unstable episodes instead of flapping
+  (a run ≥60s resets the counter).
+- **Network recovery script** (`scripts/recover.sh`, shipped in the plugin
+  folder): one command restores connectivity if the plugin ever dies without
+  cleaning up — removes the kill-switch chain (IPv4+IPv6), stale TUN
+  routes/interface and legacy fwmark rules, stops leftover xray-core
+  processes, and turns the desktop system proxy off.
+- `_uninstall` hook: removing the plugin now unconditionally restores the
+  network (system proxy, routes, xray-core, kill switch chain).
+
+### Fixed
+
+- Stopping an already-dead xray-core process no longer reports a failure
+  (`ProcessLookupError` is treated as already stopped, and the temp config
+  file is still cleaned up).
+
 - **LAN web admin panel** (roadmap Phase 3, first cut): `https://<deck>:<port>/admin`
   served by the existing embedded HTTPS server. Steam-UI-styled dashboard
   (dark Steam palette, big touch/gamepad-friendly controls, SteamOS-style
