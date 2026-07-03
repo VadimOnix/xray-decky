@@ -82,13 +82,17 @@ Facts that shape the plan:
 
 *Goal: the existing feature set becomes trustworthy. No new features.*
 
-- **Fix the kill switch.** Implement real rule removal (track rule specs and delete
-  with `iptables -D`, or migrate to an `nftables` named table that can be atomically
-  flushed — SteamOS ships nft). Add an integration test. Consider replacing the
-  fragile `--pid-owner` match with an owner-uid/cgroup match or nft socket cgroup.
-- **Pin the xray-core version** in one shared constant (e.g. `xray_version.json`
-  consumed by both the release workflow and `xray_downloader.py`), verify the
-  download with the published SHA256. Upgrade deliberately, not implicitly.
+- **Fix the kill switch.** _Done:_ rules now live in a dedicated `XRAY_KILLSWITCH`
+  chain removed reliably on teardown; the removed-from-kernel `--pid-owner` match was
+  replaced with `--uid-owner`; rules are applied on both IPv4 and IPv6; `deactivate()`
+  reports failure (instead of a false success) if the chain is still hooked; `_unload`
+  tears down unconditionally. Uses `-w` for the xtables lock. _Remaining:_ validate the
+  permit set (loopback + TUN interface + xray uid) against a real Steam Deck in TUN mode,
+  and add an on-device integration test; optionally migrate to an `nftables` named table.
+- **Pin the xray-core version** _(done)_ in `backend/src/xray_version.json`, consumed by
+  both the release workflow and `xray_downloader.py` (repo/asset/version/sha256).
+  _Remaining:_ populate the `sha256` so downloads are integrity-verified; upgrade the
+  pinned version deliberately, not implicitly.
 - **Resolve the TUN contradiction**: verify native TUN inbound behavior against the
   pinned core, delete the stale comments/dead code paths (`create_tun_interface`
   no-ops), and make route setup failure a hard, user-visible error in TUN mode.

@@ -1,15 +1,18 @@
-"""Tests for the KillSwitch iptables lifecycle.
+"""Tests for the KillSwitch firewall lifecycle.
 
-These tests mock ``asyncio.create_subprocess_exec`` so no real iptables rules
-are touched. They assert the property that the previous implementation broke:
-deactivation actually issues the iptables commands that remove our rules.
+These tests mock ``asyncio.create_subprocess_exec`` so no real firewall rules
+are touched. They assert the properties the previous implementation broke:
+deactivation actually issues the commands that remove our rules, reports failure
+when the chain is still hooked, and the rules match by uid (not the long-removed
+--pid-owner match) across both IPv4 and IPv6.
 """
 
 import asyncio
+import os
 from typing import List, Tuple
 from unittest.mock import patch
 
-from backend.src.kill_switch import KillSwitch, CHAIN
+from backend.src.kill_switch import KillSwitch, CHAIN, TUN_INTERFACE, _IPV6
 
 
 class _FakeProcess:
@@ -22,42 +25,46 @@ class _FakeProcess:
         return (b"", b"")
 
 
-class _IptablesRecorder:
-    """Records every iptables invocation and returns scripted return codes.
+class _Recorder:
+    """Records every iptables/ip6tables invocation and returns scripted codes.
 
-    ``delete_hits`` controls how many times a ``-D OUTPUT -j CHAIN`` call
-    succeeds before returning non-zero, so the teardown delete-loop terminates.
+    Each recorded entry is (binary, args_without_lock_flag).
     """
 
-    def __init__(self, delete_hits: int = 1):
-        self.calls: List[List[str]] = []
-        self._delete_budget = delete_hits
+    def __init__(self, ipv6_present: bool = True, hooked: bool = False):
+        self.calls: List[Tuple[str, Tuple[str, ...]]] = []
+        self.ipv6_present = ipv6_present
+        # Whether "-C OUTPUT -j CHAIN" reports the jump as present.
+        self.hooked = hooked
+        self._delete_budget = {"iptables": 1, "ip6tables": 1}
 
     def __call__(self, *args, **kwargs) -> "_FakeProcess":
-        # args[0] is "iptables"; the rest are the actual iptables arguments.
-        argv = list(args[1:])
-        self.calls.append(argv)
+        binary = args[0]
+        rest = list(args[1:])
+        # Strip the "-w <n>" lock flag that _run prepends.
+        if rest[:1] == ["-w"]:
+            rest = rest[2:]
+        self.calls.append((binary, tuple(rest)))
 
-        # The delete-jump loop keeps going while rc == 0; give it a finite
-        # number of successes then fail so the loop exits.
-        if argv[:2] == ["-D", "OUTPUT"]:
-            if self._delete_budget > 0:
-                self._delete_budget -= 1
+        if binary == _IPV6 and not self.ipv6_present:
+            return _FakeProcess(127)
+
+        if rest[:2] == ["-D", "OUTPUT"]:
+            if self._delete_budget.get(binary, 0) > 0:
+                self._delete_budget[binary] -= 1
                 return _FakeProcess(0)
             return _FakeProcess(1)
 
-        # A check that finds no existing jump returns non-zero (so activate
-        # proceeds to insert one).
-        if argv[:2] == ["-C", "OUTPUT"]:
-            return _FakeProcess(1)
+        if rest[:2] == ["-C", "OUTPUT"]:
+            return _FakeProcess(0 if self.hooked else 1)
 
         return _FakeProcess(0)
 
-    def commands(self) -> List[Tuple[str, ...]]:
-        return [tuple(c) for c in self.calls]
+    def args_for(self, binary: str) -> List[Tuple[str, ...]]:
+        return [a for b, a in self.calls if b == binary]
 
 
-def _patch(recorder: "_IptablesRecorder"):
+def _patch(recorder: "_Recorder"):
     async def _fake_exec(*args, **kwargs):
         return recorder(*args, **kwargs)
 
@@ -66,90 +73,124 @@ def _patch(recorder: "_IptablesRecorder"):
 
 def test_activate_creates_chain_and_hooks_output():
     ks = KillSwitch()
-    rec = _IptablesRecorder()
+    rec = _Recorder()
 
     with _patch(rec):
         result = asyncio.run(ks.activate(4242))
 
     assert result["success"] is True
     assert ks.is_active is True
-    cmds = rec.commands()
+    v4 = rec.args_for("iptables")
 
-    # Chain is created, the drop-all rule is added, and OUTPUT jumps to it.
-    assert ("-N", CHAIN) in cmds
-    assert ("-A", CHAIN, "-j", "DROP") in cmds
-    assert ("-I", "OUTPUT", "1", "-j", CHAIN) in cmds
-    # The allowed xray pid appears in an ACCEPT rule.
-    assert any("4242" in c and "ACCEPT" in c for c in cmds)
+    assert ("-N", CHAIN) in v4
+    assert ("-A", CHAIN, "-j", "DROP") in v4
+    assert ("-A", CHAIN, "-o", "lo", "-j", "ACCEPT") in v4
+    assert ("-A", CHAIN, "-o", TUN_INTERFACE, "-j", "ACCEPT") in v4
+    assert ("-I", "OUTPUT", "1", "-j", CHAIN) in v4
+    # Owner match is uid-based (the supported match), never pid-based.
+    uid = str(os.geteuid())
+    assert ("-A", CHAIN, "-m", "owner", "--uid-owner", uid, "-j", "ACCEPT") in v4
+
+
+def test_never_uses_removed_pid_owner_match():
+    """Regression guard: --pid-owner was removed from modern kernels."""
+    ks = KillSwitch()
+    rec = _Recorder()
+    with _patch(rec):
+        asyncio.run(ks.activate(4242))
+    assert all("--pid-owner" not in a for _, a in rec.calls)
+
+
+def test_rules_applied_to_both_families():
+    ks = KillSwitch()
+    rec = _Recorder(ipv6_present=True)
+    with _patch(rec):
+        asyncio.run(ks.activate(4242))
+    # The DROP rule is installed on both IPv4 and IPv6.
+    assert ("-A", CHAIN, "-j", "DROP") in rec.args_for("iptables")
+    assert ("-A", CHAIN, "-j", "DROP") in rec.args_for("ip6tables")
+
+
+def test_activate_succeeds_when_ipv6_absent():
+    ks = KillSwitch()
+    rec = _Recorder(ipv6_present=False)
+    with _patch(rec):
+        result = asyncio.run(ks.activate(4242))
+    assert result["success"] is True
+    # IPv4 rules still applied.
+    assert ("-A", CHAIN, "-j", "DROP") in rec.args_for("iptables")
 
 
 def test_deactivate_removes_chain_and_jump():
     """The core regression: deactivate must actually delete the rules."""
     ks = KillSwitch()
-
-    with _patch(_IptablesRecorder()):
+    with _patch(_Recorder()):
         asyncio.run(ks.activate(4242))
 
-    rec = _IptablesRecorder()
+    rec = _Recorder(hooked=False)
     with _patch(rec):
         result = asyncio.run(ks.deactivate())
 
     assert result["success"] is True
     assert ks.is_active is False
-    cmds = rec.commands()
+    v4 = rec.args_for("iptables")
+    assert ("-D", "OUTPUT", "-j", CHAIN) in v4
+    assert ("-F", CHAIN) in v4
+    assert ("-X", CHAIN) in v4
 
-    # The OUTPUT jump is deleted, and the chain is flushed and removed.
-    assert ("-D", "OUTPUT", "-j", CHAIN) in cmds
-    assert ("-F", CHAIN) in cmds
-    assert ("-X", CHAIN) in cmds
+
+def test_deactivate_reports_failure_when_still_hooked():
+    """If teardown can't remove the jump, deactivate must not claim success."""
+    ks = KillSwitch()
+    with _patch(_Recorder()):
+        asyncio.run(ks.activate(4242))
+
+    rec = _Recorder(hooked=True)  # -C OUTPUT still finds the jump
+    with _patch(rec):
+        result = asyncio.run(ks.deactivate())
+
+    assert result["success"] is False
+    assert result["errorCode"] == "IPTABLES_FAILED"
 
 
 def test_deactivate_when_not_active_is_safe():
     """Deactivating an inactive switch still tears down any stale chain."""
     ks = KillSwitch()
-    rec = _IptablesRecorder()
-
+    rec = _Recorder(hooked=False)
     with _patch(rec):
         result = asyncio.run(ks.deactivate())
-
     assert result["success"] is True
-    cmds = rec.commands()
-    # Even with no in-memory state, teardown targets the named chain.
-    assert ("-X", CHAIN) in cmds
+    assert ("-X", CHAIN) in rec.args_for("iptables")
 
 
 def test_activate_rolls_back_on_rule_failure():
     """If a chain rule fails to apply, no DROP is left hooked into OUTPUT."""
     ks = KillSwitch()
 
-    class _FailDropRecorder(_IptablesRecorder):
+    class _FailDrop(_Recorder):
         def __call__(self, *args, **kwargs):
-            argv = list(args[1:])
             proc = super().__call__(*args, **kwargs)
-            # Fail specifically when applying the DROP rule.
-            if argv == ["-A", CHAIN, "-j", "DROP"]:
+            rest = list(args[1:])
+            if rest[:1] == ["-w"]:
+                rest = rest[2:]
+            if args[0] == "iptables" and rest == ["-A", CHAIN, "-j", "DROP"]:
                 return _FakeProcess(1)
             return proc
 
-    rec = _FailDropRecorder()
+    rec = _FailDrop()
     with _patch(rec):
         result = asyncio.run(ks.activate(4242))
 
     assert result["success"] is False
     assert result["errorCode"] == "IPTABLES_FAILED"
     assert ks.is_active is False
-    cmds = rec.commands()
-    # Rollback removed the chain; OUTPUT was never left with a dangling jump.
-    assert ("-X", CHAIN) in cmds
+    assert ("-X", CHAIN) in rec.args_for("iptables")
 
 
-def test_double_activate_is_idempotent():
+def test_double_activate_updates_pid():
     ks = KillSwitch()
-
-    with _patch(_IptablesRecorder()):
+    with _patch(_Recorder()):
         asyncio.run(ks.activate(4242))
         result = asyncio.run(ks.activate(9999))
-
     assert result["success"] is True
-    # The second activate just updates the tracked pid.
     assert ks.xray_process_id == 9999

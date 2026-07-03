@@ -82,8 +82,11 @@ def test_download_extracts_binary_and_geo(tmp_path: Path, monkeypatch) -> None:
 def test_download_uses_pinned_version_when_version_unset(
     tmp_path: Path, monkeypatch
 ) -> None:
-    monkeypatch.setattr(xray_downloader, "pinned_version", lambda: "v1.2.3")
-    monkeypatch.setattr(xray_downloader, "pinned_sha256", lambda: None)
+    monkeypatch.setattr(
+        xray_downloader,
+        "_load_pin",
+        lambda: {"repo": "acme/fork", "asset": "custom.zip", "version": "v1.2.3"},
+    )
 
     captured = {}
 
@@ -97,6 +100,9 @@ def test_download_uses_pinned_version_when_version_unset(
     result = xray_downloader.download_xray(tmp_path / "bin")
     assert result["success"] is True
     assert result["version"] == "v1.2.3"
+    # repo and asset from the pin flow into the download URL (single source).
+    assert "acme/fork" in captured["url"]
+    assert "custom.zip" in captured["url"]
     assert "v1.2.3" in captured["url"]
 
 
@@ -106,6 +112,15 @@ def test_pin_falls_back_when_version_file_missing(monkeypatch) -> None:
     assert xray_downloader.pinned_sha256() is None
 
 
+def test_load_pin_rejects_non_object_json(tmp_path: Path, monkeypatch) -> None:
+    # A valid-JSON-but-not-an-object pin file must not crash callers.
+    bad = tmp_path / "xray_version.json"
+    bad.write_text('"v9.9.9"')  # bare string, parses fine
+    monkeypatch.setattr(xray_downloader, "_VERSION_FILE", bad)
+    assert xray_downloader._load_pin() == {}
+    assert xray_downloader.pinned_version() == xray_downloader.FALLBACK_XRAY_VERSION
+
+
 def test_version_file_is_valid_and_pins_a_version() -> None:
     # The shipped xray_version.json must parse and pin a concrete tag.
     version = xray_downloader.pinned_version()
@@ -113,21 +128,21 @@ def test_version_file_is_valid_and_pins_a_version() -> None:
 
 
 def test_download_verifies_checksum_when_pinned(tmp_path: Path, monkeypatch) -> None:
-    import hashlib
-
     def _fake_download_file(url: str, dest: Path) -> bool:
         _make_release_zip(Path(dest))
         return True
 
     monkeypatch.setattr(xray_downloader, "_download_file", _fake_download_file)
-    monkeypatch.setattr(xray_downloader, "pinned_version", lambda: "v9.9.9")
 
-    # Compute the sha256 the fake archive will actually have.
+    # Compute the sha256 the fake archive will actually have, via the production
+    # helper so the test exercises the same hashing path.
     tmp_zip = tmp_path / "probe.zip"
     _make_release_zip(tmp_zip)
-    good_sha = hashlib.sha256(tmp_zip.read_bytes()).hexdigest()
+    good_sha = xray_downloader._sha256(tmp_zip)
 
-    monkeypatch.setattr(xray_downloader, "pinned_sha256", lambda: good_sha)
+    monkeypatch.setattr(
+        xray_downloader, "_load_pin", lambda: {"version": "v9.9.9", "sha256": good_sha}
+    )
     result = xray_downloader.download_xray(tmp_path / "bin")
     assert result["success"] is True, result
 
@@ -138,12 +153,30 @@ def test_download_rejects_checksum_mismatch(tmp_path: Path, monkeypatch) -> None
         "_download_file",
         lambda url, dest: _make_release_zip(Path(dest)) or True,
     )
-    monkeypatch.setattr(xray_downloader, "pinned_version", lambda: "v9.9.9")
-    monkeypatch.setattr(xray_downloader, "pinned_sha256", lambda: "00" * 32)
+    monkeypatch.setattr(
+        xray_downloader, "_load_pin", lambda: {"version": "v9.9.9", "sha256": "00" * 32}
+    )
 
     result = xray_downloader.download_xray(tmp_path / "bin")
     assert result["success"] is False
     assert result["errorCode"] == "CHECKSUM_MISMATCH"
+
+
+def test_checksum_skipped_when_version_overrides_pin(tmp_path: Path, monkeypatch) -> None:
+    # The pin has a sha256, but the caller requests a different version: the
+    # pinned hash does not describe that asset, so verification must be skipped.
+    monkeypatch.setattr(
+        xray_downloader,
+        "_download_file",
+        lambda url, dest: _make_release_zip(Path(dest)) or True,
+    )
+    monkeypatch.setattr(
+        xray_downloader, "_load_pin", lambda: {"version": "v9.9.9", "sha256": "00" * 32}
+    )
+
+    result = xray_downloader.download_xray(tmp_path / "bin", version="v1.2.3")
+    assert result["success"] is True, result
+    assert result["version"] == "v1.2.3"
 
 
 def test_download_reports_download_failure(tmp_path: Path, monkeypatch) -> None:

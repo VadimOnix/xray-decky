@@ -43,8 +43,7 @@ jobs:
           XRAY_SHA256=$(jq -r '.sha256 // empty' "$VERSION_FILE")
           echo "Using xray-core ${XRAY_VERSION} (${XRAY_REPO})"
 
-          XRAY_ZIP="$XRAY_ASSET"
-          wget -q "https://github.com/${XRAY_REPO}/releases/download/${XRAY_VERSION}/${XRAY_ZIP}" -O /tmp/xray.zip
+          wget -q "https://github.com/${XRAY_REPO}/releases/download/${XRAY_VERSION}/${XRAY_ASSET}" -O /tmp/xray.zip
 
           # Verify the checksum when the pin provides one.
           if [ -n "$XRAY_SHA256" ]; then

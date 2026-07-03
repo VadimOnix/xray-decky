@@ -49,12 +49,19 @@ FALLBACK_XRAY_VERSION = "v26.1.23"
 
 
 def _load_pin() -> Dict[str, Any]:
-    """Read the pinned version metadata (version + optional sha256)."""
+    """
+    Read the pinned metadata (repo, asset, version, optional sha256).
+
+    Returns an empty dict on any problem, including a file that parses to a
+    non-object (bare string / list), so callers always get a ``.get()``-able
+    value and fall back cleanly.
+    """
     try:
         with open(_VERSION_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+            data = json.load(f)
     except (OSError, ValueError):
         return {}
+    return data if isinstance(data, dict) else {}
 
 
 def pinned_version() -> str:
@@ -76,8 +83,8 @@ def _sha256(path: Path) -> str:
             h.update(chunk)
     return h.hexdigest()
 
-# Network timeouts (seconds).
-_API_TIMEOUT = 20
+
+# Network timeout (seconds) for the release download.
 _DOWNLOAD_TIMEOUT = 300
 
 
@@ -99,28 +106,6 @@ def geo_files_present(directory: Path) -> bool:
     """True if both geoip.dat and geosite.dat exist in directory."""
     directory = Path(directory)
     return all((directory / name).is_file() for name in GEO_FILES)
-
-
-def fetch_latest_version() -> Optional[str]:
-    """
-    Return the latest xray-core release tag (e.g. "v26.1.23"), or None if the
-    GitHub API cannot be reached or parsed.
-    """
-    try:
-        result = subprocess.run(
-            ["curl", "-sSL", f"https://api.github.com/repos/{XRAY_REPO}/releases/latest"],
-            capture_output=True,
-            text=True,
-            timeout=_API_TIMEOUT,
-            env=_clean_env(),
-        )
-        if result.returncode == 0 and result.stdout:
-            tag = json.loads(result.stdout).get("tag_name")
-            if tag:
-                return str(tag)
-    except Exception:
-        pass
-    return None
 
 
 def _download_file(url: str, dest: Path) -> bool:
@@ -186,15 +171,28 @@ def download_xray(target_dir: Path, version: Optional[str] = None) -> Dict[str, 
             "errorCode": "TARGET_DIR_ERROR",
         }
 
-    resolved_version = version or pinned_version()
-    url = (
-        f"https://github.com/{XRAY_REPO}/releases/download/"
-        f"{resolved_version}/{XRAY_ASSET}"
-    )
+    # Read the pin once so repo/asset/version/sha256 all come from one file
+    # state (no drift between the workflow's bundle and this download, and no
+    # chance of checking a version against a mismatched sha if the file changes
+    # mid-call).
+    pin = _load_pin()
+    repo = pin.get("repo") or XRAY_REPO
+    asset = pin.get("asset") or XRAY_ASSET
+    resolved_version = version or pin.get("version") or FALLBACK_XRAY_VERSION
+
+    # Only verify the pinned checksum when we are actually downloading the pinned
+    # version. An explicit `version` override refers to a different asset whose
+    # hash the pin does not describe, so verifying it would always fail.
+    expected_sha = None
+    if version is None:
+        sha = pin.get("sha256")
+        expected_sha = str(sha).lower() if sha else None
+
+    url = f"https://github.com/{repo}/releases/download/{resolved_version}/{asset}"
 
     tmp_dir = Path(tempfile.mkdtemp(prefix="xray-dl-"))
     try:
-        zip_path = tmp_dir / XRAY_ASSET
+        zip_path = tmp_dir / asset
         if not _download_file(url, zip_path):
             return {
                 "success": False,
@@ -202,16 +200,13 @@ def download_xray(target_dir: Path, version: Optional[str] = None) -> Dict[str, 
                 "errorCode": "DOWNLOAD_FAILED",
             }
 
-        # Verify the download against the pinned checksum (only when the pin
-        # includes one; kept opt-in so a null sha256 does not block installs).
-        expected_sha = pinned_sha256()
         if expected_sha:
             actual_sha = _sha256(zip_path)
             if actual_sha != expected_sha:
                 return {
                     "success": False,
                     "error": (
-                        f"Checksum mismatch for {XRAY_ASSET}: "
+                        f"Checksum mismatch for {asset}: "
                         f"expected {expected_sha}, got {actual_sha}"
                     ),
                     "errorCode": "CHECKSUM_MISMATCH",

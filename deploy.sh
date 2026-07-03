@@ -25,6 +25,8 @@ mkdir -p "$PLUGIN_DIR/backend/src"
 cp backend/__init__.py "$PLUGIN_DIR/backend/"
 cp backend/src/__init__.py "$PLUGIN_DIR/backend/src/"
 cp backend/src/*.py "$PLUGIN_DIR/backend/src/"
+# Pinned-version metadata, read at runtime by the self-heal downloader.
+cp backend/src/*.json "$PLUGIN_DIR/backend/src/"
 cp -r backend/static "$PLUGIN_DIR/backend/"
 
 echo "🚀 Deploying to Steam Deck..."
