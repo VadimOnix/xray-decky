@@ -132,6 +132,25 @@
             </div>
             <div id="subscription-row" class="subscription-row" hidden>
               <span id="subscription-info" class="subscription-info"></span>
+              <label
+                id="sub-interval-label"
+                class="sub-interval-label"
+                for="sub-interval"
+                data-i18n="sub.auto"
+                >Auto-refresh</label
+              >
+              <select
+                id="sub-interval"
+                class="sub-interval"
+                data-i18n-aria="sub.autoAria"
+                aria-label="Auto-refresh interval"
+              >
+                <option value="0" data-i18n="sub.intervalOff">Off</option>
+                <option value="6" data-i18n="sub.interval6">Every 6h</option>
+                <option value="12" data-i18n="sub.interval12">Every 12h</option>
+                <option value="24" data-i18n="sub.interval24">Daily</option>
+                <option value="48" data-i18n="sub.interval48">Every 2 days</option>
+              </select>
               <button
                 id="rename-sub-btn"
                 class="btn btn-ghost btn-small"

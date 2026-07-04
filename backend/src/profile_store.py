@@ -233,13 +233,18 @@ class ProfileStore:
         data = self._load()
         existing = data.get("subscription")
         existing = existing if isinstance(existing, dict) else {}
-        kept_name = existing.get("name") if existing.get("url") == url else None
+        same_url = existing.get("url") == url
+        kept_name = existing.get("name") if same_url else None
+        # A scheduled-refresh interval is a per-subscription preference; keep it
+        # across a refresh of the same URL (a refresh must not disable itself).
+        kept_interval = existing.get("refreshIntervalHours", 0) if same_url else 0
         data["subscription"] = {
             "url": url,
             "name": name or kept_name or _derive_sub_name(url),
             "updatedAt": int(time.time()),
             "nodeCount": node_count,
             "userinfo": userinfo,
+            "refreshIntervalHours": kept_interval,
         }
         self._save(data)
 
@@ -252,6 +257,19 @@ class ProfileStore:
         subscription["name"] = name.strip() or _derive_sub_name(
             subscription.get("url")
         )
+        self._save(data)
+        return True
+
+    def set_refresh_interval(self, hours: int) -> bool:
+        """Set the subscription's auto-refresh interval in hours (0 disables).
+
+        Returns False when no subscription is stored (nothing to schedule).
+        """
+        data = self._load()
+        subscription = data.get("subscription")
+        if not isinstance(subscription, dict):
+            return False
+        subscription["refreshIntervalHours"] = max(0, int(hours))
         self._save(data)
         return True
 

@@ -166,6 +166,30 @@ def test_rename_subscription_without_subscription():
     assert store.rename_subscription("nope") is False
 
 
+def test_refresh_interval_set_and_preserved_across_refresh():
+    settings = _FakeSettings()
+    store = ProfileStore(settings)
+    # No subscription yet → nothing to schedule.
+    assert store.set_refresh_interval(12) is False
+
+    store.set_subscription("https://sub.example.com/link", 3)
+    assert store.get_subscription()["refreshIntervalHours"] == 0  # default off
+    assert store.set_refresh_interval(12) is True
+    assert store.get_subscription()["refreshIntervalHours"] == 12
+
+    # A refresh of the same URL keeps the interval (must not disable itself).
+    store.set_subscription("https://sub.example.com/link", 5)
+    assert store.get_subscription()["refreshIntervalHours"] == 12
+
+    # A different subscription URL resets the interval to off.
+    store.set_subscription("https://other.example.net/x", 2)
+    assert store.get_subscription()["refreshIntervalHours"] == 0
+
+    # Negative values are clamped to 0 (disabled).
+    store.set_refresh_interval(-3)
+    assert store.get_subscription()["refreshIntervalHours"] == 0
+
+
 def test_clear_subscription():
     settings = _FakeSettings()
     store = ProfileStore(settings)

@@ -765,19 +765,43 @@ body {
 .subscription-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px 12px;
   padding: 8px 0 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   margin-bottom: 10px;
 }
 
 .subscription-info {
+  flex: 1 1 160px;
   font-size: 13px;
   color: var(--muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.sub-interval-label {
+  font-size: 12.5px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.sub-interval {
+  min-height: 34px;
+  padding: 0 10px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.sub-interval:focus {
+  outline: none;
+  border-color: var(--accent);
 }
 
 .card-footnote {

@@ -140,8 +140,8 @@ def register_admin_routes(
             import_config, toggle_tun_mode, toggle_kill_switch,
             deactivate_kill_switch, get_profiles, set_active_profile,
             remove_profile, test_profiles_latency, refresh_subscription,
-            rename_subscription, get_traffic_stats, check_updates,
-            export_profiles.
+            rename_subscription, set_subscription_refresh_interval,
+            get_traffic_stats, check_updates, export_profiles.
         token: The admin token (see ensure_admin_token).
         rate_limiter: Failed-auth limiter; a fresh per-install one is created
             when omitted (state is per app, never shared across installs).
@@ -337,6 +337,21 @@ def register_admin_routes(
         status = 200 if result.get("success", False) else 400
         return web.json_response(result, status=status)
 
+    async def api_subscription_interval(request: web.Request) -> web.Response:
+        denied = _guard(request)
+        if denied is not None:
+            return denied
+        body = await _body_json(request)
+        hours = (body or {}).get("hours")
+        if not isinstance(hours, int) or isinstance(hours, bool) or hours < 0:
+            return web.json_response(
+                {"success": False, "error": "Expected JSON body {\"hours\": int>=0}"},
+                status=400,
+            )
+        result = await handlers["set_subscription_refresh_interval"](hours)
+        status = 200 if result.get("success", False) else 400
+        return web.json_response(result, status=status)
+
     async def api_stats(request: web.Request) -> web.Response:
         denied = _guard(request)
         if denied is not None:
@@ -394,6 +409,7 @@ def register_admin_routes(
     app.router.add_post("/api/v1/profiles/ping", api_profiles_ping)
     app.router.add_post("/api/v1/subscription/refresh", api_subscription_refresh)
     app.router.add_post("/api/v1/subscription/rename", api_subscription_rename)
+    app.router.add_post("/api/v1/subscription/interval", api_subscription_interval)
     app.router.add_get("/api/v1/stats", api_stats)
     app.router.add_get("/api/v1/updates", api_updates)
     app.router.add_get("/api/v1/export", api_export)

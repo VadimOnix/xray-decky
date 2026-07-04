@@ -18,6 +18,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Scheduled subscription auto-refresh** (roadmap Phase 2): a subscription can
+  now carry an optional refresh interval (Off / 6h / 12h / daily / 2 days),
+  set from a selector in the admin panel's subscription bar. A slow background
+  tick re-fetches the subscription URL once the interval has elapsed since the
+  last update. **Off by default** — zero change for anyone who doesn't opt in.
+  The auto-refresh reuses the existing refresh flow, so it preserves the active
+  server and manually-added servers, and it never touches or reconnects the live
+  xray process. New pure `refresh_scheduler.is_refresh_due`, `ProfileStore`
+  `set_refresh_interval`, `set_subscription_refresh_interval` RPC + token-guarded
+  `POST /api/v1/subscription/interval`.
+
 - **Profile export** (roadmap Phase 5): the admin panel gains an **Export
   servers** card that reveals a standard share link for every saved server
   (`vless`/`vmess`/`trojan`/`ss`/`hysteria2`/`tuic`) plus a base64 subscription

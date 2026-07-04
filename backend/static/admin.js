@@ -64,6 +64,16 @@
       'sub.renamePrompt': 'Subscription name:',
       'sub.renamed': 'Subscription renamed',
       'sub.renameFail': 'Rename failed',
+      'sub.auto': 'Auto-refresh',
+      'sub.autoAria': 'Auto-refresh interval',
+      'sub.intervalOff': 'Off',
+      'sub.interval6': 'Every 6h',
+      'sub.interval12': 'Every 12h',
+      'sub.interval24': 'Daily',
+      'sub.interval48': 'Every 2 days',
+      'sub.intervalSet': 'Auto-refresh set',
+      'sub.intervalOffSet': 'Auto-refresh off',
+      'sub.intervalFail': 'Could not set auto-refresh',
       'options.title': 'Options',
       'options.tun': 'TUN mode',
       'options.tunDesc': 'Route all system traffic through the proxy',
@@ -190,6 +200,16 @@
       'sub.renamePrompt': 'Название подписки:',
       'sub.renamed': 'Подписка переименована',
       'sub.renameFail': 'Не удалось переименовать',
+      'sub.auto': 'Автообновление',
+      'sub.autoAria': 'Интервал автообновления',
+      'sub.intervalOff': 'Выкл',
+      'sub.interval6': 'Каждые 6 ч',
+      'sub.interval12': 'Каждые 12 ч',
+      'sub.interval24': 'Ежедневно',
+      'sub.interval48': 'Каждые 2 дня',
+      'sub.intervalSet': 'Автообновление включено',
+      'sub.intervalOffSet': 'Автообновление выключено',
+      'sub.intervalFail': 'Не удалось настроить автообновление',
       'options.title': 'Опции',
       'options.tun': 'Режим TUN',
       'options.tunDesc': 'Направлять весь системный трафик через прокси',
@@ -357,6 +377,7 @@
     subscriptionInfo: document.getElementById('subscription-info'),
     refreshSubBtn: document.getElementById('refresh-sub-btn'),
     renameSubBtn: document.getElementById('rename-sub-btn'),
+    subInterval: document.getElementById('sub-interval'),
     heroStats: document.getElementById('hero-stats'),
     statDown: document.getElementById('stat-down'),
     statUp: document.getElementById('stat-up'),
@@ -829,6 +850,9 @@
         }
       }
       els.subscriptionInfo.textContent = parts.join(' · ')
+      if (els.subInterval) {
+        els.subInterval.value = String(subscription.refreshIntervalHours || 0)
+      }
       els.subscriptionRow.hidden = false
     } else {
       els.subscriptionRow.hidden = true
@@ -1013,6 +1037,29 @@
       })
       .catch(function () {
         toast(t('toast.netErr'), true)
+      })
+  })
+
+  els.subInterval.addEventListener('change', function () {
+    var hours = parseInt(els.subInterval.value, 10) || 0
+    els.subInterval.disabled = true
+    api('/api/v1/subscription/interval', {
+      method: 'POST',
+      body: JSON.stringify({ hours: hours }),
+    })
+      .then(function (res) {
+        if (res.status === 200 && res.data.success) {
+          toast(t(hours > 0 ? 'sub.intervalSet' : 'sub.intervalOffSet'))
+        } else {
+          toast(res.data.error || t('sub.intervalFail'), true)
+        }
+        return fetchProfiles()
+      })
+      .catch(function () {
+        toast(t('toast.netErr'), true)
+      })
+      .then(function () {
+        els.subInterval.disabled = false
       })
   })
 

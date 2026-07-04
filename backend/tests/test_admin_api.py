@@ -89,6 +89,10 @@ def _make_handlers(overrides=None):
             "refresh_subscription", {"success": True, "profileCount": 3}
         ),
         "rename_subscription": handler("rename_subscription", {"success": True}),
+        "set_subscription_refresh_interval": handler(
+            "set_subscription_refresh_interval",
+            {"success": True, "refreshIntervalHours": 12},
+        ),
         "get_traffic_stats": handler(
             "get_traffic_stats",
             {
@@ -459,6 +463,48 @@ def test_subscription_rename_endpoint():
             # Token required.
             resp = await client.post(
                 "/api/v1/subscription/rename", json={"name": "x"}
+            )
+            assert resp.status == 401
+        finally:
+            await client.close()
+
+    _run(scenario())
+
+
+def test_subscription_interval_endpoint():
+    handlers, calls = _make_handlers()
+
+    async def scenario():
+        client = await _client(handlers=handlers)
+        try:
+            resp = await client.post(
+                "/api/v1/subscription/interval",
+                json={"hours": 12},
+                headers={"X-Admin-Token": TOKEN},
+            )
+            assert resp.status == 200
+            assert ("set_subscription_refresh_interval", (12,)) in calls
+
+            # 0 disables — still a valid value.
+            resp = await client.post(
+                "/api/v1/subscription/interval",
+                json={"hours": 0},
+                headers={"X-Admin-Token": TOKEN},
+            )
+            assert resp.status == 200
+
+            # Negative / non-int / bool rejected before the handler.
+            for bad in (-1, "12", 1.5, True):
+                resp = await client.post(
+                    "/api/v1/subscription/interval",
+                    json={"hours": bad},
+                    headers={"X-Admin-Token": TOKEN},
+                )
+                assert resp.status == 400, bad
+
+            # Token required.
+            resp = await client.post(
+                "/api/v1/subscription/interval", json={"hours": 6}
             )
             assert resp.status == 401
         finally:
