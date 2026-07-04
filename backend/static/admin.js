@@ -66,14 +66,23 @@
         'TUN mode is enabled but privileges are missing — see ' +
         'INSTALLATION.md on the Deck.',
       'import.title': 'Import configuration',
-      'import.sub':
-        'Paste a <span class="mono">vless://</span>, ' +
-        '<span class="mono">vmess://</span>, ' +
-        '<span class="mono">trojan://</span>, ' +
-        '<span class="mono">ss://</span>, ' +
-        '<span class="mono">hysteria2://</span> or ' +
-        '<span class="mono">tuic://</span> link, a subscription URL ' +
-        '(<span class="mono">https://…</span>) or its base64 content.',
+      'import.seg': [
+        'Paste a ',
+        { mono: 'vless://' },
+        ', ',
+        { mono: 'vmess://' },
+        ', ',
+        { mono: 'trojan://' },
+        ', ',
+        { mono: 'ss://' },
+        ', ',
+        { mono: 'hysteria2://' },
+        ' or ',
+        { mono: 'tuic://' },
+        ' link, a subscription URL (',
+        { mono: 'https://…' },
+        ') or its base64 content.',
+      ],
       'import.ph': 'vless:// / vmess:// / trojan:// / ss:// / hysteria2:// / tuic://',
       'import.aria': 'Share link',
       'import.save': 'Save',
@@ -153,14 +162,23 @@
       'options.tunNote':
         'Режим TUN включён, но нет прав — см. INSTALLATION.md на Deck.',
       'import.title': 'Импорт конфигурации',
-      'import.sub':
-        'Вставьте ссылку <span class="mono">vless://</span>, ' +
-        '<span class="mono">vmess://</span>, ' +
-        '<span class="mono">trojan://</span>, ' +
-        '<span class="mono">ss://</span>, ' +
-        '<span class="mono">hysteria2://</span> или ' +
-        '<span class="mono">tuic://</span>, URL подписки ' +
-        '(<span class="mono">https://…</span>) или её base64-содержимое.',
+      'import.seg': [
+        'Вставьте ссылку ',
+        { mono: 'vless://' },
+        ', ',
+        { mono: 'vmess://' },
+        ', ',
+        { mono: 'trojan://' },
+        ', ',
+        { mono: 'ss://' },
+        ', ',
+        { mono: 'hysteria2://' },
+        ' или ',
+        { mono: 'tuic://' },
+        ', URL подписки (',
+        { mono: 'https://…' },
+        ') или её base64-содержимое.',
+      ],
       'import.ph': 'vless:// / vmess:// / trojan:// / ss:// / hysteria2:// / tuic://',
       'import.aria': 'Ссылка',
       'import.save': 'Сохранить',
@@ -214,10 +232,7 @@
     for (i = 0; i < nodes.length; i++) {
       nodes[i].textContent = t(nodes[i].getAttribute('data-i18n'))
     }
-    var htmlNodes = document.querySelectorAll('[data-i18n-html]')
-    for (i = 0; i < htmlNodes.length; i++) {
-      htmlNodes[i].innerHTML = t(htmlNodes[i].getAttribute('data-i18n-html'))
-    }
+    renderImportHint()
     var phNodes = document.querySelectorAll('[data-i18n-ph]')
     for (i = 0; i < phNodes.length; i++) {
       phNodes[i].setAttribute('placeholder', t(phNodes[i].getAttribute('data-i18n-ph')))
@@ -227,6 +242,27 @@
       ariaNodes[i].setAttribute('aria-label', t(ariaNodes[i].getAttribute('data-i18n-aria')))
     }
     if (els.langToggle) els.langToggle.textContent = t('lang.self')
+  }
+
+  // Build the import hint from structured segments (text + mono chips) using
+  // DOM nodes only — never innerHTML — so the scheme tokens can't be
+  // reinterpreted as markup.
+  function renderImportHint() {
+    var el = els.importSub
+    if (!el) return
+    var dict = I18N[state.lang] || I18N.en
+    var segs = dict['import.seg'] || I18N.en['import.seg']
+    el.textContent = ''
+    segs.forEach(function (seg) {
+      if (typeof seg === 'string') {
+        el.appendChild(document.createTextNode(seg))
+      } else {
+        var span = document.createElement('span')
+        span.className = 'mono'
+        span.textContent = seg.mono
+        el.appendChild(span)
+      }
+    })
   }
 
   function setLang(lang) {
@@ -273,6 +309,7 @@
     killswitchToggle: document.getElementById('killswitch-toggle'),
     optionsNote: document.getElementById('options-note'),
     importForm: document.getElementById('import-form'),
+    importSub: document.getElementById('import-sub'),
     importInput: document.getElementById('import-input'),
     importBtn: document.getElementById('import-btn'),
     importMsg: document.getElementById('import-msg'),
