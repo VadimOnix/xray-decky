@@ -18,6 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Admin server list sorts by latency** (roadmap Phase 5 polish): after a
+  "Ping all", the web panel orders servers fastest-first (measured servers,
+  then untested, then offline). The sort is presentational and stable, so an
+  unpinged list keeps its stored order.
+
 - **QAM localization (English / Russian)** (roadmap Phase 5): the whole in-game
   Quick Access Menu is now localized via a small `src/utils/i18n.ts` helper —
   the connection tab (status, connection toggle, server picker), the options tab

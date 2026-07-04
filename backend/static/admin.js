@@ -641,6 +641,15 @@
     return span
   }
 
+  // Sort key: measured servers first (fastest → slowest), then untested,
+  // then offline. Real latencies never reach these sentinels, and a stable
+  // sort keeps the stored order within each group (so an unpinged list is
+  // unchanged).
+  function latencyRank(profile) {
+    if (typeof profile.latencyMs === 'number') return profile.latencyMs
+    return profile.latencyTestedAt ? 1e9 : 1e8
+  }
+
   function renderProfiles(activeId, profiles) {
     els.serverList.textContent = ''
     var hasProfiles = profiles && profiles.length > 0
@@ -648,7 +657,10 @@
     els.serverList.hidden = !hasProfiles
     if (!hasProfiles) return
 
-    profiles.forEach(function (profile) {
+    var ordered = profiles.slice().sort(function (a, b) {
+      return latencyRank(a) - latencyRank(b)
+    })
+    ordered.forEach(function (profile) {
       var li = document.createElement('li')
       var row = document.createElement('button')
       row.type = 'button'
