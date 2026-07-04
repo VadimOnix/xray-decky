@@ -21,6 +21,7 @@ export function validateVLESSURL(url: string): boolean {
     /^vless:\/\/.+@.+:\d+/i,
     /^trojan:\/\/.+@.+:\d+/i,
     /^ss:\/\/.+/i,
+    /^(hysteria2|hy2|tuic):\/\/.+@.+:\d+/i,
     // vmess is a base64-encoded JSON payload
     /^vmess:\/\/[A-Za-z0-9+/=_-]+$/i,
     // subscription URL, fetched by the backend

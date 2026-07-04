@@ -235,6 +235,10 @@ Decision framework (as of July 2026):
 - **First, refactor to a core-adapter interface** (`CoreAdapter`: generate config /
   start / stop / stats / test) with `XrayAdapter` as the only implementation. This
   is pure enabling work and is worth doing during Phase 2 regardless.
+  _(started — `hysteria2://`/`hy2://`/`tuic://` links parse and import, every
+  profile carries a `core` field, `core_for_protocol` maps protocol→core, and the
+  connect path dispatches by core (sing-box profiles fail with a clear message).
+  The full `CoreAdapter`/`SingBoxAdapter` + binary download is the next step.)_
 - Track xray's Hysteria2 client maturity each release; if the upstream bugs are
   closed by the time this phase starts, Option A makes Hysteria2 nearly free and
   sing-box can be deferred until someone actually needs TUIC.

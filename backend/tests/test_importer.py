@@ -111,10 +111,17 @@ def test_import_pasted_base64_subscription():
 
 def test_import_invalid_link():
     store = _store()
-    result = _run(importer.import_link(store, "hysteria2://x@h:443"))
+    result = _run(importer.import_link(store, "naive+https://x@h:443"))
     assert result["success"] is False
     result = _run(importer.import_link(store, "   "))
     assert result["success"] is False
+
+
+def test_import_hysteria2_stores_singbox_profile():
+    store = _store()
+    result = _run(importer.import_link(store, "hysteria2://pw@h2.example.com:443"))
+    assert result["success"] is True
+    assert store.get_active()["core"] == "sing-box"
 
 
 # --- refresh_subscription ---

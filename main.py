@@ -81,7 +81,7 @@ if str(PLUGIN_DIR) not in sys.path:
     sys.path.insert(0, str(PLUGIN_DIR))
 
 from settings import SettingsManager
-from backend.src.config_parser import validate_share_link
+from backend.src.config_parser import validate_share_link, core_for_protocol
 from backend.src.importer import (
     import_link,
     refresh_subscription as refresh_subscription_flow,
@@ -1096,6 +1096,22 @@ class Plugin:
                         "VLESS config is invalid", ErrorCode.INVALID_CONFIG
                     )
                     return create_error_response(ErrorCode.INVALID_CONFIG)
+
+                # Dispatch by core: hysteria2/tuic need the sing-box second
+                # core, which isn't bundled yet. Fail with a clear message
+                # instead of feeding an unsupported profile to xray-core.
+                required_core = config.get("core") or core_for_protocol(
+                    config.get("protocol", "vless")
+                )
+                if required_core != "xray":
+                    protocol = config.get("protocol", "this protocol")
+                    msg = (
+                        f"{protocol} requires the sing-box core, which is not "
+                        "available yet. Pick an xray-based server "
+                        "(VLESS/VMess/Trojan/Shadowsocks) for now."
+                    )
+                    connection_state.set_error(msg, ErrorCode.INVALID_CONFIG)
+                    return create_error_response(ErrorCode.INVALID_CONFIG, msg)
 
                 # Set connecting status
                 connection_state.set_connecting()
