@@ -163,6 +163,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Subscription import/refresh no longer wipes manually-added servers.**
+  Previously importing (or refreshing) a subscription replaced the *entire*
+  profile list, so a server you added by hand was silently dropped. It now
+  replaces only the subscription-sourced profiles and keeps your manual ones;
+  the active selection is preserved when it survives. New
+  `ProfileStore.replace_subscription_profiles` / `clear_subscription`.
+
 - Stopping an already-dead xray-core process no longer reports a failure
   (`ProcessLookupError` is treated as already stopped, and the temp config
   file is still cleaned up).

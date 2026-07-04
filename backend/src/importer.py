@@ -135,7 +135,7 @@ async def import_link(store: ProfileStore, link: str) -> Dict[str, Any]:
             config = build_profile_config(node, link, "subscription")
             config["lastValidatedAt"] = now
             configs.append(config)
-        store.replace_all(configs)
+        store.replace_subscription_profiles(configs)
         store.set_subscription(link, len(configs), userinfo=response.userinfo)
         return {
             "success": True,
@@ -161,7 +161,8 @@ async def import_link(store: ProfileStore, link: str) -> Dict[str, Any]:
             "profileCount": len(store.list_profiles()),
         }
 
-    # Pasted base64 subscription content: store every node.
+    # Pasted base64 subscription content: store every node. There's no URL to
+    # refresh, so forget any prior subscription metadata.
     nodes = parse_subscription(link)
     if not nodes:
         return {"success": False, "error": "Failed to parse share link"}
@@ -170,7 +171,8 @@ async def import_link(store: ProfileStore, link: str) -> Dict[str, Any]:
         config = build_profile_config(node, link, "subscription")
         config["lastValidatedAt"] = now
         configs.append(config)
-    store.replace_all(configs)
+    store.replace_subscription_profiles(configs)
+    store.clear_subscription()
     return {
         "success": True,
         "error": None,
