@@ -246,6 +246,12 @@ Decision framework (as of July 2026):
   path, pinned + checksummed, not bundled in the plugin zip — keeps store package
   small), dispatched per-profile protocol (`hysteria2://`, `hy2://`, `tuic://`
   links). TUN stays with whichever core is active.
+  _(substrate done — `singbox_manager.build_singbox_config` generates the
+  hysteria2/tuic config on the same inbound ports as xray, and
+  `singbox_downloader` fetches the pinned sing-box release on demand with
+  optional sha256. Remaining: wire the process lifecycle into the connect path
+  so a `hysteria2://`/`tuic://` server actually connects, and add stats/latency
+  through the sing-box clash API.)_
 
 **Exit criteria:** a `hysteria2://` share link imports and connects; xray-only users
 see zero change.

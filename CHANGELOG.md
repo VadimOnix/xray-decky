@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **sing-box core substrate** (roadmap Phase 4): a config generator
+  (`singbox_manager.build_singbox_config`) that turns hysteria2/tuic
+  profiles into sing-box JSON (proxy outbound + SOCKS/HTTP/TUN inbounds on
+  the same ports as xray + private-IP bypass route), and an on-demand
+  downloader (`singbox_downloader`) that fetches the pinned sing-box release
+  (`singbox_version.json`, optional sha256) into the persistent runtime
+  directory — not bundled in the plugin zip, to keep the store package
+  small. Process-lifecycle wiring into the connect path is the next step.
+
 - **Hysteria2 / TUIC share links parse and import** (roadmap Phase 4, first
   cut): `hysteria2://` (`hy2://`) and `tuic://` links are recognized and
   stored as profiles tagged with the core they need (`"core": "sing-box"`);
