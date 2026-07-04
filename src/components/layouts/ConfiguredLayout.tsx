@@ -8,6 +8,7 @@ import { ConfigSummaryCard } from '../ConfigSummaryCard';
 import { ConnectionToggle } from '../ConnectionToggle';
 import { KillSwitchToggle } from '../KillSwitchToggle';
 import { ResetConfigurationButton } from '../ResetConfigurationButton';
+import { ServerPicker } from '../ServerPicker';
 import { StatusDisplay } from '../StatusDisplay';
 import { TUNModeToggle } from '../TUNModeToggle';
 import { HelpPopover } from '../ui/HelpPopover';
@@ -186,6 +187,9 @@ export const ConfiguredLayout: FC<ConfiguredLayoutProps> = ({
 
       {activeTab === TAB_MAIN && (
         <>
+          <PanelSectionRow>
+            <ServerPicker />
+          </PanelSectionRow>
           <PanelSectionRow>
             <ConnectionToggle status={connection.status} onToggle={onToggleConnection} />
           </PanelSectionRow>
