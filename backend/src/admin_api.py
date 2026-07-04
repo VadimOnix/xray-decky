@@ -74,7 +74,8 @@ def register_admin_routes(
             get_connection_status, toggle_connection, get_vless_config,
             import_config, toggle_tun_mode, toggle_kill_switch,
             deactivate_kill_switch, get_profiles, set_active_profile,
-            remove_profile, test_profiles_latency, refresh_subscription.
+            remove_profile, test_profiles_latency, refresh_subscription,
+            get_traffic_stats.
         token: The admin token (see ensure_admin_token).
     """
 
@@ -224,6 +225,13 @@ def register_admin_routes(
         status = 200 if result.get("success", False) else 502
         return web.json_response(result, status=status)
 
+    async def api_stats(request: web.Request) -> web.Response:
+        if not _authorized(request):
+            return _unauthorized()
+        result = await handlers["get_traffic_stats"]()
+        status = 200 if result.get("success", False) else 502
+        return web.json_response(result, status=status)
+
     async def api_import(request: web.Request) -> web.Response:
         if not _authorized(request):
             return _unauthorized()
@@ -252,3 +260,4 @@ def register_admin_routes(
     app.router.add_post("/api/v1/profiles/remove", api_profile_remove)
     app.router.add_post("/api/v1/profiles/ping", api_profiles_ping)
     app.router.add_post("/api/v1/subscription/refresh", api_subscription_refresh)
+    app.router.add_get("/api/v1/stats", api_stats)

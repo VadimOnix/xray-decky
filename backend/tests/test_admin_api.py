@@ -74,6 +74,17 @@ def _make_handlers(overrides=None):
         "refresh_subscription": handler(
             "refresh_subscription", {"success": True, "profileCount": 3}
         ),
+        "get_traffic_stats": handler(
+            "get_traffic_stats",
+            {
+                "success": True,
+                "available": True,
+                "uplink": 10,
+                "downlink": 20,
+                "uplinkSpeed": 1,
+                "downlinkSpeed": 2,
+            },
+        ),
     }
     handlers.update(overrides or {})
     return handlers, calls
@@ -342,6 +353,15 @@ def test_profile_activate_remove_and_ping():
             )
             assert resp.status == 200
             assert ("refresh_subscription", ()) in calls
+
+            resp = await client.get(
+                "/api/v1/stats", headers={"X-Admin-Token": TOKEN}
+            )
+            assert resp.status == 200
+            data = await resp.json()
+            assert data["downlinkSpeed"] == 2
+            resp = await client.get("/api/v1/stats")
+            assert resp.status == 401
 
             # All profile endpoints require the token.
             for path in (

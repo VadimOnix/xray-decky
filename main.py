@@ -101,6 +101,7 @@ from backend.src.admin_api import ensure_admin_token, register_admin_routes
 from backend.src.supervisor import XraySupervisor
 from backend.src.profile_store import ProfileStore
 from backend.src.latency import test_profiles
+from backend.src.stats import TrafficStats
 from backend.src.cert_utils import ensure_cert_key
 from aiohttp import web
 
@@ -149,6 +150,7 @@ xray_manager = XrayManager(xray_binary_path=_resolve_xray_path(PLUGIN_DIR))
 tun_manager = TUNManager()
 kill_switch = KillSwitch()
 system_proxy_manager = SystemProxyManager()
+traffic_stats = TrafficStats()
 
 
 class Plugin:
@@ -239,6 +241,7 @@ class Plugin:
                             "remove_profile": self.remove_profile,
                             "test_profiles_latency": self.test_profiles_latency,
                             "refresh_subscription": self.refresh_subscription,
+                            "get_traffic_stats": self.get_traffic_stats,
                         },
                         token=ensure_admin_token(settings),
                     )
@@ -1204,6 +1207,9 @@ class Plugin:
                 )
                 settings.commit()
 
+                # Fresh connection -> fresh speed baseline
+                traffic_stats.reset()
+
                 # Watch the process: crash -> kill switch + bounded auto-restart
                 self._start_supervisor(config, tun_mode)
 
@@ -1219,6 +1225,7 @@ class Plugin:
                 # Intentional stop: cancel crash supervision first so the
                 # exit below is not treated as a crash.
                 await self._stop_supervisor()
+                traffic_stats.reset()
 
                 # Always clear system proxy on disconnect so SOCKS is never left on
                 await system_proxy_manager.clear_system_proxy()
@@ -1296,6 +1303,41 @@ class Plugin:
             )
             return create_error_response(
                 ErrorCode.UNKNOWN_ERROR, f"Connection error: {str(e)}"
+            )
+
+    async def get_traffic_stats(self) -> Dict[str, Any]:
+        """
+        Current traffic totals and speeds from the xray StatsService.
+
+        Returns:
+            {
+                'success': bool,
+                'available': bool,   # stats API reachable
+                'uplink': int, 'downlink': int,          # cumulative bytes
+                'uplinkSpeed': int, 'downlinkSpeed': int  # bytes/second
+            }
+        """
+        zeros = {
+            "available": False,
+            "uplink": 0,
+            "downlink": 0,
+            "uplinkSpeed": 0,
+            "downlinkSpeed": 0,
+        }
+        try:
+            connection_state = get_connection_state()
+            if (
+                connection_state.status != ConnectionStatus.CONNECTED
+                or not xray_manager.is_running()
+            ):
+                return create_success_response(zeros)
+            sample = await traffic_stats.sample(xray_manager.xray_binary_path)
+            if sample is None:
+                return create_success_response(zeros)
+            return create_success_response({"available": True, **sample})
+        except Exception as e:
+            return create_error_response(
+                ErrorCode.UNKNOWN_ERROR, f"Stats query failed: {str(e)}"
             )
 
     async def handle_resume(self) -> Dict[str, Any]:
