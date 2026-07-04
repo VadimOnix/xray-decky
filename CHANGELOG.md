@@ -18,6 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Core badge in the admin server list**: servers that need the second core
+  (hysteria2 / tuic) now show a distinct `sing-box` chip next to their
+  protocol chip, so it's clear at a glance which servers depend on the
+  sing-box core (whose connect path is still being wired up).
+
 - **Subscription quota & expiry** (roadmap Phase 5): the standard
   `Subscription-Userinfo` header (upload / download / total / expire) returned
   by most subscription panels is now parsed on import and refresh, stored with

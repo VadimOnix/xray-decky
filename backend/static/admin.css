@@ -583,6 +583,22 @@ body {
   border-color: rgba(102, 192, 244, 0.35);
 }
 
+.chip-core {
+  background: rgba(180, 130, 240, 0.16);
+  color: #c9a6f0;
+  border-color: rgba(180, 130, 240, 0.4);
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+
+.server-row-chips {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  align-items: flex-start;
+}
+
 .empty-note {
   color: var(--muted);
   font-size: 14px;
