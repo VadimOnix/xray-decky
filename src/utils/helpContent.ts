@@ -16,7 +16,7 @@ const helpContent: Record<HelpTopic, HelpContent> = {
   },
   'setup.vless_link': {
     title: 'Share link',
-    body: 'Paste a vless://, vmess://, trojan:// or ss:// link, or a subscription. Invalid links are rejected and do not overwrite a valid config.',
+    body: 'Paste a vless://, vmess://, trojan:// or ss:// link, or a subscription URL (https://). Invalid links are rejected and do not overwrite a valid config.',
   },
   'configured.status': {
     title: 'Status meanings',

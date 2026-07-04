@@ -81,11 +81,10 @@ if str(PLUGIN_DIR) not in sys.path:
     sys.path.insert(0, str(PLUGIN_DIR))
 
 from settings import SettingsManager
-from backend.src.config_parser import (
-    validate_share_link,
-    parse_share_link,
-    parse_subscription,
-    build_profile_config,
+from backend.src.config_parser import validate_share_link
+from backend.src.importer import (
+    import_link,
+    refresh_subscription as refresh_subscription_flow,
 )
 from backend.src.error_codes import (
     ErrorCode,
@@ -239,6 +238,7 @@ class Plugin:
                             "set_active_profile": self.set_active_profile,
                             "remove_profile": self.remove_profile,
                             "test_profiles_latency": self.test_profiles_latency,
+                            "refresh_subscription": self.refresh_subscription,
                         },
                         token=ensure_admin_token(settings),
                     )
@@ -455,8 +455,9 @@ class Plugin:
         Import and validate a proxy share link.
 
         Args:
-            url: Share link (vless://, vmess://, trojan://, ss://)
-                or base64 subscription
+            url: Share link (vless://, vmess://, trojan://, ss://),
+                a subscription URL (http:// or https://), or pasted
+                base64 subscription content
 
         Returns:
             {
@@ -466,40 +467,16 @@ class Plugin:
             }
         """
         try:
-            # Validate URL format
-            is_valid, error_msg = validate_share_link(url)
-            if not is_valid:
-                return create_error_response(ErrorCode.INVALID_URL, error_msg)
-
-            # Try parsing as single node first
-            parsed = parse_share_link(url)
-            now = int(time.time())
-
-            if parsed:
-                # Single link: append to the profile list and make it active.
-                config = build_profile_config(parsed, url, "single")
-                config["lastValidatedAt"] = now
-                profile_store.add(config)
-                return create_success_response(
-                    {"config": config, "profileCount": len(profile_store.list_profiles())}
-                )
-
-            # Subscription: store every node, first becomes active.
-            parsed_configs = parse_subscription(url)
-            if not parsed_configs:
+            result = await import_link(profile_store, url)
+            if not result.get("success", False):
                 return create_error_response(
-                    ErrorCode.INVALID_URL, "Failed to parse share link"
+                    ErrorCode.INVALID_URL, result.get("error") or "Import failed"
                 )
-
-            configs = []
-            for node in parsed_configs:
-                config = build_profile_config(node, url, "subscription")
-                config["lastValidatedAt"] = now
-                configs.append(config)
-            profile_store.replace_all(configs)
-
             return create_success_response(
-                {"config": configs[0], "profileCount": len(configs)}
+                {
+                    "config": result.get("config"),
+                    "profileCount": result.get("profileCount", 0),
+                }
             )
 
         except Exception as e:
@@ -583,6 +560,7 @@ class Plugin:
                 {
                     "activeId": profile_store.get_active_id(),
                     "profiles": profile_store.list_profiles(),
+                    "subscription": profile_store.get_subscription(),
                 }
             )
         except Exception as e:
@@ -652,6 +630,30 @@ class Plugin:
                 ErrorCode.UNKNOWN_ERROR, f"Failed to remove profile: {str(e)}"
             )
 
+    async def refresh_subscription(self) -> Dict[str, Any]:
+        """
+        Re-fetch the stored subscription URL and replace the profile list.
+        The active server survives when it's still present in the refreshed
+        list (matched by protocol/address/port).
+
+        Returns:
+            { 'success': bool, 'profileCount': int, 'error': str | None }
+        """
+        try:
+            result = await refresh_subscription_flow(profile_store)
+            if not result.get("success", False):
+                return create_error_response(
+                    ErrorCode.NETWORK_ERROR,
+                    result.get("error") or "Subscription refresh failed",
+                )
+            return create_success_response(
+                {"profileCount": result.get("profileCount", 0)}
+            )
+        except Exception as e:
+            return create_error_response(
+                ErrorCode.UNKNOWN_ERROR, f"Subscription refresh failed: {str(e)}"
+            )
+
     async def test_profiles_latency(self) -> Dict[str, Any]:
         """
         TCPing every stored profile concurrently and persist the results.
@@ -700,7 +702,12 @@ class Plugin:
                     "error": "Missing source URL",
                 }
 
-            is_valid, error_msg = validate_share_link(source_url)
+            if source_url.lower().startswith(("http://", "https://")):
+                # Subscription-URL profiles can't be re-validated by parsing
+                # the source; validity was established at import time.
+                is_valid, error_msg = True, None
+            else:
+                is_valid, error_msg = validate_share_link(source_url)
             config["isValid"] = is_valid
             config["lastValidatedAt"] = int(time.time())
 

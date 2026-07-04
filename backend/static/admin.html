@@ -76,6 +76,12 @@
                 Ping all
               </button>
             </div>
+            <div id="subscription-row" class="subscription-row" hidden>
+              <span id="subscription-info" class="subscription-info"></span>
+              <button id="refresh-sub-btn" class="btn btn-ghost btn-small" type="button">
+                Refresh
+              </button>
+            </div>
             <div id="servers-empty" class="empty-note">
               No servers yet. Use the import form to add one.
             </div>
@@ -126,8 +132,8 @@
             </div>
             <p class="card-sub">
               Paste a <span class="mono">vless://</span>, <span class="mono">vmess://</span>,
-              <span class="mono">trojan://</span> or <span class="mono">ss://</span> link, or a
-              subscription.
+              <span class="mono">trojan://</span> or <span class="mono">ss://</span> link, a
+              subscription URL (<span class="mono">https://…</span>) or its base64 content.
             </p>
             <form id="import-form" class="import-form">
               <input

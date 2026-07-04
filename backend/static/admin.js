@@ -22,6 +22,9 @@
     serversEmpty: document.getElementById('servers-empty'),
     serverList: document.getElementById('server-list'),
     pingBtn: document.getElementById('ping-btn'),
+    subscriptionRow: document.getElementById('subscription-row'),
+    subscriptionInfo: document.getElementById('subscription-info'),
+    refreshSubBtn: document.getElementById('refresh-sub-btn'),
     tunToggle: document.getElementById('tun-toggle'),
     killswitchToggle: document.getElementById('killswitch-toggle'),
     optionsNote: document.getElementById('options-note'),
@@ -199,7 +202,9 @@
 
       var chip = document.createElement('span')
       chip.className = 'chip chip-accent'
-      chip.textContent = profile.protocol || 'vless'
+      // Keep chips narrow on phone screens.
+      chip.textContent =
+        profile.protocol === 'shadowsocks' ? 'ss' : profile.protocol || 'vless'
 
       var main = document.createElement('span')
       main.className = 'server-row-main'
@@ -270,17 +275,55 @@
     })
   }
 
+  function renderSubscription(subscription) {
+    if (subscription && subscription.url) {
+      var updated = subscription.updatedAt
+        ? new Date(subscription.updatedAt * 1000).toLocaleString()
+        : 'unknown'
+      els.subscriptionInfo.textContent =
+        'Subscription · ' +
+        (subscription.nodeCount || 0) +
+        ' servers · updated ' +
+        updated
+      els.subscriptionRow.hidden = false
+    } else {
+      els.subscriptionRow.hidden = true
+    }
+  }
+
   function fetchProfiles() {
     return api('/api/v1/profiles')
       .then(function (res) {
         if (res.status === 200 && res.data.success) {
           renderProfiles(res.data.activeId, res.data.profiles || [])
+          renderSubscription(res.data.subscription)
         }
       })
       .catch(function () {
         /* transient */
       })
   }
+
+  els.refreshSubBtn.addEventListener('click', function () {
+    els.refreshSubBtn.disabled = true
+    els.refreshSubBtn.textContent = 'Refreshing…'
+    api('/api/v1/subscription/refresh', { method: 'POST' })
+      .then(function (res) {
+        if (res.status === 200 && res.data.success) {
+          toast('Subscription refreshed')
+        } else {
+          toast(res.data.error || 'Refresh failed', true)
+        }
+        return fetchProfiles()
+      })
+      .catch(function () {
+        toast('Network error', true)
+      })
+      .then(function () {
+        els.refreshSubBtn.disabled = false
+        els.refreshSubBtn.textContent = 'Refresh'
+      })
+  })
 
   els.pingBtn.addEventListener('click', function () {
     els.pingBtn.disabled = true
