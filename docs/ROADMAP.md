@@ -149,7 +149,9 @@ panels for VLESS/VMess/Trojan/SS import and connect without manual editing.
 *Goal: from "one saved link" to a managed server list.*
 
 - **Server list storage** (settings schema v2 with migration): multiple profiles,
-  active-profile selection, per-profile protocol metadata.
+  active-profile selection, per-profile protocol metadata. _(done —
+  `backend/src/profile_store.py`; legacy single config migrates automatically,
+  the `vlessConfig` mirror keeps the connection path unchanged)_
 - **Standard subscription support**: base64 newline-delimited link lists (the de
   facto universal format), keep the current JSON-array format for backward compat.
   Named subscriptions, manual + scheduled refresh, "last updated" state. Clash YAML
@@ -157,6 +159,8 @@ panels for VLESS/VMess/Trojan/SS import and connect without manual editing.
 - **Latency testing**: real-delay test through the proxy
   (`http://www.gstatic.com/generate_204`-style, configurable URL), concurrency
   limited; TCPing as the cheap fallback. Show results in the server list.
+  _(TCPing done — concurrent, persisted, shown in the admin panel server list;
+  real-delay through the proxy remaining)_
 - **Traffic stats**: enable xray `stats` + `policy`, poll StatsService over the gRPC
   API (or `metrics` endpoint), display up/down counters and speed in the QAM.
 - QAM UI: compact server picker (current server + status + latency), keeping the

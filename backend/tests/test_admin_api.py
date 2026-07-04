@@ -49,6 +49,28 @@ def _make_handlers(overrides=None):
         "toggle_tun_mode": handler("tun", {"success": True}),
         "toggle_kill_switch": handler("killswitch", {"success": True}),
         "deactivate_kill_switch": handler("deactivate", {"success": True}),
+        "get_profiles": handler(
+            "get_profiles",
+            {
+                "success": True,
+                "activeId": "p1",
+                "profiles": [
+                    {
+                        "id": "p1",
+                        "protocol": "trojan",
+                        "address": "example.com",
+                        "port": 443,
+                        "password": "secret",
+                        "latencyMs": 42,
+                    }
+                ],
+            },
+        ),
+        "set_active_profile": handler("set_active_profile", {"success": True}),
+        "remove_profile": handler("remove_profile", {"success": True}),
+        "test_profiles_latency": handler(
+            "test_profiles_latency", {"success": True, "results": {"p1": 42}}
+        ),
     }
     handlers.update(overrides or {})
     return handlers, calls
@@ -249,6 +271,79 @@ def test_import_endpoint_validates_and_calls_handler():
                 headers={"X-Admin-Token": TOKEN},
             )
             assert resp.status == 400
+        finally:
+            await client.close()
+
+    _run(scenario())
+
+
+def test_profiles_endpoint_redacts_credentials():
+    async def scenario():
+        client = await _client()
+        try:
+            resp = await client.get(
+                "/api/v1/profiles", headers={"X-Admin-Token": TOKEN}
+            )
+            assert resp.status == 200
+            data = await resp.json()
+            assert data["activeId"] == "p1"
+            profile = data["profiles"][0]
+            assert profile["id"] == "p1"
+            assert profile["latencyMs"] == 42
+            assert "password" not in profile
+        finally:
+            await client.close()
+
+    _run(scenario())
+
+
+def test_profile_activate_remove_and_ping():
+    handlers, calls = _make_handlers()
+
+    async def scenario():
+        client = await _client(handlers=handlers)
+        try:
+            resp = await client.post(
+                "/api/v1/profiles/activate",
+                json={"id": "p2"},
+                headers={"X-Admin-Token": TOKEN},
+            )
+            assert resp.status == 200
+            assert ("set_active_profile", ("p2",)) in calls
+
+            resp = await client.post(
+                "/api/v1/profiles/remove",
+                json={"id": "p1"},
+                headers={"X-Admin-Token": TOKEN},
+            )
+            assert resp.status == 200
+            assert ("remove_profile", ("p1",)) in calls
+
+            # Missing/invalid id rejected before the handler runs.
+            resp = await client.post(
+                "/api/v1/profiles/activate",
+                json={"id": 5},
+                headers={"X-Admin-Token": TOKEN},
+            )
+            assert resp.status == 400
+
+            resp = await client.post(
+                "/api/v1/profiles/ping", headers={"X-Admin-Token": TOKEN}
+            )
+            assert resp.status == 200
+            data = await resp.json()
+            assert data["results"] == {"p1": 42}
+
+            # All profile endpoints require the token.
+            for path in (
+                "/api/v1/profiles/activate",
+                "/api/v1/profiles/remove",
+                "/api/v1/profiles/ping",
+            ):
+                resp = await client.post(path, json={"id": "x"})
+                assert resp.status == 401, path
+            resp = await client.get("/api/v1/profiles")
+            assert resp.status == 401
         finally:
             await client.close()
 

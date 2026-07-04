@@ -19,14 +19,9 @@
     connectBtn: document.getElementById('connect-btn'),
     connectBtnLabel: document.getElementById('connect-btn-label'),
     unblockBtn: document.getElementById('unblock-btn'),
-    serverProtocol: document.getElementById('server-protocol'),
-    serverEmpty: document.getElementById('server-empty'),
-    serverInfo: document.getElementById('server-info'),
-    serverName: document.getElementById('server-name'),
-    serverAddress: document.getElementById('server-address'),
-    serverNetwork: document.getElementById('server-network'),
-    serverSecurity: document.getElementById('server-security'),
-    serverImported: document.getElementById('server-imported'),
+    serversEmpty: document.getElementById('servers-empty'),
+    serverList: document.getElementById('server-list'),
+    pingBtn: document.getElementById('ping-btn'),
     tunToggle: document.getElementById('tun-toggle'),
     killswitchToggle: document.getElementById('killswitch-toggle'),
     optionsNote: document.getElementById('options-note'),
@@ -153,27 +148,6 @@
     }
     els.unblockBtn.hidden = status !== 'blocked'
 
-    // Server card
-    var config = data.config
-    if (config) {
-      els.serverEmpty.hidden = true
-      els.serverInfo.hidden = false
-      els.serverProtocol.hidden = false
-      els.serverProtocol.textContent = config.protocol || 'vless'
-      els.serverName.textContent = config.name || '—'
-      els.serverAddress.textContent =
-        (config.address || '?') + ':' + (config.port || '?')
-      els.serverNetwork.textContent = config.network || 'tcp'
-      els.serverSecurity.textContent = config.security || 'none'
-      els.serverImported.textContent = config.importedAt
-        ? new Date(config.importedAt * 1000).toLocaleString()
-        : '—'
-    } else {
-      els.serverEmpty.hidden = false
-      els.serverInfo.hidden = true
-      els.serverProtocol.hidden = true
-    }
-
     // Options
     if (!state.busy) {
       els.tunToggle.checked = Boolean(data.tun && data.tun.enabled)
@@ -187,6 +161,147 @@
       els.optionsNote.hidden = true
     }
   }
+
+  // ----- server list -----
+
+  function latencyBadge(profile) {
+    var span = document.createElement('span')
+    var ms = profile.latencyMs
+    if (typeof ms === 'number') {
+      span.textContent = ms + ' ms'
+      span.className = 'latency ' + (ms < 150 ? 'good' : ms < 400 ? 'ok' : 'bad')
+    } else if (profile.latencyTestedAt) {
+      span.textContent = 'offline'
+      span.className = 'latency bad'
+    } else {
+      span.textContent = '— ms'
+      span.className = 'latency unknown'
+    }
+    return span
+  }
+
+  function renderProfiles(activeId, profiles) {
+    els.serverList.textContent = ''
+    var hasProfiles = profiles && profiles.length > 0
+    els.serversEmpty.hidden = hasProfiles
+    els.serverList.hidden = !hasProfiles
+    if (!hasProfiles) return
+
+    profiles.forEach(function (profile) {
+      var li = document.createElement('li')
+      var row = document.createElement('button')
+      row.type = 'button'
+      row.className = 'server-row' + (profile.id === activeId ? ' active' : '')
+      row.setAttribute(
+        'aria-label',
+        'Activate ' + (profile.name || profile.address || 'server')
+      )
+
+      var chip = document.createElement('span')
+      chip.className = 'chip chip-accent'
+      chip.textContent = profile.protocol || 'vless'
+
+      var main = document.createElement('span')
+      main.className = 'server-row-main'
+      var name = document.createElement('span')
+      name.className = 'server-row-name'
+      name.textContent = profile.name || profile.address || 'Unnamed server'
+      var addr = document.createElement('span')
+      addr.className = 'server-row-addr'
+      addr.textContent =
+        (profile.address || '?') +
+        ':' +
+        (profile.port || '?') +
+        ' · ' +
+        (profile.network || 'tcp') +
+        ' / ' +
+        (profile.security || 'none')
+      main.appendChild(name)
+      main.appendChild(addr)
+
+      var del = document.createElement('button')
+      del.type = 'button'
+      del.className = 'server-delete'
+      del.textContent = '✕'
+      del.setAttribute('aria-label', 'Remove server')
+      del.addEventListener('click', function (e) {
+        e.stopPropagation()
+        api('/api/v1/profiles/remove', {
+          method: 'POST',
+          body: JSON.stringify({ id: profile.id }),
+        }).then(function (res) {
+          if (res.status === 200 && res.data.success) {
+            toast('Server removed')
+            fetchProfiles()
+          } else {
+            toast(res.data.error || 'Failed to remove server', true)
+          }
+        })
+      })
+
+      row.addEventListener('click', function () {
+        if (profile.id === activeId) return
+        withBusy(
+          api('/api/v1/profiles/activate', {
+            method: 'POST',
+            body: JSON.stringify({ id: profile.id }),
+          })
+        ).then(function (res) {
+          if (!res) return
+          if (res.status === 200 && res.data.success) {
+            toast(
+              res.data.reconnected
+                ? 'Switched and reconnected'
+                : 'Server activated'
+            )
+          } else {
+            toast(res.data.error || 'Failed to switch server', true)
+          }
+          fetchProfiles()
+        })
+      })
+
+      row.appendChild(chip)
+      row.appendChild(main)
+      row.appendChild(latencyBadge(profile))
+      row.appendChild(del)
+      li.appendChild(row)
+      els.serverList.appendChild(li)
+    })
+  }
+
+  function fetchProfiles() {
+    return api('/api/v1/profiles')
+      .then(function (res) {
+        if (res.status === 200 && res.data.success) {
+          renderProfiles(res.data.activeId, res.data.profiles || [])
+        }
+      })
+      .catch(function () {
+        /* transient */
+      })
+  }
+
+  els.pingBtn.addEventListener('click', function () {
+    els.pingBtn.disabled = true
+    els.pingBtn.textContent = 'Pinging…'
+    api('/api/v1/profiles/ping', { method: 'POST' })
+      .then(function (res) {
+        if (res.status === 200 && res.data.success) {
+          toast('Latency updated')
+        } else {
+          toast(res.data.error || 'Ping failed', true)
+        }
+        return fetchProfiles()
+      })
+      .catch(function () {
+        toast('Network error', true)
+      })
+      .then(function () {
+        els.pingBtn.disabled = false
+        els.pingBtn.textContent = 'Ping all'
+      })
+  })
 
   function toast(message, isError) {
     els.toast.textContent = message
@@ -321,6 +436,7 @@
           els.importMsg.textContent = 'Saved.'
           els.importMsg.className = 'form-error ok'
           els.importInput.value = ''
+          fetchProfiles()
         } else {
           els.importMsg.textContent = res.data.error || 'Import failed'
           els.importMsg.className = 'form-error'
@@ -349,6 +465,7 @@
         els.tokenInput.value = ''
         showPanel()
         startPolling()
+        fetchProfiles()
       } else {
         state.token = null
         showLocked('That token was rejected. Check the QR code in the plugin.')
@@ -361,6 +478,7 @@
   state.token = loadToken()
   if (state.token) {
     startPolling()
+    fetchProfiles()
   } else {
     showLocked(null)
   }
