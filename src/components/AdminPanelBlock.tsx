@@ -4,6 +4,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { AdminPanelUrlResponse, getAdminPanelUrl } from '../services/api';
 import { HelpPopover } from './ui/HelpPopover';
 import type { HelpTopic } from '../types/ui';
+import { t } from '../utils/i18n';
 
 interface AdminPanelBlockProps {
   helpTopic?: HelpTopic;
@@ -54,8 +55,8 @@ export const AdminPanelBlock: FC<AdminPanelBlockProps> = ({ helpTopic }) => {
 
   const header = (
     <div style={headerRowStyle}>
-      <span style={headerLabelStyle}>Admin panel</span>
-      {helpTopic && <HelpPopover label="Help: admin panel" topic={helpTopic} />}
+      <span style={headerLabelStyle}>{t('admin.title')}</span>
+      {helpTopic && <HelpPopover label={t('admin.help')} topic={helpTopic} />}
     </div>
   );
 
@@ -72,7 +73,7 @@ export const AdminPanelBlock: FC<AdminPanelBlockProps> = ({ helpTopic }) => {
     return (
       <div>
         {header}
-        <p style={{ color: '#8f98a0', marginTop: '8px' }}>Loading admin panel address…</p>
+        <p style={{ color: '#8f98a0', marginTop: '8px' }}>{t('admin.loading')}</p>
       </div>
     );
   }
@@ -86,9 +87,7 @@ export const AdminPanelBlock: FC<AdminPanelBlockProps> = ({ helpTopic }) => {
   return (
     <div>
       {header}
-      <p style={{ color: '#8f98a0', marginBottom: '12px' }}>
-        Scan with your phone to manage the proxy from a browser on the same network.
-      </p>
+      <p style={{ color: '#8f98a0', marginBottom: '12px' }}>{t('admin.desc')}</p>
 
       <div
         style={{
@@ -111,7 +110,7 @@ export const AdminPanelBlock: FC<AdminPanelBlockProps> = ({ helpTopic }) => {
             borderRadius: '5px',
           }}
         >
-          <span style={{ fontSize: '14px', color: '#c7d5e0' }}>Admin URL</span>
+          <span style={{ fontSize: '14px', color: '#c7d5e0' }}>{t('admin.url')}</span>
           <p
             style={{
               fontSize: '14px',

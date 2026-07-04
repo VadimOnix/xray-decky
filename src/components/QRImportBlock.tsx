@@ -4,6 +4,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { getImportServerUrl, ImportServerUrlResponse } from '../services/api';
 import { HelpPopover } from './ui/HelpPopover';
 import type { HelpTopic } from '../types/ui';
+import { t } from '../utils/i18n';
 
 interface QRImportBlockProps {
   helpTopicQr?: HelpTopic;
@@ -57,8 +58,8 @@ export const QRImportBlock: FC<QRImportBlockProps> = ({ helpTopicQr, helpTopicLa
     return (
       <div>
         <div style={headerRowStyle}>
-          <span style={headerLabelStyle}>Import via QR</span>
-          {helpTopicQr && <HelpPopover label="Help: QR import" topic={helpTopicQr} />}
+          <span style={headerLabelStyle}>{t('qr.title')}</span>
+          {helpTopicQr && <HelpPopover label={t('qr.help')} topic={helpTopicQr} />}
         </div>
         <p style={{ color: '#ff6b6b', marginTop: '8px' }}>{error}</p>
       </div>
@@ -69,10 +70,10 @@ export const QRImportBlock: FC<QRImportBlockProps> = ({ helpTopicQr, helpTopicLa
     return (
       <div>
         <div style={headerRowStyle}>
-          <span style={headerLabelStyle}>Import via QR</span>
-          {helpTopicQr && <HelpPopover label="Help: QR import" topic={helpTopicQr} />}
+          <span style={headerLabelStyle}>{t('qr.title')}</span>
+          {helpTopicQr && <HelpPopover label={t('qr.help')} topic={helpTopicQr} />}
         </div>
-        <p style={{ color: '#8f98a0', marginTop: '8px' }}>Loading import address…</p>
+        <p style={{ color: '#8f98a0', marginTop: '8px' }}>{t('qr.loading')}</p>
       </div>
     );
   }
@@ -82,12 +83,10 @@ export const QRImportBlock: FC<QRImportBlockProps> = ({ helpTopicQr, helpTopicLa
   return (
     <div>
       <div style={headerRowStyle}>
-        <span style={headerLabelStyle}>Import via QR</span>
-        {helpTopicQr && <HelpPopover label="Help: QR import" topic={helpTopicQr} />}
+        <span style={headerLabelStyle}>{t('qr.title')}</span>
+        {helpTopicQr && <HelpPopover label={t('qr.help')} topic={helpTopicQr} />}
       </div>
-      <p style={{ color: '#8f98a0', marginBottom: '12px' }}>
-        Scan with your phone or open the link below to import your proxy configuration.
-      </p>
+      <p style={{ color: '#8f98a0', marginBottom: '12px' }}>{t('qr.desc')}</p>
 
       {/* QR code section */}
       <div
@@ -112,8 +111,8 @@ export const QRImportBlock: FC<QRImportBlockProps> = ({ helpTopicQr, helpTopicLa
           }}
         >
           <div style={headerRowStyle}>
-            <span style={{ fontSize: '14px', color: '#c7d5e0' }}>Import URL</span>
-            {helpTopicLan && <HelpPopover label="Help: LAN address" topic={helpTopicLan} />}
+            <span style={{ fontSize: '14px', color: '#c7d5e0' }}>{t('qr.importUrl')}</span>
+            {helpTopicLan && <HelpPopover label={t('qr.helpLan')} topic={helpTopicLan} />}
           </div>
           <p
             style={{

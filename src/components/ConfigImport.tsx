@@ -3,6 +3,7 @@ import { ButtonItem, TextField } from '@decky/ui';
 import { FaSave } from 'react-icons/fa';
 import { HelpPopover } from './ui/HelpPopover';
 import type { HelpTopic } from '../types/ui';
+import { t } from '../utils/i18n';
 
 interface ConfigImportProps {
   value: string;
@@ -23,24 +24,20 @@ export const ConfigImport: FC<ConfigImportProps> = ({
   successMessage,
   helpTopic,
 }) => {
-  const labelText = isSaving ? 'Saving…' : 'Save configuration';
+  const labelText = isSaving ? t('import.saving') : t('import.save');
   const leftDescriptionStyle = { display: 'block', textAlign: 'left' } as const;
 
   return (
     <div>
       <TextField
-        label="Share link"
-        description={
-          <span style={leftDescriptionStyle}>
-            Paste a vless://, vmess://, trojan:// or ss:// link. We validate it before saving.
-          </span>
-        }
+        label={t('import.shareLink')}
+        description={<span style={leftDescriptionStyle}>{t('import.shareDesc')}</span>}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         disabled={isSaving}
         bShowClearAction
         inlineControls={
-          helpTopic ? <HelpPopover label="Help: share link" topic={helpTopic} /> : undefined
+          helpTopic ? <HelpPopover label={t('import.helpShare')} topic={helpTopic} /> : undefined
         }
       />
 
@@ -54,7 +51,7 @@ export const ConfigImport: FC<ConfigImportProps> = ({
             borderRadius: '5px',
           }}
         >
-          <strong>Error:</strong> {error}
+          <strong>{t('common.errorLabel')}</strong> {error}
         </div>
       )}
 
@@ -68,18 +65,14 @@ export const ConfigImport: FC<ConfigImportProps> = ({
             borderRadius: '5px',
           }}
         >
-          <strong>Success:</strong> {successMessage}
+          <strong>{t('import.successLabel')}</strong> {successMessage}
         </div>
       )}
 
       <div style={{ marginTop: '10px' }}>
         <ButtonItem
           icon={<FaSave />}
-          description={
-            <span style={leftDescriptionStyle}>
-              Save the VLESS link and switch to the configured layout.
-            </span>
-          }
+          description={<span style={leftDescriptionStyle}>{t('import.saveDesc')}</span>}
           onClick={onSave}
           disabled={isSaving || !value.trim()}
         >

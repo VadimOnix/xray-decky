@@ -268,11 +268,10 @@ see zero change.
   subscription, and shown in the admin panel as used/total data and an expiry
   date.)_
 - DNS hardening options (DoH upstream through the proxy, leak tests in diagnostics).
-- Localization of QAM + admin panel (EN/RU first). _(admin panel done —
-  EN/RU with a top-bar language switch, auto-detected from the browser and
-  persisted. QAM first cut done — the connection tab (status, connection
-  toggle, server picker) is localized via `src/utils/i18n.ts`, auto-detected
-  from the Steam client locale; the options/setup/help surfaces remain.)_
+- Localization of QAM + admin panel (EN/RU first). _(done — admin panel EN/RU
+  with a top-bar language switch (auto-detected + persisted); the whole QAM
+  (connection, options, setup, help) localized via `src/utils/i18n.ts`,
+  auto-detected once from the Steam client locale.)_
 - Telemetry-free update checker for the plugin and cores. _(done —
   `update_checker` compares the plugin's own version (package.json) and the
   pinned xray-core / sing-box versions against their latest GitHub releases,
