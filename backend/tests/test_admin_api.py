@@ -99,6 +99,20 @@ def _make_handlers(overrides=None):
                 "downlinkSpeed": 2,
             },
         ),
+        "check_updates": handler(
+            "check_updates",
+            {
+                "success": True,
+                "cores": [
+                    {
+                        "name": "xray-core",
+                        "current": "v26.3.27",
+                        "latest": "v26.3.27",
+                        "updateAvailable": False,
+                    }
+                ],
+            },
+        ),
     }
     handlers.update(overrides or {})
     return handlers, calls
@@ -388,6 +402,24 @@ def test_profile_activate_remove_and_ping():
                 resp = await client.post(path, json={"id": "x"})
                 assert resp.status == 401, path
             resp = await client.get("/api/v1/profiles")
+            assert resp.status == 401
+        finally:
+            await client.close()
+
+    _run(scenario())
+
+
+def test_updates_endpoint():
+    async def scenario():
+        client = await _client()
+        try:
+            resp = await client.get("/api/v1/updates", headers={"X-Admin-Token": TOKEN})
+            assert resp.status == 200
+            data = await resp.json()
+            assert data["cores"][0]["name"] == "xray-core"
+            assert data["cores"][0]["updateAvailable"] is False
+            # Token required.
+            resp = await client.get("/api/v1/updates")
             assert resp.status == 401
         finally:
             await client.close()

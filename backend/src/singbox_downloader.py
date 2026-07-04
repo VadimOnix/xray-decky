@@ -47,6 +47,11 @@ def pinned_version() -> str:
     return str(_load_pin().get("version") or FALLBACK_SINGBOX_VERSION)
 
 
+def pinned_repo() -> str:
+    """The GitHub repo the pinned sing-box release is fetched from."""
+    return str(_load_pin().get("repo") or SINGBOX_REPO)
+
+
 def pinned_sha256() -> Optional[str]:
     """Expected sha256 of the release asset, or None when unset."""
     value = _load_pin().get("sha256")

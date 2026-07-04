@@ -18,6 +18,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Core update checker** (roadmap Phase 5): the admin panel's new Updates
+  card compares the pinned xray-core / sing-box versions against their latest
+  GitHub releases on demand and shows an "up to date" / "vX available" badge
+  per core. Telemetry-free — an anonymous request to the public releases API,
+  made only when you press Check; new `check_updates` backend method and
+  token-guarded `GET /api/v1/updates`. Version comparison is numeric (so
+  `v1.10` &gt; `v1.9`) and pre-release tags are handled.
+
 - **Admin panel localization (English / Russian)** (roadmap Phase 5): the
   whole web panel is now translatable, with a top-bar language switch. The
   language is auto-detected from the browser (`ru*` → Russian, otherwise
