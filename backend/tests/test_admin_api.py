@@ -103,13 +103,21 @@ def _make_handlers(overrides=None):
             "check_updates",
             {
                 "success": True,
-                "cores": [
+                "components": [
+                    {
+                        "name": "xray-decky",
+                        "kind": "plugin",
+                        "current": "1.0.1",
+                        "latest": "v1.0.1",
+                        "updateAvailable": False,
+                    },
                     {
                         "name": "xray-core",
+                        "kind": "core",
                         "current": "v26.3.27",
                         "latest": "v26.3.27",
                         "updateAvailable": False,
-                    }
+                    },
                 ],
             },
         ),
@@ -416,8 +424,8 @@ def test_updates_endpoint():
             resp = await client.get("/api/v1/updates", headers={"X-Admin-Token": TOKEN})
             assert resp.status == 200
             data = await resp.json()
-            assert data["cores"][0]["name"] == "xray-core"
-            assert data["cores"][0]["updateAvailable"] is False
+            assert data["components"][0]["name"] == "xray-decky"
+            assert data["components"][0]["updateAvailable"] is False
             # Token required.
             resp = await client.get("/api/v1/updates")
             assert resp.status == 401

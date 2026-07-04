@@ -1,13 +1,15 @@
 """
-Telemetry-free update checker for the bundled cores.
+Telemetry-free update checker for the plugin and the bundled cores.
 
-Compares the pinned xray-core / sing-box versions (backend/src/*_version.json)
-against the latest GitHub release tag for each core's repo. Nothing about the
-install or the user is sent — it is an anonymous GET to the public GitHub
-releases API, made only when explicitly requested from the admin panel.
+Compares the plugin's own version (package.json) and the pinned xray-core /
+sing-box versions (backend/src/*_version.json) against the latest GitHub
+release tag for each repo. Nothing about the install or the user is sent — it
+is an anonymous GET to the public GitHub releases API, made only when
+explicitly requested from the admin panel.
 """
 
 import json
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import aiohttp
@@ -19,6 +21,21 @@ _REQUEST_TIMEOUT = 10
 # GitHub's release JSON is a few KiB; cap defensively so a hostile/redirected
 # endpoint can't stream an unbounded body into memory.
 _MAX_BODY_BYTES = 1 * 1024 * 1024
+
+# The plugin's own GitHub repository (releases are published here).
+PLUGIN_REPO = "VadimOnix/xray-decky"
+_PACKAGE_JSON = Path(__file__).resolve().parents[2] / "package.json"
+
+
+def plugin_version() -> Optional[str]:
+    """The plugin's current version from package.json, or None if unreadable."""
+    try:
+        with open(_PACKAGE_JSON, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, ValueError):
+        return None
+    version = data.get("version") if isinstance(data, dict) else None
+    return str(version) if version else None
 
 
 def parse_version(tag: Any) -> Tuple[int, ...]:
@@ -90,11 +107,12 @@ async def _fetch_latest_tag(
     return tag if isinstance(tag, str) and tag else None
 
 
-def _core_entry(
-    name: str, repo: str, current: str, latest: Optional[str]
+def _entry(
+    name: str, kind: str, repo: str, current: str, latest: Optional[str]
 ) -> Dict[str, Any]:
     return {
         "name": name,
+        "kind": kind,
         "repo": repo,
         "current": current,
         "latest": latest,
@@ -130,7 +148,33 @@ async def check_core_updates(
         results = []
         for name, repo, current in cores:
             latest = await _fetch_latest_tag(session, repo)
-            results.append(_core_entry(name, repo, current, latest))
+            results.append(_entry(name, "core", repo, current, latest))
+        return results
+    finally:
+        if owns_session:
+            await session.close()
+
+
+async def check_updates(
+    session: Optional[aiohttp.ClientSession] = None,
+) -> List[Dict[str, Any]]:
+    """Check the plugin and the bundled cores against their latest releases.
+
+    The plugin entry comes first (when its version is readable), followed by
+    the core entries from :func:`check_core_updates`.
+    """
+    owns_session = session is None
+    if owns_session:
+        session = aiohttp.ClientSession()
+    try:
+        results: List[Dict[str, Any]] = []
+        current = plugin_version()
+        if current:
+            latest = await _fetch_latest_tag(session, PLUGIN_REPO)
+            results.append(
+                _entry("xray-decky", "plugin", PLUGIN_REPO, current, latest)
+            )
+        results.extend(await check_core_updates(session=session))
         return results
     finally:
         if owns_session:

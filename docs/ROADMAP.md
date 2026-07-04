@@ -268,10 +268,10 @@ see zero change.
 - Localization of QAM + admin panel (EN/RU first). _(admin panel done —
   EN/RU with a top-bar language switch, auto-detected from the browser and
   persisted; QAM localization remaining.)_
-- Telemetry-free update checker for the plugin and cores. _(cores done —
-  `update_checker` compares the pinned xray-core / sing-box versions against
-  their latest GitHub releases, surfaced in the admin panel's Updates card on
-  demand; plugin self-update check remaining.)_
+- Telemetry-free update checker for the plugin and cores. _(done —
+  `update_checker` compares the plugin's own version (package.json) and the
+  pinned xray-core / sing-box versions against their latest GitHub releases,
+  surfaced in the admin panel's Updates card on demand.)_
 - Automatic "connect on boot / on Wi-Fi X" rules.
 
 ---
