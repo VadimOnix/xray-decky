@@ -7,6 +7,7 @@ from aiohttp import web
 from aiohttp.test_utils import TestClient, TestServer
 
 from backend.src.admin_api import (
+    RateLimiter,
     config_summary,
     ensure_admin_token,
     register_admin_routes,
@@ -14,6 +15,19 @@ from backend.src.admin_api import (
 
 
 TOKEN = "test-token-123"
+
+
+class _Clock:
+    """Manually-advanced clock for deterministic RateLimiter tests."""
+
+    def __init__(self) -> None:
+        self.t = 0.0
+
+    def __call__(self) -> float:
+        return self.t
+
+    def advance(self, dt: float) -> None:
+        self.t += dt
 
 
 class _FakeSettings:
@@ -94,7 +108,7 @@ def _run(coro):
     return asyncio.run(coro)
 
 
-async def _client(settings=None, handlers=None, static_dir=None):
+async def _client(settings=None, handlers=None, static_dir=None, rate_limiter=None):
     app = web.Application()
     register_admin_routes(
         app,
@@ -102,6 +116,7 @@ async def _client(settings=None, handlers=None, static_dir=None):
         static_dir=static_dir or Path("/nonexistent"),
         handlers=handlers or _make_handlers()[0],
         token=TOKEN,
+        rate_limiter=rate_limiter,
     )
     client = TestClient(TestServer(app))
     await client.start_server()
@@ -374,6 +389,91 @@ def test_profile_activate_remove_and_ping():
                 assert resp.status == 401, path
             resp = await client.get("/api/v1/profiles")
             assert resp.status == 401
+        finally:
+            await client.close()
+
+    _run(scenario())
+
+
+def test_rate_limiter_locks_out_and_expires():
+    clock = _Clock()
+    rl = RateLimiter(max_failures=3, window=60, block=30, clock=clock)
+    key = "1.2.3.4"
+    assert not rl.is_blocked(key)
+    rl.record_failure(key)
+    rl.record_failure(key)
+    assert not rl.is_blocked(key)  # two failures, still under the limit
+    rl.record_failure(key)  # third failure trips the lockout
+    assert rl.is_blocked(key)
+    assert rl.retry_after(key) >= 1
+    clock.advance(30)  # cooldown elapses
+    assert not rl.is_blocked(key)
+    assert rl.retry_after(key) == 0
+
+
+def test_rate_limiter_window_slides():
+    clock = _Clock()
+    rl = RateLimiter(max_failures=3, window=10, block=30, clock=clock)
+    key = "k"
+    rl.record_failure(key)
+    clock.advance(4)
+    rl.record_failure(key)
+    clock.advance(8)  # the first failure is now older than the window
+    rl.record_failure(key)  # only two failures fall inside the window
+    assert not rl.is_blocked(key)
+
+
+def test_rate_limiter_success_resets():
+    clock = _Clock()
+    rl = RateLimiter(max_failures=3, window=60, block=60, clock=clock)
+    key = "k"
+    rl.record_failure(key)
+    rl.record_failure(key)
+    rl.record_success(key)  # a valid token wipes the history
+    rl.record_failure(key)
+    rl.record_failure(key)
+    assert not rl.is_blocked(key)
+
+
+def test_auth_rate_limited_after_repeated_failures():
+    rl = RateLimiter(max_failures=3, window=60, block=60)
+
+    async def scenario():
+        client = await _client(rate_limiter=rl)
+        try:
+            for _ in range(3):
+                resp = await client.get(
+                    "/api/v1/status", headers={"X-Admin-Token": "wrong"}
+                )
+                assert resp.status == 401
+            # Locked out now — even the correct token is refused with 429.
+            resp = await client.get(
+                "/api/v1/status", headers={"X-Admin-Token": TOKEN}
+            )
+            assert resp.status == 429
+            assert int(resp.headers.get("Retry-After", "0")) >= 1
+        finally:
+            await client.close()
+
+    _run(scenario())
+
+
+def test_auth_success_avoids_lockout():
+    rl = RateLimiter(max_failures=3, window=60, block=60)
+
+    async def scenario():
+        client = await _client(rate_limiter=rl)
+        try:
+            # Interleaved successes keep the failure counter from saturating.
+            for _ in range(5):
+                bad = await client.get(
+                    "/api/v1/status", headers={"X-Admin-Token": "wrong"}
+                )
+                assert bad.status == 401
+                ok = await client.get(
+                    "/api/v1/status", headers={"X-Admin-Token": TOKEN}
+                )
+                assert ok.status == 200
         finally:
             await client.close()
 

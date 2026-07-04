@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- **Admin API auth rate limiting** (roadmap Phase 3): repeated failed token
+  attempts from one client are now counted in a sliding window and, past a
+  threshold, locked out for a cooldown (HTTP 429 with `Retry-After`) — a
+  brute-force speed bump for the LAN-exposed panel. A valid token clears the
+  client's failure history, so honest clients are never affected. The limiter
+  is in-memory and per-install (cleared on plugin reload).
+
 ### Added
 
 - **Live traffic speed graph in the admin panel** (roadmap Phase 3): the hero
