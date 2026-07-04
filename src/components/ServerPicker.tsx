@@ -6,6 +6,7 @@ import {
   testProfilesLatency,
   type ServerProfile,
 } from '../services/api';
+import { t } from '../utils/i18n';
 
 interface ServerPickerProps {
   /** Bumped by the parent whenever the config changes, to trigger a refetch. */
@@ -34,12 +35,12 @@ const latencyColor = (ms?: number | null): string => {
 
 const latencyText = (profile: ServerProfile): string => {
   if (typeof profile.latencyMs === 'number') return `${profile.latencyMs} ms`;
-  if (profile.latencyTestedAt) return 'offline';
+  if (profile.latencyTestedAt) return t('servers.offline');
   return '— ms';
 };
 
 const profileLabel = (profile: ServerProfile): string =>
-  profile.name || profile.address || 'Unnamed server';
+  profile.name || profile.address || t('servers.unnamed');
 
 export const ServerPicker: FC<ServerPickerProps> = ({ refreshKey }) => {
   const [profiles, setProfiles] = useState<ServerProfile[]>([]);
@@ -118,7 +119,7 @@ export const ServerPicker: FC<ServerPickerProps> = ({ refreshKey }) => {
 
   const openMenu = () => {
     showContextMenu(
-      <Menu label="Servers">
+      <Menu label={t('servers.menuLabel')}>
         {profiles.map((profile) => (
           <MenuItem key={profile.id} onSelected={() => void handleSelect(profile.id)}>
             <span style={rowStyle}>
@@ -127,7 +128,7 @@ export const ServerPicker: FC<ServerPickerProps> = ({ refreshKey }) => {
             </span>
           </MenuItem>
         ))}
-        <MenuItem onSelected={() => void handlePing()}>Ping all servers</MenuItem>
+        <MenuItem onSelected={() => void handlePing()}>{t('servers.pingAll')}</MenuItem>
       </Menu>
     );
   };
@@ -135,7 +136,7 @@ export const ServerPicker: FC<ServerPickerProps> = ({ refreshKey }) => {
   return (
     <div style={{ marginBottom: '8px' }}>
       <div style={{ ...rowStyle, marginBottom: '6px' }}>
-        <span style={labelStyle}>Server</span>
+        <span style={labelStyle}>{t('servers.server')}</span>
         {activeProfile && (
           <span
             style={{
@@ -154,15 +155,13 @@ export const ServerPicker: FC<ServerPickerProps> = ({ refreshKey }) => {
           selectedOption={activeId ?? undefined}
           onChange={(option) => void handleSelect(option.data as string)}
           disabled={busy}
-          strDefaultLabel="Select a server"
+          strDefaultLabel={t('servers.select')}
         />
       </Focusable>
       <Field
         bottomSeparator="none"
         description={
-          <span style={{ fontSize: '12px', color: '#8f98a0' }}>
-            Press ✕ / … on the picker to ping all servers.
-          </span>
+          <span style={{ fontSize: '12px', color: '#8f98a0' }}>{t('servers.pingHint')}</span>
         }
       />
     </div>

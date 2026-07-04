@@ -270,7 +270,9 @@ see zero change.
 - DNS hardening options (DoH upstream through the proxy, leak tests in diagnostics).
 - Localization of QAM + admin panel (EN/RU first). _(admin panel done —
   EN/RU with a top-bar language switch, auto-detected from the browser and
-  persisted; QAM localization remaining.)_
+  persisted. QAM first cut done — the connection tab (status, connection
+  toggle, server picker) is localized via `src/utils/i18n.ts`, auto-detected
+  from the Steam client locale; the options/setup/help surfaces remain.)_
 - Telemetry-free update checker for the plugin and cores. _(done —
   `update_checker` compares the plugin's own version (package.json) and the
   pinned xray-core / sing-box versions against their latest GitHub releases,
