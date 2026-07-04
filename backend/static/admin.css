@@ -300,6 +300,74 @@ body {
   flex-wrap: wrap;
 }
 
+/* ---------- Live speed graph ---------- */
+
+.hero-graph {
+  flex: 1 0 100%;
+  margin-top: 6px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.graph-legend {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.legend-item b {
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.legend-swatch {
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+  flex: none;
+}
+
+.legend-down .legend-swatch {
+  background: var(--green);
+  box-shadow: 0 0 6px rgba(161, 205, 68, 0.55);
+}
+
+.legend-up .legend-swatch {
+  background: var(--accent);
+  box-shadow: 0 0 6px rgba(102, 192, 244, 0.55);
+}
+
+.graph-window {
+  margin-left: auto;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.speed-canvas {
+  display: block;
+  width: 100%;
+  height: 128px;
+  border-radius: var(--radius);
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.14), rgba(0, 0, 0, 0.34)), var(--panel);
+  border: 1px solid var(--line);
+}
+
 /* ---------- Buttons (Steam "Play"-style) ---------- */
 
 .btn {
@@ -784,5 +852,9 @@ body {
 
   .hero-actions .btn {
     width: 100%;
+  }
+
+  .speed-canvas {
+    height: 104px;
   }
 }

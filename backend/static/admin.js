@@ -4,6 +4,8 @@
 
   var POLL_INTERVAL_MS = 3000
   var TOKEN_KEY = 'xray-decky-admin-token'
+  // 40 samples at 3s each ≈ the last two minutes of traffic.
+  var SPEED_HISTORY_MAX = 40
 
   var els = {
     locked: document.getElementById('locked'),
@@ -29,6 +31,10 @@
     statDown: document.getElementById('stat-down'),
     statUp: document.getElementById('stat-up'),
     statTotal: document.getElementById('stat-total'),
+    heroGraph: document.getElementById('hero-graph'),
+    speedCanvas: document.getElementById('speed-canvas'),
+    graphDownPeak: document.getElementById('graph-down-peak'),
+    graphUpPeak: document.getElementById('graph-up-peak'),
     tunToggle: document.getElementById('tun-toggle'),
     killswitchToggle: document.getElementById('killswitch-toggle'),
     optionsNote: document.getElementById('options-note'),
@@ -45,6 +51,7 @@
     busy: false,
     pollTimer: null,
     toastTimer: null,
+    speedHistory: [],
   }
 
   // ----- token handling -----
@@ -132,14 +139,116 @@
       els.statTotal.textContent =
         formatBytes((stats.uplink || 0) + (stats.downlink || 0)) + ' total'
       els.heroStats.hidden = false
+      pushSpeedSample(stats.downlinkSpeed || 0, stats.uplinkSpeed || 0)
     } else {
       els.heroStats.hidden = true
+      resetGraph()
     }
+  }
+
+  // ----- live speed graph -----
+
+  function pushSpeedSample(down, up) {
+    state.speedHistory.push({ down: Math.max(0, down), up: Math.max(0, up) })
+    if (state.speedHistory.length > SPEED_HISTORY_MAX) {
+      state.speedHistory.shift()
+    }
+    els.heroGraph.hidden = false
+    drawGraph()
+  }
+
+  function resetGraph() {
+    if (state.speedHistory.length === 0 && els.heroGraph.hidden) return
+    state.speedHistory = []
+    els.heroGraph.hidden = true
+  }
+
+  function drawGraph() {
+    var canvas = els.speedCanvas
+    if (!canvas || els.heroGraph.hidden) return
+    var ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    var ratio = window.devicePixelRatio || 1
+    var cssW = canvas.clientWidth || 600
+    var cssH = canvas.clientHeight || 128
+    var w = Math.round(cssW * ratio)
+    var h = Math.round(cssH * ratio)
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width = w
+      canvas.height = h
+    }
+    ctx.clearRect(0, 0, w, h)
+
+    var hist = state.speedHistory
+    var n = hist.length
+
+    var downPeak = 0
+    var upPeak = 0
+    for (var i = 0; i < n; i++) {
+      if (hist[i].down > downPeak) downPeak = hist[i].down
+      if (hist[i].up > upPeak) upPeak = hist[i].up
+    }
+    els.graphDownPeak.textContent = formatBytes(downPeak, true)
+    els.graphUpPeak.textContent = formatBytes(upPeak, true)
+    // Scale to the largest sample in view, with a 1 KB/s floor so an idle
+    // line sits flat at the bottom instead of amplifying noise.
+    var peak = Math.max(downPeak, upPeak, 1024)
+
+    // Horizontal gridlines.
+    ctx.lineWidth = ratio
+    ctx.strokeStyle = 'rgba(103, 193, 245, 0.10)'
+    for (var g = 1; g < 4; g++) {
+      var gy = Math.round((h * g) / 4) + 0.5
+      ctx.beginPath()
+      ctx.moveTo(0, gy)
+      ctx.lineTo(w, gy)
+      ctx.stroke()
+    }
+
+    if (n < 2) return
+
+    var pad = 4 * ratio
+    var innerH = h - pad * 2
+    var stepX = w / (SPEED_HISTORY_MAX - 1)
+
+    function series(key, stroke, fill) {
+      var lastX = (n - 1) * stepX
+      ctx.beginPath()
+      for (var j = 0; j < n; j++) {
+        var x = j * stepX
+        var y = h - pad - (hist[j][key] / peak) * innerH
+        if (j === 0) ctx.moveTo(x, y)
+        else ctx.lineTo(x, y)
+      }
+      ctx.lineTo(lastX, h)
+      ctx.lineTo(0, h)
+      ctx.closePath()
+      ctx.fillStyle = fill
+      ctx.fill()
+
+      ctx.beginPath()
+      for (var k = 0; k < n; k++) {
+        var lx = k * stepX
+        var ly = h - pad - (hist[k][key] / peak) * innerH
+        if (k === 0) ctx.moveTo(lx, ly)
+        else ctx.lineTo(lx, ly)
+      }
+      ctx.lineWidth = 2 * ratio
+      ctx.lineJoin = 'round'
+      ctx.strokeStyle = stroke
+      ctx.stroke()
+    }
+
+    // Download drawn first (under), upload on top.
+    series('down', '#a1cd44', 'rgba(161, 205, 68, 0.16)')
+    series('up', '#66c0f4', 'rgba(102, 192, 244, 0.16)')
   }
 
   function fetchStats() {
     if (state.status !== 'connected') {
       els.heroStats.hidden = true
+      resetGraph()
       return Promise.resolve()
     }
     return api('/api/v1/stats')
@@ -559,6 +668,11 @@
         showLocked('That token was rejected. Check the QR code in the plugin.')
       }
     })
+  })
+
+  // Keep the canvas backing store aligned with its CSS size on resize.
+  window.addEventListener('resize', function () {
+    if (!els.heroGraph.hidden) drawGraph()
   })
 
   // ----- init -----
