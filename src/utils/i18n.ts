@@ -115,6 +115,13 @@ const en: Dict = {
   'admin.loading': 'Loading admin panel address…',
   'admin.desc': 'Scan with your phone to manage the proxy from a browser on the same network.',
   'admin.url': 'Admin URL',
+  'admin.lan': 'Allow LAN access',
+  'admin.lanDesc':
+    'Let phones and PCs on your network open the panel and QR import page. ' +
+    'Off restricts them to this Deck only.',
+  'admin.lanOffNote':
+    'LAN access is off — the panel and import page are reachable only from this Deck.',
+  'admin.lanFail': 'Failed to change LAN access',
 
   'summary.valid': 'Valid',
   'summary.invalid': 'Invalid',
@@ -258,6 +265,12 @@ const ru: Dict = {
   'admin.loading': 'Загрузка адреса панели…',
   'admin.desc': 'Отсканируйте телефоном, чтобы управлять прокси из браузера в той же сети.',
   'admin.url': 'Адрес панели',
+  'admin.lan': 'Доступ из локальной сети',
+  'admin.lanDesc':
+    'Разрешить телефонам и ПК в вашей сети открывать панель и страницу QR-импорта. ' +
+    'Выкл — доступ только с этого Deck.',
+  'admin.lanOffNote': 'Доступ из сети выключен — панель и импорт доступны только с этого Deck.',
+  'admin.lanFail': 'Не удалось изменить доступ из сети',
 
   'summary.valid': 'Действителен',
   'summary.invalid': 'Недействителен',

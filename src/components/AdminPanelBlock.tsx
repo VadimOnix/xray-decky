@@ -1,7 +1,7 @@
-import { FC, useEffect, useState } from 'react';
-import { Focusable } from '@decky/ui';
+import { FC, useCallback, useEffect, useState } from 'react';
+import { Field, Focusable, Toggle } from '@decky/ui';
 import { QRCodeSVG } from 'qrcode.react';
-import { AdminPanelUrlResponse, getAdminPanelUrl } from '../services/api';
+import { AdminPanelUrlResponse, getAdminPanelUrl, setLanAccess } from '../services/api';
 import { HelpPopover } from './ui/HelpPopover';
 import type { HelpTopic } from '../types/ui';
 import { t } from '../utils/i18n';
@@ -23,35 +23,54 @@ const headerLabelStyle = {
   color: '#c7d5e0',
 };
 
+const leftDescriptionStyle = { display: 'block', textAlign: 'left' } as const;
+
 export const AdminPanelBlock: FC<AdminPanelBlockProps> = ({ helpTopic }) => {
   const [urlInfo, setUrlInfo] = useState<AdminPanelUrlResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [lanBusy, setLanBusy] = useState(false);
+
+  const fetchUrl = useCallback(async () => {
+    try {
+      const res = await getAdminPanelUrl();
+      setUrlInfo(res);
+      setError(null);
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      setError(errMsg);
+      setUrlInfo(null);
+    }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
 
-    const fetchUrl = async () => {
-      try {
-        const res = await getAdminPanelUrl();
-        if (!cancelled) {
-          setUrlInfo(res);
-          setError(null);
-        }
-      } catch (err: unknown) {
-        if (!cancelled) {
-          const errMsg = err instanceof Error ? err.message : String(err);
-          setError(errMsg);
-          setUrlInfo(null);
-        }
-      }
+    const load = async () => {
+      if (!cancelled) await fetchUrl();
     };
-
-    fetchUrl();
+    load();
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [fetchUrl]);
+
+  const handleLanToggle = async (enabled: boolean) => {
+    setLanBusy(true);
+    setError(null);
+    try {
+      const res = await setLanAccess(enabled);
+      if (!res.success) {
+        setError(res.error || t('admin.lanFail'));
+      }
+      // The URL/QR flips between the LAN IP and 127.0.0.1 — refresh it.
+      await fetchUrl();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : t('admin.lanFail'));
+    } finally {
+      setLanBusy(false);
+    }
+  };
 
   const header = (
     <div style={headerRowStyle}>
@@ -60,7 +79,7 @@ export const AdminPanelBlock: FC<AdminPanelBlockProps> = ({ helpTopic }) => {
     </div>
   );
 
-  if (error) {
+  if (error && !urlInfo) {
     return (
       <div>
         {header}
@@ -78,6 +97,7 @@ export const AdminPanelBlock: FC<AdminPanelBlockProps> = ({ helpTopic }) => {
     );
   }
 
+  const lanAllowed = urlInfo.allowLan !== false;
   const adminUrl =
     urlInfo.baseUrl.replace(/\/$/, '') +
     urlInfo.path +
@@ -89,17 +109,37 @@ export const AdminPanelBlock: FC<AdminPanelBlockProps> = ({ helpTopic }) => {
       {header}
       <p style={{ color: '#8f98a0', marginBottom: '12px' }}>{t('admin.desc')}</p>
 
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '8px',
-          marginBottom: '12px',
-        }}
+      <Field
+        label={t('admin.lan')}
+        description={<span style={leftDescriptionStyle}>{t('admin.lanDesc')}</span>}
+        bottomSeparator="none"
+        highlightOnFocus
+        childrenLayout="inline"
       >
-        <QRCodeSVG value={adminUrl} size={180} level="M" />
-      </div>
+        <Toggle value={lanAllowed} disabled={lanBusy} onChange={handleLanToggle} />
+      </Field>
+
+      {error && <p style={{ color: '#ff6b6b', marginBottom: '8px' }}>{error}</p>}
+
+      {!lanAllowed && (
+        <p style={{ color: '#e8b339', marginBottom: '12px', fontSize: '13px' }}>
+          {t('admin.lanOffNote')}
+        </p>
+      )}
+
+      {lanAllowed && (
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '8px',
+            marginBottom: '12px',
+          }}
+        >
+          <QRCodeSVG value={adminUrl} size={180} level="M" />
+        </div>
+      )}
 
       <Focusable>
         <div
