@@ -38,6 +38,9 @@ if [ -f README.md ]; then
   cp README.md "$PLUGIN_DIR/"
 fi
 
+# Network recovery script (run manually if the Deck loses connectivity)
+cp scripts/recover.sh "$PLUGIN_DIR/"
+
 # Backend and import server: backend/src/*.py (cert_utils, import_server, …), backend/static (import.html, import.css)
 if [ ! -d backend/src ] || [ ! -d backend/static ]; then
   echo -e "${YELLOW}❌ backend/src or backend/static missing. Import server will not start on device.${NC}"

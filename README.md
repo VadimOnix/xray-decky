@@ -4,10 +4,18 @@ Decky Loader plugin for Steam Deck that enables VLESS proxy connections with Rea
 
 ## Features
 
-- **Import VLESS Configurations** — via URL (single node or subscription)
+- **Import Configurations** — vless://, vmess://, trojan://, ss:// links or subscriptions
 - **Connection Toggle** — turn proxy on/off from Quick Access
+- **Web Admin Panel** — Steam-styled management UI on your phone/PC (QR pairing from the QAM)
 - **TUN Mode** — system-wide traffic routing, **recommended for Gaming Mode**
 - **Kill Switch** — block traffic when proxy disconnects (optional)
+- **Auto-restart** — a crashed xray-core is detected instantly and restarted with backoff
+
+**Network recovery:** if the Deck ever loses connectivity because the plugin
+died uncleanly, run `sudo bash recover.sh` (shipped in the plugin folder,
+also at [scripts/recover.sh](scripts/recover.sh)) from a Desktop Mode
+terminal — it removes the kill-switch firewall chain, stale TUN routes and
+the system proxy.
 
 ## Installation
 

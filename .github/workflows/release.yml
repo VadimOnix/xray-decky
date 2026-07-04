@@ -78,6 +78,8 @@ jobs:
           cp -r dist "$PLUGIN_DIR/"
           cp package.json plugin.json main.py LICENSE.md "$PLUGIN_DIR/"
           [ -f README.md ] && cp README.md "$PLUGIN_DIR/"
+          # Network recovery script (run manually if the Deck loses connectivity)
+          cp scripts/recover.sh "$PLUGIN_DIR/"
 
           # Backend
           mkdir -p "$PLUGIN_DIR/backend/src"

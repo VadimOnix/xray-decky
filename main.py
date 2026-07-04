@@ -13,7 +13,7 @@ import socket
 import subprocess
 import time
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 
 def _get_lan_ip() -> str:
@@ -99,6 +99,7 @@ from backend.src.kill_switch import KillSwitch
 from backend.src.system_proxy import SystemProxyManager
 from backend.src.import_server import create_import_app
 from backend.src.admin_api import ensure_admin_token, register_admin_routes
+from backend.src.supervisor import XraySupervisor
 from backend.src.cert_utils import ensure_cert_key
 from aiohttp import web
 
@@ -162,6 +163,7 @@ class Plugin:
         Called when the plugin is loaded.
         """
         print("Xray Decky Plugin: Backend initialized")
+        self._supervisor: Optional[XraySupervisor] = None
 
         # Ensure the xray-core binary is present. On SteamOS the plugin's bin/
         # can be wiped on reboot/system update, so re-download it if missing.
@@ -351,6 +353,9 @@ class Plugin:
         Cleanup code called when the plugin is unloaded.
         """
         print("Xray Decky Plugin: Backend unloading")
+        # Stop crash supervision before tearing anything down
+        await self._stop_supervisor()
+
         # Stop import HTTP server
         if getattr(self, "_import_runner", None) is not None:
             await self._import_runner.cleanup()
@@ -379,6 +384,29 @@ class Plugin:
         # plugin reload a fresh KillSwitch reports isActive=False while the
         # firewall chain may still be live, so gating on that flag would leave a
         # DROP rule blocking the whole system after unload/uninstall.
+        await kill_switch.deactivate()
+
+    async def _uninstall(self):
+        """
+        Cleanup code called when the plugin is uninstalled. Restores the
+        network unconditionally: a plugin being removed must never leave
+        firewall rules, routes or a system proxy behind (lesson learned from
+        ToMoon's resolv.conf failure mode).
+        """
+        print("Xray Decky Plugin: Uninstalling, restoring network state")
+        await self._stop_supervisor()
+        try:
+            await system_proxy_manager.clear_system_proxy()
+        except Exception as e:
+            print(f"Xray Decky Plugin: system proxy cleanup failed: {e}")
+        try:
+            await tun_manager.remove_system_route()
+        except Exception as e:
+            print(f"Xray Decky Plugin: route cleanup failed: {e}")
+        try:
+            await xray_manager.stop()
+        except Exception as e:
+            print(f"Xray Decky Plugin: xray-core stop failed: {e}")
         await kill_switch.deactivate()
 
     # SettingsManager wrapper methods
@@ -773,6 +801,137 @@ class Plugin:
                 ErrorCode.UNKNOWN_ERROR, f"Failed to toggle TUN mode: {str(e)}"
             )
 
+    # Process supervision
+    async def _stop_supervisor(self) -> None:
+        """Cancel crash supervision before an intentional stop."""
+        supervisor = getattr(self, "_supervisor", None)
+        if supervisor is not None:
+            await supervisor.stop()
+            self._supervisor = None
+
+    def _start_supervisor(self, config: Dict[str, Any], tun_mode: bool) -> None:
+        """Start watching the running xray-core process for crashes."""
+
+        async def wait_for_exit() -> Optional[int]:
+            process = xray_manager.process
+            if process is None:
+                # Nothing to watch; park until cancelled so a missing process
+                # is not treated as an endless crash loop.
+                await asyncio.Event().wait()
+                return None
+            return await process.wait()
+
+        async def on_crash(returncode: Optional[int]) -> None:
+            print(
+                "Xray Decky Plugin: xray-core exited unexpectedly "
+                f"(code {returncode}); engaging fail-safe"
+            )
+            connection_state = get_connection_state()
+            kill_switch_pref = settings.getSetting("killSwitch", {})
+            if kill_switch_pref.get("enabled", False):
+                kill_result = await kill_switch.activate(
+                    connection_state.xray_process_id or 0
+                )
+                if kill_result.get("success"):
+                    kill_switch_pref["isActive"] = True
+                    kill_switch_pref["activatedAt"] = int(time.time())
+                    connection_state.set_blocked()
+                    settings.setSetting("killSwitch", kill_switch_pref)
+                    settings.commit()
+                else:
+                    print(
+                        "Warning: kill switch failed to activate after crash: "
+                        f"{kill_result.get('error')}"
+                    )
+                    connection_state.set_error(
+                        "xray-core crashed and the kill switch failed to engage",
+                        ErrorCode.PROCESS_FAILED,
+                    )
+            else:
+                connection_state.set_error(
+                    "xray-core process terminated unexpectedly",
+                    ErrorCode.PROCESS_FAILED,
+                )
+
+        async def restart() -> bool:
+            config_file = xray_manager.config_file
+            if not config_file or not os.path.exists(config_file):
+                outbound_if = (
+                    await tun_manager.get_physical_interface() if tun_mode else None
+                )
+                if tun_mode and not outbound_if:
+                    return False
+                config_file = xray_manager.generate_config(
+                    config, tun_mode, outbound_if
+                )
+            result = await xray_manager.start(config_file)
+            if not result.get("success", False):
+                return False
+
+            if tun_mode:
+                route_result = await tun_manager.setup_system_route()
+                if not route_result.get("success"):
+                    print(
+                        "Xray Decky Plugin: TUN route re-setup failed after "
+                        f"restart: {route_result.get('error', 'Unknown')}"
+                    )
+
+            connection_state = get_connection_state()
+            connection_state.set_connected(
+                result.get("processId"), config_file, config
+            )
+
+            # Lift the kill switch we engaged on crash — traffic is safe again.
+            kill_switch_pref = settings.getSetting("killSwitch", {})
+            if kill_switch_pref.get("isActive", False):
+                deactivate_result = await kill_switch.deactivate()
+                if deactivate_result.get("success"):
+                    kill_switch_pref["isActive"] = False
+                    kill_switch_pref["deactivatedAt"] = int(time.time())
+                    settings.setSetting("killSwitch", kill_switch_pref)
+                    settings.commit()
+
+            settings.setSetting(
+                "connectionState",
+                {"status": "connected", "connectedAt": int(time.time())},
+            )
+            settings.commit()
+            return True
+
+        async def on_recovered(attempt: int) -> None:
+            print(
+                f"Xray Decky Plugin: xray-core auto-restarted (attempt {attempt})"
+            )
+
+        async def on_gave_up() -> None:
+            print(
+                "Xray Decky Plugin: xray-core keeps crashing; auto-restart gave up"
+            )
+            connection_state = get_connection_state()
+            kill_switch_pref = settings.getSetting("killSwitch", {})
+            if kill_switch_pref.get("isActive", False):
+                connection_state.set_blocked()
+                persisted_status = "blocked"
+            else:
+                connection_state.set_error(
+                    "xray-core keeps crashing; auto-restart gave up",
+                    ErrorCode.PROCESS_FAILED,
+                )
+                persisted_status = "error"
+            settings.setSetting("connectionState", {"status": persisted_status})
+            settings.commit()
+            # Release process/config-file references of the dead process.
+            await xray_manager.stop()
+
+        self._supervisor = XraySupervisor(
+            wait_for_exit=wait_for_exit,
+            on_crash=on_crash,
+            restart=restart,
+            on_recovered=on_recovered,
+            on_gave_up=on_gave_up,
+        )
+        self._supervisor.start()
+
     # Connection Management
     async def toggle_connection(self, enable: bool) -> Dict[str, Any]:
         """
@@ -802,6 +961,10 @@ class Plugin:
                             "processId": connection_state.xray_process_id,
                         }
                     )
+
+                # Cancel any pending crash-recovery so a supervisor mid-backoff
+                # can't start a second xray process underneath us.
+                await self._stop_supervisor()
 
                 # Load and validate config
                 config = settings.getSetting("vlessConfig", None)
@@ -918,6 +1081,9 @@ class Plugin:
                 )
                 settings.commit()
 
+                # Watch the process: crash -> kill switch + bounded auto-restart
+                self._start_supervisor(config, tun_mode)
+
                 return create_success_response(
                     {"status": "connected", "processId": process_id}
                 )
@@ -926,6 +1092,10 @@ class Plugin:
                 # Disconnect
                 if connection_state.status == ConnectionStatus.DISCONNECTED:
                     return create_success_response({"status": "disconnected"})
+
+                # Intentional stop: cancel crash supervision first so the
+                # exit below is not treated as a crash.
+                await self._stop_supervisor()
 
                 # Always clear system proxy on disconnect so SOCKS is never left on
                 await system_proxy_manager.clear_system_proxy()
