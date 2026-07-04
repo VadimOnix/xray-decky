@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **QAM server picker** (roadmap Phase 2): the Quick Access Menu now shows a
+  compact server dropdown (with per-server latency) when more than one
+  profile is stored, so you can switch servers without opening the web
+  panel — a live connection reconnects through the new server. Secondary/
+  options button on the picker pings all servers.
+- **Live speed in the QAM**: the connection status card shows ▼ download /
+  ▲ upload speed and session-total traffic while connected, polled from the
+  StatsService.
+
 - **Traffic statistics** (roadmap Phase 2): the generated config now enables
   the xray StatsService (localhost-only API inbound); totals are read with
   `xray api statsquery` and per-second speeds derived between samples
