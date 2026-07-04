@@ -103,6 +103,20 @@
       'updates.upToDate': 'up to date',
       'updates.available': '{v} available',
       'updates.failed': 'check failed',
+      'export.title': 'Export servers',
+      'export.reveal': 'Reveal',
+      'export.hide': 'Hide',
+      'export.hint':
+        'Reveal share links for every saved server. They contain credentials — ' +
+        'handle with care.',
+      'export.aria': 'Exported servers',
+      'export.count': '{n} servers exported',
+      'export.empty': 'No servers to export',
+      'export.copyLinks': 'Copy links',
+      'export.copySub': 'Copy subscription',
+      'export.copied': 'Copied to clipboard',
+      'export.copyFail': 'Copy failed — select the text and copy manually',
+      'toast.exportFail': 'Export failed',
       'toast.updatesFail': 'Update check failed',
       'toast.netErr': 'Network error',
       'toast.removed': 'Server removed',
@@ -214,6 +228,20 @@
       'updates.upToDate': 'актуально',
       'updates.available': 'доступна {v}',
       'updates.failed': 'ошибка проверки',
+      'export.title': 'Экспорт серверов',
+      'export.reveal': 'Показать',
+      'export.hide': 'Скрыть',
+      'export.hint':
+        'Показать ссылки для всех сохранённых серверов. Они содержат учётные ' +
+        'данные — обращайтесь осторожно.',
+      'export.aria': 'Экспортированные серверы',
+      'export.count': 'Экспортировано серверов: {n}',
+      'export.empty': 'Нет серверов для экспорта',
+      'export.copyLinks': 'Скопировать ссылки',
+      'export.copySub': 'Скопировать подписку',
+      'export.copied': 'Скопировано в буфер обмена',
+      'export.copyFail': 'Не удалось скопировать — выделите текст вручную',
+      'toast.exportFail': 'Не удалось экспортировать',
       'toast.updatesFail': 'Не удалось проверить обновления',
       'toast.netErr': 'Ошибка сети',
       'toast.removed': 'Сервер удалён',
@@ -348,6 +376,13 @@
     checkUpdatesBtn: document.getElementById('check-updates-btn'),
     updatesList: document.getElementById('updates-list'),
     updatesHint: document.getElementById('updates-hint'),
+    exportBtn: document.getElementById('export-btn'),
+    exportHint: document.getElementById('export-hint'),
+    exportResult: document.getElementById('export-result'),
+    exportCount: document.getElementById('export-count'),
+    exportText: document.getElementById('export-text'),
+    exportCopyLinks: document.getElementById('export-copy-links'),
+    exportCopySub: document.getElementById('export-copy-sub'),
     toast: document.getElementById('toast'),
     langToggle: document.getElementById('lang-toggle'),
   }
@@ -363,6 +398,8 @@
     lastData: null,
     lastProfiles: null,
     lastUpdates: null,
+    lastExport: null,
+    exportShown: false,
   }
 
   // ----- token handling -----
@@ -868,6 +905,88 @@
         els.checkUpdatesBtn.disabled = false
         els.checkUpdatesBtn.textContent = t('updates.check')
       })
+  })
+
+  // ----- export -----
+
+  function hideExport() {
+    // Clear the revealed credentials off-screen when collapsing.
+    state.exportShown = false
+    els.exportText.value = ''
+    els.exportResult.hidden = true
+    els.exportHint.hidden = false
+    els.exportBtn.textContent = t('export.reveal')
+  }
+
+  function showExport(data) {
+    state.lastExport = data
+    state.exportShown = true
+    var links = (data.links || []).map(function (item) {
+      return item.link
+    })
+    els.exportText.value = links.join('\n')
+    els.exportText.rows = Math.min(Math.max(links.length, 2), 8)
+    els.exportCount.textContent = t('export.count', { n: data.count || 0 })
+    els.exportHint.hidden = true
+    els.exportResult.hidden = false
+    els.exportBtn.textContent = t('export.hide')
+  }
+
+  function copyText(text) {
+    var clip = window.navigator && window.navigator.clipboard
+    if (clip && clip.writeText) {
+      clip.writeText(text).then(
+        function () {
+          toast(t('export.copied'))
+        },
+        function () {
+          els.exportText.select()
+          toast(t('export.copyFail'), true)
+        }
+      )
+    } else {
+      els.exportText.select()
+      toast(t('export.copyFail'), true)
+    }
+  }
+
+  els.exportBtn.addEventListener('click', function () {
+    if (state.exportShown) {
+      hideExport()
+      return
+    }
+    els.exportBtn.disabled = true
+    api('/api/v1/export')
+      .then(function (res) {
+        if (res.status === 200 && res.data.success) {
+          if (!res.data.count) {
+            toast(t('export.empty'))
+          } else {
+            showExport(res.data)
+          }
+        } else {
+          toast(res.data.error || t('toast.exportFail'), true)
+        }
+      })
+      .catch(function () {
+        toast(t('toast.netErr'), true)
+      })
+      .then(function () {
+        els.exportBtn.disabled = false
+      })
+  })
+
+  els.exportCopyLinks.addEventListener('click', function () {
+    if (!state.lastExport) return
+    var links = (state.lastExport.links || []).map(function (item) {
+      return item.link
+    })
+    copyText(links.join('\n'))
+  })
+
+  els.exportCopySub.addEventListener('click', function () {
+    if (!state.lastExport) return
+    copyText(state.lastExport.subscription || '')
   })
 
   els.renameSubBtn.addEventListener('click', function () {

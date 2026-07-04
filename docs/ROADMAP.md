@@ -268,7 +268,10 @@ see zero change.
   per-app is not feasible with TUN alone — needs cgroup marking, research spike).
 - Profile import via Clash YAML / sing-box JSON; export. _(sing-box JSON import
   done — a pasted sing-box config or bare outbounds array is converted to share
-  links and imported through the standard parser; Clash YAML + export remaining.)_
+  links and imported through the standard parser. **Export done** — the admin
+  panel's Export card reveals a share link per server plus a base64 subscription
+  blob (token-guarded, revealed only on explicit request); backend
+  `export_profiles` RPC + `GET /api/v1/export`. Clash YAML import remaining.)_
 - Per-subscription user-info headers (traffic quota / expiry display). _(done —
   the `Subscription-Userinfo` header is parsed on fetch/refresh, stored with the
   subscription, and shown in the admin panel as used/total data and an expiry

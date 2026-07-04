@@ -100,6 +100,22 @@ def _make_handlers(overrides=None):
                 "downlinkSpeed": 2,
             },
         ),
+        "export_profiles": handler(
+            "export_profiles",
+            {
+                "success": True,
+                "count": 1,
+                "links": [
+                    {
+                        "id": "p1",
+                        "name": "example.com",
+                        "protocol": "trojan",
+                        "link": "trojan://secret@example.com:443?security=tls",
+                    }
+                ],
+                "subscription": "dHJvamFuOi8v",
+            },
+        ),
         "check_updates": handler(
             "check_updates",
             {
@@ -462,6 +478,29 @@ def test_updates_endpoint():
             assert data["components"][0]["updateAvailable"] is False
             # Token required.
             resp = await client.get("/api/v1/updates")
+            assert resp.status == 401
+        finally:
+            await client.close()
+
+    _run(scenario())
+
+
+def test_export_endpoint_returns_links_and_requires_token():
+    async def scenario():
+        client = await _client()
+        try:
+            resp = await client.get(
+                "/api/v1/export", headers={"X-Admin-Token": TOKEN}
+            )
+            assert resp.status == 200
+            data = await resp.json()
+            assert data["count"] == 1
+            assert data["links"][0]["protocol"] == "trojan"
+            # Export deliberately carries the full share link (the credential).
+            assert data["links"][0]["link"].startswith("trojan://")
+            assert data["subscription"]
+            # Token required.
+            resp = await client.get("/api/v1/export")
             assert resp.status == 401
         finally:
             await client.close()

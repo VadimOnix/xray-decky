@@ -244,6 +244,7 @@ class Plugin:
                             "rename_subscription": self.rename_subscription,
                             "get_traffic_stats": self.get_traffic_stats,
                             "check_updates": self.check_updates,
+                            "export_profiles": self.export_profiles,
                         },
                         token=ensure_admin_token(settings),
                     )
@@ -588,6 +589,27 @@ class Plugin:
         except Exception as e:
             return create_error_response(
                 ErrorCode.UNKNOWN_ERROR, f"Failed to list profiles: {str(e)}"
+            )
+
+    async def export_profiles(self) -> Dict[str, Any]:
+        """
+        Export every stored profile as a share link plus a base64 subscription.
+
+        Unlike get_profiles (which redacts credentials for display), this
+        returns full share links — a link *is* the credential. It is only
+        served on an explicit, token-guarded request, never in passive display.
+
+        Returns:
+            { 'success': bool, 'links': [...], 'subscription': str, 'count': int }
+        """
+        try:
+            from backend.src.exporter import export_profiles as _export
+
+            result = _export(profile_store.list_profiles())
+            return create_success_response(result)
+        except Exception as e:
+            return create_error_response(
+                ErrorCode.UNKNOWN_ERROR, f"Failed to export profiles: {str(e)}"
             )
 
     async def set_active_profile(self, profile_id: str) -> Dict[str, Any]:
