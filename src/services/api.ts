@@ -132,6 +132,13 @@ export interface AdminPanelUrlResponse {
   token: string;
 }
 
+export interface HandleResumeResponse {
+  success: boolean;
+  checked?: boolean;
+  routeRestored?: boolean;
+  error?: string;
+}
+
 // Backend method handles using callable (new API)
 // callable<[arg types], returnType>("method_name")
 
@@ -177,3 +184,4 @@ export const getSystemProxyStatus = callable<[], SystemProxyStatusResponse>(
 
 export const getImportServerUrl = callable<[], ImportServerUrlResponse>('get_import_server_url');
 export const getAdminPanelUrl = callable<[], AdminPanelUrlResponse>('get_admin_panel_url');
+export const handleResume = callable<[], HandleResumeResponse>('handle_resume');

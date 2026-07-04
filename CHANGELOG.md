@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Suspend/resume handling** (roadmap Phase 0): when the Deck wakes from
+  sleep, the frontend notifies the backend (`handle_resume` via
+  `SteamClient.System.RegisterForOnResumeFromSuspend`), which re-adds the
+  TUN default route if it vanished during suspend or Wi-Fi roaming while
+  xray-core kept running. A core that died during suspend is already
+  restarted by the process supervisor.
+
+### Changed
+
+- TUN route setup failure on connect is now a hard, user-visible error
+  (xray-core is stopped and the connection reports the failure) instead of
+  silently degrading to SOCKS-only, which left Gaming Mode traffic
+  unproxied while the UI claimed otherwise.
+- Resolved the stale "xray-core has no native TUN" comments: the pinned
+  core (≥ v26.1.23) creates the TUN interface natively from its config.
+
 - **Process supervisor** (roadmap Phase 0): a crashed xray-core is now
   detected the moment it exits (not on the next status poll). The kill
   switch engages immediately (fail closed) when enabled, then the process is

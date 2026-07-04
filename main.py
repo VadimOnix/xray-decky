@@ -1005,6 +1005,8 @@ class Plugin:
                                 "TUN mode requires elevated privileges. Please complete installation steps.",
                             )
 
+                    # Track the interface name; xray-core itself creates
+                    # xray0 from its TUN inbound config (native since v26.1.23).
                     await tun_manager.create_tun_interface()
 
                 # TUN: get physical interface for sockopt.interface (avoids routing loop)
@@ -1035,18 +1037,25 @@ class Plugin:
                     return create_error_response(error_code, error_msg)
 
                 # TUN: setup system routing + system proxy.
-                # NOTE: xray-core does not natively support TUN inbound, so
-                # the TUN interface won't be created by xray. Route setup may
-                # fail, but the SOCKS/HTTP proxy is still functional.
+                # The pinned xray-core (>= v26.1.23) creates the TUN interface
+                # natively from its config; only the system route is ours.
                 if tun_mode:
                     route_result = await tun_manager.setup_system_route()
                     if not route_result.get("success"):
-                        # TUN route failed — log but don't kill the connection.
-                        # SOCKS proxy on 10808 and HTTP proxy on 10809 are still
-                        # available and the connection is usable.
-                        print(
-                            f"Xray Decky Plugin: TUN route failed (SOCKS proxy still works): "
-                            f"{route_result.get('error', 'Unknown')}"
+                        # TUN was explicitly requested: fail loudly. Silently
+                        # degrading to SOCKS-only would leave Gaming Mode
+                        # traffic unproxied while the UI claims otherwise.
+                        await xray_manager.stop()
+                        error_msg = (
+                            "TUN route setup failed: "
+                            f"{route_result.get('error', 'Unknown')}. "
+                            "Disable TUN mode to use SOCKS/HTTP proxy only."
+                        )
+                        connection_state.set_error(
+                            error_msg, ErrorCode.IPTABLES_FAILED
+                        )
+                        return create_error_response(
+                            ErrorCode.IPTABLES_FAILED, error_msg
                         )
 
                     # Auto-enable System Proxy (gsettings for GTK/Qt apps)
@@ -1173,6 +1182,50 @@ class Plugin:
             )
             return create_error_response(
                 ErrorCode.UNKNOWN_ERROR, f"Connection error: {str(e)}"
+            )
+
+    async def handle_resume(self) -> Dict[str, Any]:
+        """
+        Called by the frontend when the Deck resumes from suspend.
+
+        Suspend/resume (and Wi-Fi roaming) is a top real-world failure source:
+        the TUN default route can vanish while xray-core keeps running, and a
+        core that died during suspend needs to be brought back. The supervisor
+        already handles the dead-process case the moment it happens; this hook
+        repairs the routing side.
+
+        Returns:
+            {'success': bool, 'checked': bool, 'routeRestored': bool}
+        """
+        try:
+            connection_state = get_connection_state()
+            if connection_state.status not in (
+                ConnectionStatus.CONNECTED,
+                ConnectionStatus.CONNECTING,
+            ):
+                return create_success_response({"checked": False})
+
+            route_restored = False
+            tun_pref = settings.getSetting("tunMode", {})
+            if tun_pref.get("enabled", False) and xray_manager.is_running():
+                route_result = await tun_manager.ensure_system_route()
+                route_restored = bool(route_result.get("restored", False))
+                if not route_result.get("success", False):
+                    print(
+                        "Xray Decky Plugin: TUN route repair after resume "
+                        f"failed: {route_result.get('error', 'Unknown')}"
+                    )
+                elif route_restored:
+                    print(
+                        "Xray Decky Plugin: TUN default route restored after resume"
+                    )
+
+            return create_success_response(
+                {"checked": True, "routeRestored": route_restored}
+            )
+        except Exception as e:
+            return create_error_response(
+                ErrorCode.UNKNOWN_ERROR, f"Resume handling failed: {str(e)}"
             )
 
     async def get_connection_status(self) -> Dict[str, Any]:

@@ -96,6 +96,8 @@ Facts that shape the plan:
 - **Resolve the TUN contradiction**: verify native TUN inbound behavior against the
   pinned core, delete the stale comments/dead code paths (`create_tun_interface`
   no-ops), and make route setup failure a hard, user-visible error in TUN mode.
+  _(done in code — stale comments fixed, route failure now hard-fails the connect;
+  remaining: verify native TUN inbound against the pinned core on a real Deck)_
 - **Process supervision**: `await process.wait()` in a background task → immediate
   crash detection, bounded auto-restart with backoff, kill-switch engagement on
   crash (not on next poll). _(done — `backend/src/supervisor.py`; crash loops give
@@ -108,7 +110,8 @@ Facts that shape the plan:
   restores the network unconditionally)_
 - **Suspend/resume + Wi-Fi roaming handling**: reconnect xray and re-apply routes
   after resume (Steam Deck suspends constantly; this is a top real-world failure
-  source for proxy plugins).
+  source for proxy plugins). _(done — `handle_resume` repairs the TUN default route
+  on wake; a core that died during suspend is restarted by the supervisor)_
 
 **Exit criteria:** kill switch on/off leaves the system exactly as it was; a killed
 `xray-core` recovers within seconds; version drift impossible.
