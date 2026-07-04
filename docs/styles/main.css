@@ -146,28 +146,75 @@ section { max-width: 1080px; margin: 0 auto; padding: 3.5rem 1.25rem; }
 /* Clears the phone mockup, which hangs ~26px below the Deck. */
 .demo-caption { text-align: center; color: var(--muted); font-size: 0.82rem; margin: 2.6rem 0 0; }
 
-/* --- Steam Deck --- */
+/* --- Steam Deck ---
+   Signature cues kept faithful: both thumbsticks mounted high and symmetric,
+   square trackpads *below* the sticks, wide grip panels, thick glossy bezel,
+   vent slits on the top edge, Steam / ··· (QAM) system buttons. */
 .deck {
   position: relative; margin-right: 3.4rem;
-  display: grid; grid-template-columns: 54px 1fr 54px;
-  background: linear-gradient(180deg, #23262e, #14161b);
-  border: 1px solid #3a3f4a; border-radius: 26px;
-  padding: 12px 8px; box-shadow: var(--shadow);
+  display: grid; grid-template-columns: 88px 1fr 88px; gap: 6px;
+  background:
+    radial-gradient(140px 200px at 0% 55%, #262a33, transparent 70%),
+    radial-gradient(140px 200px at 100% 55%, #262a33, transparent 70%),
+    linear-gradient(180deg, #1f222a, #121419 78%, #0c0e12);
+  border: 1px solid #383d47; border-radius: 32px;
+  padding: 14px 10px 12px; box-shadow: var(--shadow);
 }
-.deck-side { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; }
+/* Vent slits along the top edge. */
+.deck::before {
+  content: ""; position: absolute; top: 5px; left: 50%; transform: translateX(-50%);
+  width: 42%; height: 4px; border-radius: 2px; opacity: 0.8;
+  background: repeating-linear-gradient(90deg, #05070a 0 4px, transparent 4px 8px);
+}
+.deck-side { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 11px; padding-top: 8px; }
+/* Tiny view/menu buttons at the top inner corner of each grip. */
+.deck-mini-btn {
+  position: absolute; top: 2px; width: 12px; height: 5px; border-radius: 3px;
+  background: #2c313b; border: 1px solid #454b58;
+}
+.deck-side-l .deck-mini-btn { right: 4px; }
+.deck-side-r .deck-mini-btn { left: 4px; }
 .deck-stick {
-  width: 30px; height: 30px; border-radius: 50%;
-  background: radial-gradient(circle at 34% 30%, #3d434f, #191c22 70%);
-  border: 2px solid #0c0e12; box-shadow: 0 3px 6px rgba(0,0,0,0.5);
+  width: 34px; height: 34px; border-radius: 50%; flex: none;
+  background: radial-gradient(circle at 50% 42%, #363b45 0 58%, #23272f 60%);
+  border: 3px solid #0c0e12;
+  box-shadow: 0 3px 7px rgba(0, 0, 0, 0.55), inset 0 -2px 4px rgba(0, 0, 0, 0.5);
 }
-.deck-dpad { width: 26px; height: 26px; background:
-  linear-gradient(#2a2e37, #2a2e37) center/8px 24px no-repeat,
-  linear-gradient(#2a2e37, #2a2e37) center/24px 8px no-repeat; border-radius: 4px; }
-.deck-btns { display: grid; grid-template-columns: repeat(2, 10px); gap: 5px; transform: rotate(45deg); }
-.deck-btns i { width: 10px; height: 10px; border-radius: 50%; background: #2f333d; border: 1px solid #454b58; }
+/* Outer ring around the stick well. */
+.deck-stick::after {
+  content: ""; display: block; width: 100%; height: 100%; border-radius: 50%;
+  box-shadow: 0 0 0 3px #16181e;
+}
+.deck-dpad { width: 30px; height: 30px; flex: none; background:
+  linear-gradient(#292d36, #292d36) center/10px 30px no-repeat,
+  linear-gradient(#292d36, #292d36) center/30px 10px no-repeat;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.5));
+}
+.deck-btns { display: grid; grid-template-columns: repeat(2, 11px); gap: 6px; transform: rotate(45deg); flex: none; margin: 2px 0; }
+.deck-btns i { width: 11px; height: 11px; border-radius: 50%; background: #2f333d; border: 1px solid #4a505d; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.6); }
+/* The Deck's square trackpads — its most recognizable feature. */
+.deck-trackpad {
+  width: 46px; height: 46px; flex: none; border-radius: 9px;
+  background: linear-gradient(160deg, #1d2027, #14161c);
+  border: 1px solid #3a404b;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.55), inset 0 -1px 2px rgba(255, 255, 255, 0.03);
+}
+.deck-sys-btn {
+  width: 13px; height: 13px; border-radius: 50%; flex: none;
+  background: #23262e; border: 1px solid #454b58;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: #8f98a0; font-size: 7px; line-height: 1; letter-spacing: 0.5px;
+}
+.deck-steam-btn {
+  background:
+    radial-gradient(circle at 50% 50%, #2c313b 0 30%, transparent 32%),
+    conic-gradient(from 200deg, #3d434f, #23262e 60%, #3d434f);
+}
+.deck-qam-btn { font-weight: 700; }
 .deck-screen {
-  position: relative; aspect-ratio: 16 / 10; border-radius: 8px; overflow: hidden;
-  border: 2px solid #06080b; background: #0a141e;
+  position: relative; aspect-ratio: 16 / 10; border-radius: 10px; overflow: hidden;
+  border: 7px solid #05070a; background: #0a141e;
+  box-shadow: 0 0 0 1px #2a2e37, inset 0 0 18px rgba(0, 0, 0, 0.5);
 }
 .deck-game { position: absolute; inset: 0; }
 .deck-game-sky { position: absolute; inset: 0; background: linear-gradient(180deg, #17324f 0%, #0e2338 55%, #0a1727 100%); }
@@ -187,8 +234,8 @@ section { max-width: 1080px; margin: 0 auto; padding: 3.5rem 1.25rem; }
   position: absolute; top: 0; right: 0; bottom: 0; width: 58%;
   background: rgba(11, 17, 24, 0.94);
   border-left: 1px solid rgba(102, 192, 244, 0.25);
-  padding: 7% 5%; display: flex; flex-direction: column; gap: 6%;
-  font-size: clamp(7px, 1.05vw, 10px);
+  padding: 6% 5%; display: flex; flex-direction: column; gap: 5.5%;
+  font-size: clamp(6.5px, 0.66vw, 9px);
 }
 .qam-head { display: flex; align-items: center; gap: 5px; }
 .qam-logo { width: 9px; height: 9px; border-radius: 50%; background: conic-gradient(from 210deg, #66c0f4, #1b2838 55%, #a3cf06 90%, #66c0f4); }
@@ -208,7 +255,8 @@ section { max-width: 1080px; margin: 0 auto; padding: 3.5rem 1.25rem; }
 .qam-speed { display: flex; gap: 8px; font-variant-numeric: tabular-nums; color: var(--muted); }
 .qam-speed b { font-weight: 600; }
 .spd-down b { color: var(--green); } .spd-up b { color: var(--accent); }
-.qam-server { display: flex; align-items: center; gap: 5px; color: var(--text); }
+.qam-server { display: flex; align-items: center; gap: 5px; color: var(--text); white-space: nowrap; }
+.qam-server-name { overflow: hidden; text-overflow: ellipsis; }
 .qam-proto {
   padding: 1px 5px; border-radius: 999px; border: 1px solid rgba(102, 192, 244, 0.35);
   color: var(--accent-2); font-size: 0.82em; letter-spacing: 0.06em;
@@ -410,8 +458,16 @@ footer { border-top: 1px solid var(--line); background: rgba(23, 26, 33, 0.6); m
 @media (max-width: 520px) {
   .nav-links { gap: 0.7rem; }
   .nav-links a { font-size: 0.85rem; }
-  .deck { grid-template-columns: 40px 1fr 40px; margin-right: 0; }
-  .deck-stick { width: 22px; height: 22px; }
+  .deck { grid-template-columns: 62px 1fr 62px; margin-right: 0; padding: 10px 7px 9px; border-radius: 24px; }
+  .deck-side { gap: 7px; padding-top: 6px; }
+  .deck-stick { width: 25px; height: 25px; border-width: 2px; }
+  .deck-dpad { width: 22px; height: 22px; background:
+    linear-gradient(#292d36, #292d36) center/7px 22px no-repeat,
+    linear-gradient(#292d36, #292d36) center/22px 7px no-repeat; }
+  .deck-btns { grid-template-columns: repeat(2, 8px); gap: 4px; }
+  .deck-btns i { width: 8px; height: 8px; }
+  .deck-trackpad { width: 32px; height: 32px; border-radius: 7px; }
+  .deck-screen { border-width: 5px; }
   .phone { width: 138px; right: -4px; bottom: -20px; }
   .phone-screen { font-size: 8px; }
   .chip { padding: 2px 5px; }
