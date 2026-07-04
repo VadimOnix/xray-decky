@@ -3,6 +3,7 @@ import { DialogButton, Field, Toggle } from '@decky/ui';
 import { FaShieldAlt } from 'react-icons/fa';
 import { HelpPopover } from './ui/HelpPopover';
 import type { CheckPrivilegesResponse, ToggleTUNModeResponse } from '../services/api';
+import { t } from '../utils/i18n';
 
 interface TUNModeToggleProps {
   enabled: boolean;
@@ -37,7 +38,7 @@ export const TUNModeToggle: FC<TUNModeToggleProps> = ({
       }
     } catch (err) {
       console.error('Failed to check privileges:', err);
-      setError('Failed to check privileges. Please try again.');
+      setError(t('tun.checkFail'));
     } finally {
       setCheckingPrivileges(false);
     }
@@ -50,11 +51,11 @@ export const TUNModeToggle: FC<TUNModeToggleProps> = ({
     try {
       const result = await onToggle(nextEnabled);
       if (!result.success) {
-        setError(result.error || 'Failed to toggle TUN mode');
+        setError(result.error || t('tun.toggleFail'));
       }
     } catch (err) {
       console.error('Toggle error:', err);
-      setError('Network error. Please check your connection and try again.');
+      setError(t('common.netErr'));
     } finally {
       setLoading(false);
     }
@@ -71,16 +72,16 @@ export const TUNModeToggle: FC<TUNModeToggleProps> = ({
           marginBottom: '4px',
         }}
       >
-        <span style={{ fontSize: '14px', fontWeight: 600, color: '#c7d5e0' }}>TUN Mode</span>
-        <HelpPopover label="Help: TUN mode" topic="options.tun_mode" />
+        <span style={{ fontSize: '14px', fontWeight: 600, color: '#c7d5e0' }}>
+          {t('tun.title')}
+        </span>
+        <HelpPopover label={t('tun.help')} topic="options.tun_mode" />
       </div>
 
       <div style={{ marginBottom: '15px' }}>
         <Field
-          label="Enable TUN Mode"
-          description={
-            <span style={leftDescriptionStyle}>Routes all system traffic through the proxy.</span>
-          }
+          label={t('tun.enable')}
+          description={<span style={leftDescriptionStyle}>{t('tun.enableDesc')}</span>}
           bottomSeparator="none"
           highlightOnFocus
           childrenLayout="inline"
@@ -105,12 +106,9 @@ export const TUNModeToggle: FC<TUNModeToggleProps> = ({
             }}
           >
             <p>
-              <strong>Privileges Required:</strong> TUN mode requires elevated privileges.
+              <strong>{t('tun.privReqLabel')}</strong> {t('tun.privReqMsg')}
             </p>
-            <p style={{ marginTop: '5px' }}>
-              Please complete the installation steps to enable TUN mode. See INSTALLATION.md for
-              details.
-            </p>
+            <p style={{ marginTop: '5px' }}>{t('tun.privSteps')}</p>
             <DialogButton
               onClick={handleCheckPrivileges}
               disabled={checkingPrivileges}
@@ -118,7 +116,7 @@ export const TUNModeToggle: FC<TUNModeToggleProps> = ({
             >
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
                 <FaShieldAlt />
-                {checkingPrivileges ? 'Checking...' : 'Check Privileges'}
+                {checkingPrivileges ? t('tun.checking') : t('tun.checkPriv')}
               </span>
             </DialogButton>
           </div>
@@ -137,14 +135,12 @@ export const TUNModeToggle: FC<TUNModeToggleProps> = ({
             }}
           >
             <p>
-              <strong>✓ TUN Mode Enabled</strong>
+              <strong>{t('tun.enabled')}</strong>
             </p>
             {isActive && tunInterface && (
-              <p style={{ marginTop: '5px' }}>Active on interface: {tunInterface}</p>
+              <p style={{ marginTop: '5px' }}>{t('tun.activeOn', { iface: tunInterface })}</p>
             )}
-            {!isActive && (
-              <p style={{ marginTop: '5px' }}>Connect to proxy to activate TUN mode.</p>
-            )}
+            {!isActive && <p style={{ marginTop: '5px' }}>{t('tun.connectToActivate')}</p>}
           </div>
         )}
 
@@ -160,13 +156,13 @@ export const TUNModeToggle: FC<TUNModeToggleProps> = ({
               fontSize: '14px',
             }}
           >
-            <strong>Error:</strong> {error}
+            <strong>{t('common.errorLabel')}</strong> {error}
           </div>
         )}
 
         {loading && (
           <div style={{ marginTop: '10px', color: '#aaa', fontSize: '14px' }}>
-            {enabled ? 'Disabling TUN mode...' : 'Enabling TUN mode...'}
+            {enabled ? t('tun.disabling') : t('tun.enabling')}
           </div>
         )}
       </div>

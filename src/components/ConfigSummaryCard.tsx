@@ -1,6 +1,7 @@
 import { FC } from 'react';
 import { Field } from '@decky/ui';
 import type { ConnectionConfigSummary } from '../types/ui';
+import { t } from '../utils/i18n';
 
 interface ConfigSummaryCardProps {
   summary: ConnectionConfigSummary;
@@ -11,7 +12,7 @@ export const ConfigSummaryCard: FC<ConfigSummaryCardProps> = ({ summary }) => {
     return null;
   }
 
-  const statusText = summary.isValid ? 'Valid' : 'Invalid';
+  const statusText = summary.isValid ? t('summary.valid') : t('summary.invalid');
   const leftDescriptionStyle = { display: 'block', textAlign: 'left' } as const;
   const cardStyle = {
     padding: '10px',
@@ -23,26 +24,26 @@ export const ConfigSummaryCard: FC<ConfigSummaryCardProps> = ({ summary }) => {
     <div style={cardStyle}>
       {summary.displayName && (
         <Field
-          label="Name"
+          label={t('summary.name')}
           bottomSeparator="none"
           description={<span style={leftDescriptionStyle}>{summary.displayName}</span>}
         />
       )}
       {summary.endpoint && (
         <Field
-          label="Endpoint"
+          label={t('summary.endpoint')}
           bottomSeparator="none"
           description={<span style={leftDescriptionStyle}>{summary.endpoint}</span>}
         />
       )}
       <Field
-        label="Status"
+        label={t('summary.status')}
         bottomSeparator="none"
         description={<span style={leftDescriptionStyle}>{statusText}</span>}
       />
       {summary.validationError && (
         <Field
-          label="Validation error"
+          label={t('summary.validationError')}
           bottomSeparator="none"
           description={
             <span style={{ ...leftDescriptionStyle, color: '#ff6b6b' }}>
@@ -53,7 +54,7 @@ export const ConfigSummaryCard: FC<ConfigSummaryCardProps> = ({ summary }) => {
       )}
       {summary.source && (
         <Field
-          label="Source"
+          label={t('summary.source')}
           bottomSeparator="none"
           description={<span style={leftDescriptionStyle}>{summary.source}</span>}
         />

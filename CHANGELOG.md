@@ -18,13 +18,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **QAM localization, first cut (English / Russian)** (roadmap Phase 5): the
-  in-game Quick Access Menu's connection tab — status, the connection toggle
-  and the server picker — is now localized via a small `src/utils/i18n.ts`
-  helper. The language is auto-detected once from the Steam client locale
-  (`ru*` → Russian, otherwise English), so there's no re-render wiring and no
-  toggle in the QAM. The options / setup / help surfaces are still English and
-  will follow.
+- **QAM localization (English / Russian)** (roadmap Phase 5): the whole in-game
+  Quick Access Menu is now localized via a small `src/utils/i18n.ts` helper —
+  the connection tab (status, connection toggle, server picker), the options tab
+  (TUN mode, kill switch, reset, admin-panel QR), the setup flow (share-link
+  import, QR import) and every help popover. The language is auto-detected once
+  from the Steam client locale (`ru*` → Russian, otherwise English), so `t()` is
+  a pure function with no re-render wiring and no toggle in the QAM.
 
 - **Core badge in the admin server list**: servers that need the second core
   (hysteria2 / tuic) now show a distinct `sing-box` chip next to their
