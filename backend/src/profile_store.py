@@ -146,13 +146,18 @@ class ProfileStore:
         self._save(data)
         return [item["id"] for item in data["items"]]
 
-    def set_subscription(self, url: str, node_count: int) -> None:
-        """Record where the current profile list came from (for refresh)."""
+    def set_subscription(self, url: str, node_count: int, userinfo=None) -> None:
+        """Record where the current profile list came from (for refresh).
+
+        ``userinfo`` is the optional quota/expiry dict from the subscription's
+        ``Subscription-Userinfo`` header (upload/download/total/expire).
+        """
         data = self._load()
         data["subscription"] = {
             "url": url,
             "updatedAt": int(time.time()),
             "nodeCount": node_count,
+            "userinfo": userinfo,
         }
         self._save(data)
 

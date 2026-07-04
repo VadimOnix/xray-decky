@@ -55,6 +55,7 @@
       'servers.activate': 'Activate {name}',
       'servers.remove': 'Remove server',
       'sub.info': 'Subscription · {n} servers · updated {date}',
+      'sub.expires': 'expires {date}',
       'sub.refresh': 'Refresh',
       'sub.refreshing': 'Refreshing…',
       'options.title': 'Options',
@@ -160,6 +161,7 @@
       'servers.activate': 'Выбрать {name}',
       'servers.remove': 'Удалить сервер',
       'sub.info': 'Подписка · серверов: {n} · обновлено {date}',
+      'sub.expires': 'истекает {date}',
       'sub.refresh': 'Обновить',
       'sub.refreshing': 'Обновление…',
       'options.title': 'Опции',
@@ -730,10 +732,26 @@
       var updated = subscription.updatedAt
         ? new Date(subscription.updatedAt * 1000).toLocaleString()
         : '—'
-      els.subscriptionInfo.textContent = t('sub.info', {
-        n: subscription.nodeCount || 0,
-        date: updated,
-      })
+      var parts = [
+        t('sub.info', { n: subscription.nodeCount || 0, date: updated }),
+      ]
+      var ui = subscription.userinfo
+      if (ui) {
+        var used = (ui.upload || 0) + (ui.download || 0)
+        if (ui.total) {
+          parts.push(formatBytes(used) + ' / ' + formatBytes(ui.total))
+        } else if (used) {
+          parts.push(formatBytes(used))
+        }
+        if (ui.expire) {
+          parts.push(
+            t('sub.expires', {
+              date: new Date(ui.expire * 1000).toLocaleDateString(),
+            })
+          )
+        }
+      }
+      els.subscriptionInfo.textContent = parts.join(' · ')
       els.subscriptionRow.hidden = false
     } else {
       els.subscriptionRow.hidden = true

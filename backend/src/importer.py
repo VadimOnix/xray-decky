@@ -11,7 +11,7 @@ so the behavior can't drift between entry points:
 """
 
 import time
-from typing import Any, Dict, Optional
+from typing import Any, Dict, NamedTuple, Optional
 
 import aiohttp
 
@@ -29,11 +29,49 @@ _USER_AGENT = "xray-decky (Steam Deck; +https://github.com/VadimOnix/xray-decky)
 # Subscription bodies are tiny (a few KB of links); cap reads so a hostile
 # or misconfigured server can't balloon memory.
 _MAX_BODY_BYTES = 2 * 1024 * 1024
+# De facto standard header carrying the account's quota/expiry, emitted by
+# most subscription panels (v2board, marzban, sspanel, …).
+_USERINFO_HEADER = "Subscription-Userinfo"
+_USERINFO_KEYS = ("upload", "download", "total", "expire")
 
 
-async def fetch_subscription(url: str, timeout: float = FETCH_TIMEOUT) -> Optional[str]:
+class SubscriptionResponse(NamedTuple):
+    """A fetched subscription: its body and optional quota/expiry userinfo."""
+
+    body: Optional[str]
+    userinfo: Optional[Dict[str, int]]
+
+
+def parse_subscription_userinfo(header: Optional[str]) -> Optional[Dict[str, int]]:
     """
-    Fetch a subscription URL's body; None on any network/HTTP failure.
+    Parse a ``Subscription-Userinfo`` header into integer fields.
+
+    The header looks like ``upload=1; download=2; total=3; expire=456`` (bytes
+    and a unix timestamp). Unknown keys and non-integer values are skipped;
+    returns None when nothing usable is present.
+    """
+    if not header or not isinstance(header, str):
+        return None
+    info: Dict[str, int] = {}
+    for part in header.split(";"):
+        key, sep, value = part.partition("=")
+        if not sep:
+            continue
+        key = key.strip().lower()
+        value = value.strip()
+        if key in _USERINFO_KEYS and value:
+            try:
+                info[key] = int(value)
+            except ValueError:
+                continue
+    return info or None
+
+
+async def fetch_subscription(
+    url: str, timeout: float = FETCH_TIMEOUT
+) -> SubscriptionResponse:
+    """
+    Fetch a subscription URL's body and userinfo; body is None on any failure.
 
     Fetching a user-provided URL is this feature's purpose (CodeQL flags it
     as SSRF): the URL is chosen by the device owner in the QAM or by a
@@ -42,7 +80,7 @@ async def fetch_subscription(url: str, timeout: float = FETCH_TIMEOUT) -> Option
     only parsed for share links, size-capped, and restricted to http(s).
     """
     if not url.lower().startswith(("http://", "https://")):
-        return None
+        return SubscriptionResponse(None, None)
     try:
         client_timeout = aiohttp.ClientTimeout(total=timeout)
         async with aiohttp.ClientSession(timeout=client_timeout) as session:
@@ -50,14 +88,18 @@ async def fetch_subscription(url: str, timeout: float = FETCH_TIMEOUT) -> Option
                 url, headers={"User-Agent": _USER_AGENT}
             ) as response:
                 if response.status != 200:
-                    return None
+                    return SubscriptionResponse(None, None)
                 body = await response.content.read(_MAX_BODY_BYTES + 1)
                 if len(body) > _MAX_BODY_BYTES:
-                    return None
+                    return SubscriptionResponse(None, None)
                 charset = response.charset or "utf-8"
-                return body.decode(charset, errors="replace")
+                text = body.decode(charset, errors="replace")
+                userinfo = parse_subscription_userinfo(
+                    response.headers.get(_USERINFO_HEADER)
+                )
+                return SubscriptionResponse(text, userinfo)
     except Exception:
-        return None
+        return SubscriptionResponse(None, None)
 
 
 async def import_link(store: ProfileStore, link: str) -> Dict[str, Any]:
@@ -75,14 +117,14 @@ async def import_link(store: ProfileStore, link: str) -> Dict[str, Any]:
     now = int(time.time())
 
     if link.lower().startswith(("http://", "https://")):
-        body = await fetch_subscription(link)
-        if body is None:
+        response = await fetch_subscription(link)
+        if response.body is None:
             return {
                 "success": False,
                 "error": "Failed to fetch subscription URL (check the address "
                 "and network)",
             }
-        nodes = parse_subscription_content(body)
+        nodes = parse_subscription_content(response.body)
         if not nodes:
             return {
                 "success": False,
@@ -94,7 +136,7 @@ async def import_link(store: ProfileStore, link: str) -> Dict[str, Any]:
             config["lastValidatedAt"] = now
             configs.append(config)
         store.replace_all(configs)
-        store.set_subscription(link, len(configs))
+        store.set_subscription(link, len(configs), userinfo=response.userinfo)
         return {
             "success": True,
             "error": None,
