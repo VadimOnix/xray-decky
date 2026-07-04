@@ -55,10 +55,15 @@
       'servers.activate': 'Activate {name}',
       'servers.remove': 'Remove server',
       'servers.singboxCore': 'Uses the sing-box core',
-      'sub.info': 'Subscription · {n} servers · updated {date}',
+      'sub.info': '{name} · {n} servers · updated {date}',
+      'sub.default': 'Subscription',
       'sub.expires': 'expires {date}',
       'sub.refresh': 'Refresh',
       'sub.refreshing': 'Refreshing…',
+      'sub.rename': 'Rename',
+      'sub.renamePrompt': 'Subscription name:',
+      'sub.renamed': 'Subscription renamed',
+      'sub.renameFail': 'Rename failed',
       'options.title': 'Options',
       'options.tun': 'TUN mode',
       'options.tunDesc': 'Route all system traffic through the proxy',
@@ -162,10 +167,15 @@
       'servers.activate': 'Выбрать {name}',
       'servers.remove': 'Удалить сервер',
       'servers.singboxCore': 'Использует ядро sing-box',
-      'sub.info': 'Подписка · серверов: {n} · обновлено {date}',
+      'sub.info': '{name} · серверов: {n} · обновлено {date}',
+      'sub.default': 'Подписка',
       'sub.expires': 'истекает {date}',
       'sub.refresh': 'Обновить',
       'sub.refreshing': 'Обновление…',
+      'sub.rename': 'Переименовать',
+      'sub.renamePrompt': 'Название подписки:',
+      'sub.renamed': 'Подписка переименована',
+      'sub.renameFail': 'Не удалось переименовать',
       'options.title': 'Опции',
       'options.tun': 'Режим TUN',
       'options.tunDesc': 'Направлять весь системный трафик через прокси',
@@ -318,6 +328,7 @@
     subscriptionRow: document.getElementById('subscription-row'),
     subscriptionInfo: document.getElementById('subscription-info'),
     refreshSubBtn: document.getElementById('refresh-sub-btn'),
+    renameSubBtn: document.getElementById('rename-sub-btn'),
     heroStats: document.getElementById('hero-stats'),
     statDown: document.getElementById('stat-down'),
     statUp: document.getElementById('stat-up'),
@@ -758,7 +769,11 @@
         ? new Date(subscription.updatedAt * 1000).toLocaleString()
         : '—'
       var parts = [
-        t('sub.info', { n: subscription.nodeCount || 0, date: updated }),
+        t('sub.info', {
+          name: subscription.name || t('sub.default'),
+          n: subscription.nodeCount || 0,
+          date: updated,
+        }),
       ]
       var ui = subscription.userinfo
       if (ui) {
@@ -852,6 +867,33 @@
       .then(function () {
         els.checkUpdatesBtn.disabled = false
         els.checkUpdatesBtn.textContent = t('updates.check')
+      })
+  })
+
+  els.renameSubBtn.addEventListener('click', function () {
+    var current =
+      (state.lastProfiles &&
+        state.lastProfiles.subscription &&
+        state.lastProfiles.subscription.name) ||
+      ''
+    var name = window.prompt(t('sub.renamePrompt'), current)
+    if (name == null) return
+    name = name.trim()
+    if (!name) return
+    api('/api/v1/subscription/rename', {
+      method: 'POST',
+      body: JSON.stringify({ name: name }),
+    })
+      .then(function (res) {
+        if (res.status === 200 && res.data.success) {
+          toast(t('sub.renamed'))
+        } else {
+          toast(res.data.error || t('sub.renameFail'), true)
+        }
+        return fetchProfiles()
+      })
+      .catch(function () {
+        toast(t('toast.netErr'), true)
       })
   })
 

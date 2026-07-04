@@ -18,6 +18,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Named subscriptions** (roadmap Phase 2): the stored subscription now carries
+  a user-facing label — it defaults to the subscription's URL host and can be
+  renamed from the admin panel (a **Rename** button next to Refresh). The name
+  shows in the subscription bar and survives a refresh; a new backend
+  `rename_subscription` method and token-guarded `POST /api/v1/subscription/rename`.
+
 - **Admin server list sorts by latency** (roadmap Phase 5 polish): after a
   "Ping all", the web panel orders servers fastest-first (measured servers,
   then untested, then offline). The sort is presentational and stable, so an

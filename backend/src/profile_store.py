@@ -17,10 +17,20 @@ A legacy single "vlessConfig" is migrated into the list on first load.
 import time
 import uuid
 from typing import Any, Dict, List, Optional
+from urllib.parse import urlparse
 
 PROFILES_KEY = "profiles"
 LEGACY_KEY = "vlessConfig"
 SCHEMA_VERSION = 2
+
+
+def _derive_sub_name(url: Optional[str]) -> str:
+    """A default subscription label — its URL host, or a generic fallback."""
+    try:
+        host = urlparse(url or "").hostname
+    except ValueError:
+        host = None
+    return host or "Subscription"
 
 
 def _new_id() -> str:
@@ -209,20 +219,41 @@ class ProfileStore:
             del data["subscription"]
             self._save(data)
 
-    def set_subscription(self, url: str, node_count: int, userinfo=None) -> None:
+    def set_subscription(
+        self, url: str, node_count: int, userinfo=None, name: Optional[str] = None
+    ) -> None:
         """Record where the current profile list came from (for refresh).
 
         ``userinfo`` is the optional quota/expiry dict from the subscription's
         ``Subscription-Userinfo`` header (upload/download/total/expire).
+        ``name`` is a user-facing label; when omitted, an existing custom name
+        for the same URL is kept (so a refresh doesn't reset it), otherwise a
+        default is derived from the URL host.
         """
         data = self._load()
+        existing = data.get("subscription")
+        existing = existing if isinstance(existing, dict) else {}
+        kept_name = existing.get("name") if existing.get("url") == url else None
         data["subscription"] = {
             "url": url,
+            "name": name or kept_name or _derive_sub_name(url),
             "updatedAt": int(time.time()),
             "nodeCount": node_count,
             "userinfo": userinfo,
         }
         self._save(data)
+
+    def rename_subscription(self, name: str) -> bool:
+        """Set the subscription's user-facing label; False if none is stored."""
+        data = self._load()
+        subscription = data.get("subscription")
+        if not isinstance(subscription, dict):
+            return False
+        subscription["name"] = name.strip() or _derive_sub_name(
+            subscription.get("url")
+        )
+        self._save(data)
+        return True
 
     def get_subscription(self) -> Optional[Dict[str, Any]]:
         subscription = self._load().get("subscription")

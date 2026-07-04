@@ -82,6 +82,7 @@ def test_import_subscription_url_stores_all_and_meta():
     subscription = store.get_subscription()
     assert subscription["url"] == "https://sub.example.com/s"
     assert subscription["nodeCount"] == 2
+    assert subscription["name"] == "sub.example.com"  # derived from the URL host
 
 
 def test_parse_subscription_userinfo():

@@ -144,6 +144,28 @@ def test_replace_subscription_keeps_active_server_by_endpoint():
     assert store.get_active()["address"] == "keep.example.com"
 
 
+def test_subscription_name_derived_and_editable():
+    settings = _FakeSettings()
+    store = ProfileStore(settings)
+    store.set_subscription("https://sub.example.com/link", 3)
+    sub = store.get_subscription()
+    assert sub["name"] == "sub.example.com"  # derived from the URL host
+
+    # A custom name survives a refresh (same URL, no name passed).
+    assert store.rename_subscription("Work VPN")
+    store.set_subscription("https://sub.example.com/link", 5)
+    assert store.get_subscription()["name"] == "Work VPN"
+
+    # A different URL resets to a derived name.
+    store.set_subscription("https://other.example.net/x", 2)
+    assert store.get_subscription()["name"] == "other.example.net"
+
+
+def test_rename_subscription_without_subscription():
+    store = ProfileStore(_FakeSettings())
+    assert store.rename_subscription("nope") is False
+
+
 def test_clear_subscription():
     settings = _FakeSettings()
     store = ProfileStore(settings)
