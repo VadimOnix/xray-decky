@@ -204,13 +204,31 @@ def test_sniffing_and_private_bypass_always_present():
         {"protocol": "vless", "uuid": UUID, "address": "h.io", "port": 443}
     )
     for inbound in config["inbounds"]:
+        if inbound["tag"] == "api":
+            continue
         assert inbound["sniffing"]["enabled"] is True
         assert "quic" in inbound["sniffing"]["destOverride"]
     tags = [o["tag"] for o in config["outbounds"]]
     assert tags == ["proxy", "direct"]
-    first_rule = config["routing"]["rules"][0]
-    assert first_rule["ip"] == ["geoip:private"]
-    assert first_rule["outboundTag"] == "direct"
+    rules = config["routing"]["rules"]
+    # The API rule must come before the private-IP bypass (its destination
+    # is 127.0.0.1), which must come before everything else.
+    assert rules[0] == {"type": "field", "inboundTag": ["api"], "outboundTag": "api"}
+    assert rules[1]["ip"] == ["geoip:private"]
+    assert rules[1]["outboundTag"] == "direct"
+
+
+def test_stats_service_enabled():
+    config = _build(
+        {"protocol": "vless", "uuid": UUID, "address": "h.io", "port": 443}
+    )
+    assert config["stats"] == {}
+    assert config["policy"]["system"]["statsOutboundUplink"] is True
+    assert config["policy"]["system"]["statsOutboundDownlink"] is True
+    assert config["api"] == {"tag": "api", "services": ["StatsService"]}
+    api_inbound = next(i for i in config["inbounds"] if i["tag"] == "api")
+    assert api_inbound["listen"] == "127.0.0.1"
+    assert api_inbound["protocol"] == "dokodemo-door"
 
 
 def test_tun_mode_adds_inbound_rule_and_sockopt():

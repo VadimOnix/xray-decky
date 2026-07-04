@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Traffic statistics** (roadmap Phase 2): the generated config now enables
+  the xray StatsService (localhost-only API inbound); totals are read with
+  `xray api statsquery` and per-second speeds derived between samples
+  (counter resets clamp to zero). New `get_traffic_stats` backend method and
+  token-guarded `GET /api/v1/stats`.
+- The admin panel hero card shows live ▼/▲ speed chips and session-total
+  traffic while connected, in the established Steam style.
+
 - **Subscription URLs** (roadmap Phase 2): importing an `http(s)://` link now
   fetches the subscription and stores all its servers — both the de facto
   standard body (base64 of newline-delimited share links) and plain-text

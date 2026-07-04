@@ -167,6 +167,8 @@ panels for VLESS/VMess/Trojan/SS import and connect without manual editing.
   real-delay through the proxy remaining)_
 - **Traffic stats**: enable xray `stats` + `policy`, poll StatsService over the gRPC
   API (or `metrics` endpoint), display up/down counters and speed in the QAM.
+  _(backend + admin panel done — StatsService enabled, polled via
+  `xray api statsquery`, speed chips in the panel hero; QAM display remaining)_
 - QAM UI: compact server picker (current server + status + latency), keeping the
   panel minimal per Decky UX guidance.
 - Stretch: xray **Observatory + `leastPing` balancer** for automatic

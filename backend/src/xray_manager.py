@@ -11,6 +11,8 @@ import os
 import tempfile
 from typing import Dict, Any, Optional
 
+from .stats import API_PORT
+
 
 class XrayManager:
     """
@@ -237,6 +239,9 @@ class XrayManager:
         # through to the first outbound (proxy).
         # Requires geoip.dat alongside the xray-core binary (shipped in release).
         routing_rules = [
+            # Stats API traffic must be matched before the private-IP bypass
+            # (its destination is 127.0.0.1).
+            {"type": "field", "inboundTag": ["api"], "outboundTag": "api"},
             # Bypass private/LAN IPs (127.x, 10.x, 192.168.x, etc.)
             {"type": "field", "ip": ["geoip:private"], "outboundTag": "direct"},
             # SOCKS/HTTP inbound traffic goes through proxy
@@ -250,6 +255,26 @@ class XrayManager:
             "domainStrategy": "IPIfNonMatch",
             "rules": routing_rules,
         }
+
+        # Traffic statistics: StatsService on a localhost-only API inbound,
+        # queried with `xray api statsquery`.
+        config["stats"] = {}
+        config["policy"] = {
+            "system": {
+                "statsOutboundUplink": True,
+                "statsOutboundDownlink": True,
+            }
+        }
+        config["api"] = {"tag": "api", "services": ["StatsService"]}
+        config["inbounds"].append(
+            {
+                "listen": "127.0.0.1",
+                "port": API_PORT,
+                "protocol": "dokodemo-door",
+                "settings": {"address": "127.0.0.1"},
+                "tag": "api",
+            }
+        )
 
         # Always add SOCKS proxy inbound (needed for System Proxy mode)
         # This allows System Proxy to work both with and without TUN mode

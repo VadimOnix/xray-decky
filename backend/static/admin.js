@@ -25,6 +25,10 @@
     subscriptionRow: document.getElementById('subscription-row'),
     subscriptionInfo: document.getElementById('subscription-info'),
     refreshSubBtn: document.getElementById('refresh-sub-btn'),
+    heroStats: document.getElementById('hero-stats'),
+    statDown: document.getElementById('stat-down'),
+    statUp: document.getElementById('stat-up'),
+    statTotal: document.getElementById('stat-total'),
     tunToggle: document.getElementById('tun-toggle'),
     killswitchToggle: document.getElementById('killswitch-toggle'),
     optionsNote: document.getElementById('options-note'),
@@ -107,6 +111,46 @@
     error: ['Error', 'Something went wrong'],
     blocked: ['Blocked', 'Kill switch is active — traffic is stopped'],
     unknown: ['Loading…', 'Fetching current status'],
+  }
+
+  function formatBytes(bytes, perSecond) {
+    var units = ['B', 'KB', 'MB', 'GB', 'TB']
+    var value = Math.max(0, bytes || 0)
+    var unit = 0
+    while (value >= 1024 && unit < units.length - 1) {
+      value = value / 1024
+      unit++
+    }
+    var text = (unit === 0 ? value : value.toFixed(1)) + ' ' + units[unit]
+    return perSecond ? text + '/s' : text
+  }
+
+  function renderStats(stats) {
+    if (state.status === 'connected' && stats && stats.available) {
+      els.statDown.textContent = formatBytes(stats.downlinkSpeed, true)
+      els.statUp.textContent = formatBytes(stats.uplinkSpeed, true)
+      els.statTotal.textContent =
+        formatBytes((stats.uplink || 0) + (stats.downlink || 0)) + ' total'
+      els.heroStats.hidden = false
+    } else {
+      els.heroStats.hidden = true
+    }
+  }
+
+  function fetchStats() {
+    if (state.status !== 'connected') {
+      els.heroStats.hidden = true
+      return Promise.resolve()
+    }
+    return api('/api/v1/stats')
+      .then(function (res) {
+        if (res.status === 200 && res.data.success) {
+          renderStats(res.data)
+        }
+      })
+      .catch(function () {
+        /* transient */
+      })
   }
 
   function formatUptime(seconds) {
@@ -369,6 +413,7 @@
       if (res.status === 200 && res.data.success) {
         showPanel()
         render(res.data)
+        return fetchStats()
       }
     })
   }

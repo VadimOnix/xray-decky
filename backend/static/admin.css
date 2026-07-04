@@ -260,6 +260,40 @@ body {
   font-size: 14px;
 }
 
+.hero-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.stat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--line);
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.stat-chip.stat-down {
+  color: var(--green);
+}
+
+.stat-chip.stat-up {
+  color: var(--accent);
+}
+
+.stat-chip.stat-total {
+  color: var(--muted);
+  font-weight: 400;
+}
+
 .hero-actions {
   display: flex;
   gap: 10px;

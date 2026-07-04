@@ -57,6 +57,19 @@
             <div class="hero-text">
               <h1 id="hero-title" class="hero-state">Loading…</h1>
               <p id="hero-sub" class="hero-sub">Fetching current status</p>
+              <div id="hero-stats" class="hero-stats" hidden>
+                <span class="stat-chip stat-down" aria-label="Download speed">
+                  <span aria-hidden="true">▼</span>
+                  <span id="stat-down">0 B/s</span>
+                </span>
+                <span class="stat-chip stat-up" aria-label="Upload speed">
+                  <span aria-hidden="true">▲</span>
+                  <span id="stat-up">0 B/s</span>
+                </span>
+                <span class="stat-chip stat-total" aria-label="Session traffic">
+                  <span id="stat-total">0 B</span>
+                </span>
+              </div>
             </div>
           </div>
           <div class="hero-actions">
