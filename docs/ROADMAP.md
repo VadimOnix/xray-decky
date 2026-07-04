@@ -154,14 +154,16 @@ panels for VLESS/VMess/Trojan/SS import and connect without manual editing.
   the `vlessConfig` mirror keeps the connection path unchanged)_
 - **Standard subscription support**: base64 newline-delimited link lists (the de
   facto universal format), keep the current JSON-array format for backward compat.
-  Named subscriptions, manual + scheduled refresh, "last updated" state. Clash YAML
-  and sing-box JSON import are stretch goals (or offload via subconverter).
+  Named subscriptions, manual + scheduled refresh, "last updated" state. sing-box
+  JSON import is supported; Clash YAML import is a stretch goal (or offload via
+  subconverter).
   _(mostly done — http(s) subscription URLs fetch and store all nodes (base64 or
   plain-text bodies), manual refresh preserves the active server and manually-
   added servers, "last updated" + data quota/expiry shown in the admin panel.
   The subscription carries an editable **name** (defaulting to its URL host,
-  renamable in the panel); remaining: multiple subscriptions, scheduled
-  refresh, Clash/sing-box import)_
+  renamable in the panel). Pasting a **sing-box JSON config** (or a bare
+  outbounds array) imports every server outbound; remaining: multiple
+  subscriptions, scheduled refresh, Clash YAML import)_
 - **Latency testing**: real-delay test through the proxy
   (`http://www.gstatic.com/generate_204`-style, configurable URL), concurrency
   limited; TCPing as the cheap fallback. Show results in the server list.
@@ -264,7 +266,9 @@ see zero change.
 
 - Routing rules editor in the admin panel (direct/proxy/block by domain/geosite,
   per-app is not feasible with TUN alone — needs cgroup marking, research spike).
-- Profile import via Clash YAML / sing-box JSON; export.
+- Profile import via Clash YAML / sing-box JSON; export. _(sing-box JSON import
+  done — a pasted sing-box config or bare outbounds array is converted to share
+  links and imported through the standard parser; Clash YAML + export remaining.)_
 - Per-subscription user-info headers (traffic quota / expiry display). _(done —
   the `Subscription-Userinfo` header is parsed on fetch/refresh, stored with the
   subscription, and shown in the admin panel as used/total data and an expiry

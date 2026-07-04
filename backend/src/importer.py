@@ -23,6 +23,7 @@ from .config_parser import (
     validate_share_link,
 )
 from .profile_store import ProfileStore
+from .singbox_import import looks_like_singbox_config, parse_singbox_config
 
 FETCH_TIMEOUT = 15.0
 _USER_AGENT = "xray-decky (Steam Deck; +https://github.com/VadimOnix/xray-decky)"
@@ -137,6 +138,29 @@ async def import_link(store: ProfileStore, link: str) -> Dict[str, Any]:
             configs.append(config)
         store.replace_subscription_profiles(configs)
         store.set_subscription(link, len(configs), userinfo=response.userinfo)
+        return {
+            "success": True,
+            "error": None,
+            "config": configs[0],
+            "profileCount": len(configs),
+        }
+
+    if looks_like_singbox_config(link):
+        # A pasted sing-box JSON config: import every server outbound. Like a
+        # pasted subscription, there's no URL to refresh from.
+        nodes = parse_singbox_config(link)
+        if not nodes:
+            return {
+                "success": False,
+                "error": "sing-box config has no supported server outbounds",
+            }
+        configs = []
+        for node in nodes:
+            config = build_profile_config(node, "sing-box-json", "subscription")
+            config["lastValidatedAt"] = now
+            configs.append(config)
+        store.replace_subscription_profiles(configs)
+        store.clear_subscription()
         return {
             "success": True,
             "error": None,
