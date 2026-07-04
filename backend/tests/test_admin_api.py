@@ -8,9 +8,12 @@ from aiohttp.test_utils import TestClient, TestServer
 
 from backend.src.admin_api import (
     RateLimiter,
+    admin_bind_host,
     config_summary,
     ensure_admin_token,
+    lan_access_enabled,
     register_admin_routes,
+    save_lan_access,
 )
 
 
@@ -174,6 +177,37 @@ def test_ensure_admin_token_generates_and_persists():
     # Second call returns the same token without regenerating.
     assert ensure_admin_token(settings) == token
     assert settings.commits == 1
+
+
+def test_lan_access_defaults_on_and_binds_lan():
+    settings = _FakeSettings()
+    # Historical default: LAN allowed (QR pairing from a phone).
+    assert lan_access_enabled(settings) is True
+    assert admin_bind_host(settings) == "0.0.0.0"
+
+    save_lan_access(settings, False)
+    assert lan_access_enabled(settings) is False
+    assert admin_bind_host(settings) == "127.0.0.1"
+
+    save_lan_access(settings, True)
+    assert admin_bind_host(settings) == "0.0.0.0"
+
+    # The token in the same settings blob survives the toggling.
+    settings2 = _FakeSettings()
+    token = ensure_admin_token(settings2)
+    save_lan_access(settings2, False)
+    assert ensure_admin_token(settings2) == token
+    assert lan_access_enabled(settings2) is False
+
+
+def test_lan_access_malformed_settings_fall_back_to_default():
+    assert lan_access_enabled(_FakeSettings({"adminPanel": "garbage"})) is True
+    assert lan_access_enabled(_FakeSettings({"adminPanel": {"allowLan": "no"}})) is True
+    assert admin_bind_host(_FakeSettings({"adminPanel": None})) == "0.0.0.0"
+    # save_lan_access rebuilds a malformed blob instead of crashing.
+    settings = _FakeSettings({"adminPanel": "garbage"})
+    save_lan_access(settings, False)
+    assert lan_access_enabled(settings) is False
 
 
 def test_config_summary_redacts_credentials():

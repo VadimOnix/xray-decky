@@ -97,7 +97,13 @@ from backend.src.tun_manager import TUNManager
 from backend.src.kill_switch import KillSwitch
 from backend.src.system_proxy import SystemProxyManager
 from backend.src.import_server import create_import_app
-from backend.src.admin_api import ensure_admin_token, register_admin_routes
+from backend.src.admin_api import (
+    admin_bind_host,
+    ensure_admin_token,
+    lan_access_enabled,
+    register_admin_routes,
+    save_lan_access,
+)
 from backend.src.supervisor import XraySupervisor
 from backend.src.profile_store import ProfileStore
 from backend.src.latency import test_profiles
@@ -179,11 +185,28 @@ class Plugin:
         load_connection_state_from_settings(settings)
 
         # Start import HTTPS server (TLS self-signed cert so Paste works from any device).
-        # ImportServerConfig: port from settings, default 8765, range 1024–65535.
-        # Bind to 0.0.0.0 so the import page is reachable from LAN (QR scan). If preferred port is in use, try next ports.
+        await self._start_import_server()
+
+        # Background subscription auto-refresh. Off unless the user set an
+        # interval, so this is a no-op for everyone else. It only re-fetches
+        # the stored subscription URL (preserving the active server) — it never
+        # touches or reconnects the live xray process.
+        self._refresh_task = asyncio.create_task(self._subscription_refresh_loop())
+
+    async def _start_import_server(self) -> None:
+        """
+        Start the embedded HTTPS server (import page + admin panel).
+
+        ImportServerConfig: port from settings, default 8765, range 1024–65535;
+        if the preferred port is in use the next ports are tried. The bind host
+        follows the "Allow LAN access" preference: 0.0.0.0 (QR pairing from a
+        phone, the historical default) or 127.0.0.1 (Deck-only). Called from
+        _main and again by set_lan_access to rebind.
+        """
         import_server_config = settings.getSetting("importServer", {"port": 8765})
         port = int(import_server_config.get("port", 8765))
         port = max(1024, min(65535, port))
+        bind_host = admin_bind_host(settings)
         static_dir = Path(__file__).resolve().parent / "backend" / "static"
         runtime_dir = os.environ.get("DECKY_PLUGIN_RUNTIME_DIR", "")
         ssl_context = None
@@ -254,7 +277,7 @@ class Plugin:
                     runner = web.AppRunner(import_app)
                     await runner.setup()
                     site = web.TCPSite(
-                        runner, "0.0.0.0", try_port, ssl_context=ssl_context
+                        runner, bind_host, try_port, ssl_context=ssl_context
                     )
                     await site.start()
                     self._import_runner = runner
@@ -263,11 +286,11 @@ class Plugin:
                         settings.setSetting("importServer", import_server_config)
                         settings.commit()
                         print(
-                            f"Xray Decky Plugin: Port {port} in use, using {try_port}. Import server listening on 0.0.0.0:{try_port} (HTTPS)"
+                            f"Xray Decky Plugin: Port {port} in use, using {try_port}. Import server listening on {bind_host}:{try_port} (HTTPS)"
                         )
                     else:
                         print(
-                            f"Xray Decky Plugin: Import server listening on 0.0.0.0:{try_port} (HTTPS)"
+                            f"Xray Decky Plugin: Import server listening on {bind_host}:{try_port} (HTTPS)"
                         )
                     break
                 except OSError as e:
@@ -293,12 +316,6 @@ class Plugin:
             print(
                 "Xray Decky Plugin: backend/static not found, import server not started"
             )
-
-        # Background subscription auto-refresh. Off unless the user set an
-        # interval, so this is a no-op for everyone else. It only re-fetches
-        # the stored subscription URL (preserving the active server) — it never
-        # touches or reconnects the live xray process.
-        self._refresh_task = asyncio.create_task(self._subscription_refresh_loop())
 
     # Slow tick — the interval is measured in hours, so checking every few
     # minutes is plenty and keeps this effectively idle.
@@ -574,9 +591,12 @@ class Plugin:
             import_server_config = settings.getSetting("importServer", {"port": 8765})
             port = int(import_server_config.get("port", 8765))
             port = max(1024, min(65535, port))
-            local_ip = _get_lan_ip()
-            base_url = f"https://{local_ip}:{port}"
-            return {"baseUrl": base_url, "path": "/import"}
+            allow_lan = lan_access_enabled(settings)
+            # With LAN access off the server only listens on loopback, so a
+            # LAN URL would be dead — be honest and point at localhost.
+            host = _get_lan_ip() if allow_lan else "127.0.0.1"
+            base_url = f"https://{host}:{port}"
+            return {"baseUrl": base_url, "path": "/import", "allowLan": allow_lan}
         except Exception as e:
             return create_error_response(
                 ErrorCode.UNKNOWN_ERROR, f"Failed to get import URL: {str(e)}"
@@ -594,15 +614,43 @@ class Plugin:
             import_server_config = settings.getSetting("importServer", {"port": 8765})
             port = int(import_server_config.get("port", 8765))
             port = max(1024, min(65535, port))
-            local_ip = _get_lan_ip()
+            allow_lan = lan_access_enabled(settings)
+            host = _get_lan_ip() if allow_lan else "127.0.0.1"
             return {
-                "baseUrl": f"https://{local_ip}:{port}",
+                "baseUrl": f"https://{host}:{port}",
                 "path": "/admin",
                 "token": ensure_admin_token(settings),
+                "allowLan": allow_lan,
             }
         except Exception as e:
             return create_error_response(
                 ErrorCode.UNKNOWN_ERROR, f"Failed to get admin panel URL: {str(e)}"
+            )
+
+    async def set_lan_access(self, enabled: bool) -> Dict[str, Any]:
+        """
+        Allow or restrict LAN access to the embedded server (panel + import).
+
+        Persists the preference and rebinds the running server immediately:
+        0.0.0.0 when allowed (QR pairing from a phone works — the historical
+        default), 127.0.0.1 when restricted (Deck-only). The xray connection
+        itself is unaffected.
+        """
+        try:
+            save_lan_access(settings, bool(enabled))
+            if getattr(self, "_import_runner", None) is not None:
+                await self._import_runner.cleanup()
+                self._import_runner = None
+            await self._start_import_server()
+            return create_success_response(
+                {
+                    "allowLan": lan_access_enabled(settings),
+                    "serverRunning": self._import_runner is not None,
+                }
+            )
+        except Exception as e:
+            return create_error_response(
+                ErrorCode.UNKNOWN_ERROR, f"Failed to change LAN access: {str(e)}"
             )
 
     async def check_updates(self) -> Dict[str, Any]:

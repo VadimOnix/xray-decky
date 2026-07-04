@@ -130,6 +130,14 @@ export interface AdminPanelUrlResponse {
   baseUrl: string;
   path: string;
   token: string;
+  allowLan?: boolean;
+}
+
+export interface SetLanAccessResponse {
+  success: boolean;
+  allowLan?: boolean;
+  serverRunning?: boolean;
+  error?: string;
 }
 
 export interface HandleResumeResponse {
@@ -184,6 +192,8 @@ export const getSystemProxyStatus = callable<[], SystemProxyStatusResponse>(
 
 export const getImportServerUrl = callable<[], ImportServerUrlResponse>('get_import_server_url');
 export const getAdminPanelUrl = callable<[], AdminPanelUrlResponse>('get_admin_panel_url');
+
+export const setLanAccess = callable<[enabled: boolean], SetLanAccessResponse>('set_lan_access');
 export const handleResume = callable<[], HandleResumeResponse>('handle_resume');
 
 export interface ServerProfile {

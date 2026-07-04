@@ -214,8 +214,11 @@ pointing at it.
     code / pairing URL. _(done — token in `X-Admin-Token` header or `?token=`,
     constant-time compare, page strips it from the address bar)_
   - Bind `127.0.0.1` by default; **explicit "Allow LAN access" toggle** in QAM to
-    bind `0.0.0.0`. _(remaining — server currently binds `0.0.0.0` like the
-    import page, mitigated by the token)_
+    bind `0.0.0.0`. _(toggle done — the QAM options tab has "Allow LAN access",
+    which rebinds the live server between `0.0.0.0` and `127.0.0.1` immediately
+    and switches the QR/URL accordingly. The default is still LAN-on to avoid
+    silently breaking the QR pairing flow for existing installs; flipping the
+    default to localhost-only is a deliberate one-line decision left open.)_
   - Keep HTTPS (already needed for phone clipboard access); rate-limit auth
     attempts; CSRF-safe (token header, not cookies). _(HTTPS + header token +
     per-client failed-auth rate limiting done — repeated bad tokens from one

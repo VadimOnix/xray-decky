@@ -16,6 +16,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   client's failure history, so honest clients are never affected. The limiter
   is in-memory and per-install (cleared on plugin reload).
 
+- **"Allow LAN access" toggle** (roadmap Phase 3): the QAM options tab can now
+  restrict the embedded HTTPS server (admin panel + QR import page) to this
+  Deck only. Toggling rebinds the live server immediately — `0.0.0.0` when
+  allowed, `127.0.0.1` when restricted — and the QAM QR/URL switches to match
+  (the QR is hidden in Deck-only mode since a phone can't reach it). The
+  default remains LAN-on so the QR pairing flow keeps working for existing
+  installs; new backend helpers `lan_access_enabled`/`admin_bind_host`, a
+  `set_lan_access` RPC, and the server start refactored into a re-invokable
+  `_start_import_server`.
+
 ### Added
 
 - **Scheduled subscription auto-refresh** (roadmap Phase 2): a subscription can

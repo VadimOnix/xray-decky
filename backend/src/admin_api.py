@@ -113,6 +113,35 @@ def ensure_admin_token(settings) -> str:
     return token
 
 
+def lan_access_enabled(settings) -> bool:
+    """Whether the panel/import server may bind to the LAN (default: yes).
+
+    Defaults to True to preserve the historical behavior (QR pairing from a
+    phone is the primary flow); the QAM offers an explicit toggle to restrict
+    the server to localhost. Anything malformed falls back to the default.
+    """
+    admin_config = settings.getSetting("adminPanel", {})
+    if not isinstance(admin_config, dict):
+        return True
+    value = admin_config.get("allowLan", True)
+    return value if isinstance(value, bool) else True
+
+
+def save_lan_access(settings, enabled: bool) -> None:
+    """Persist the LAN-access preference (see lan_access_enabled)."""
+    admin_config = settings.getSetting("adminPanel", {})
+    if not isinstance(admin_config, dict):
+        admin_config = {}
+    admin_config["allowLan"] = bool(enabled)
+    settings.setSetting("adminPanel", admin_config)
+    settings.commit()
+
+
+def admin_bind_host(settings) -> str:
+    """The host the embedded HTTPS server should bind to."""
+    return "0.0.0.0" if lan_access_enabled(settings) else "127.0.0.1"
+
+
 def config_summary(config: Any) -> Dict[str, Any] | None:
     """Redact a stored profile down to displayable fields (no credentials)."""
     if not isinstance(config, dict):
