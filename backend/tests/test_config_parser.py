@@ -5,6 +5,7 @@ import json
 
 from backend.src.config_parser import (
     build_profile_config,
+    core_for_protocol,
     parse_share_link,
     parse_subscription,
     validate_share_link,
@@ -247,6 +248,77 @@ def test_vmess_rejects_garbage():
     assert parse_share_link(f"vmess://{_b64('[1,2]')}") is None
 
 
+# --- Hysteria2 / TUIC (sing-box core) ---
+
+
+def test_hysteria2_link():
+    profile = parse_share_link(
+        "hysteria2://p%40ss@h2.example.com:443"
+        "?sni=h2.example.com&insecure=1&obfs=salamander&obfs-password=xyz#HY2"
+    )
+    assert profile is not None
+    assert profile["protocol"] == "hysteria2"
+    assert profile["core"] == "sing-box"
+    assert profile["password"] == "p@ss"
+    assert profile["address"] == "h2.example.com"
+    assert profile["port"] == 443
+    assert profile["tlsConfig"] == {
+        "serverName": "h2.example.com",
+        "allowInsecure": True,
+    }
+    assert profile["obfs"] == "salamander"
+    assert profile["obfsPassword"] == "xyz"
+    assert profile["name"] == "HY2"
+
+
+def test_hy2_alias():
+    profile = parse_share_link("hy2://pw@h2.example.com:8443?sni=a.example.com")
+    assert profile["protocol"] == "hysteria2"
+    assert profile["core"] == "sing-box"
+
+
+def test_tuic_link():
+    profile = parse_share_link(
+        f"tuic://{UUID_V4}:secret@t.example.com:443"
+        "?congestion_control=bbr&alpn=h3&sni=t.example.com&udp_relay_mode=native#TUIC"
+    )
+    assert profile["protocol"] == "tuic"
+    assert profile["core"] == "sing-box"
+    assert profile["uuid"] == UUID_V4
+    assert profile["password"] == "secret"
+    assert profile["congestionControl"] == "bbr"
+    assert profile["udpRelayMode"] == "native"
+    assert profile["tlsConfig"]["alpn"] == ["h3"]
+
+
+def test_tuic_requires_valid_uuid():
+    assert parse_share_link("tuic://not-a-uuid:pw@t.example.com:443") is None
+
+
+def test_xray_protocols_tagged_with_core():
+    profile = parse_share_link(f"vless://{UUID_V4}@example.com:443?security=tls")
+    assert profile["core"] == "xray"
+
+
+def test_core_for_protocol():
+    assert core_for_protocol("vless") == "xray"
+    assert core_for_protocol("shadowsocks") == "xray"
+    assert core_for_protocol("hysteria2") == "sing-box"
+    assert core_for_protocol("tuic") == "sing-box"
+
+
+def test_subscription_keeps_mixed_cores():
+    links = "\n".join(
+        [
+            f"vless://{UUID_V4}@a.example.com:443?security=tls",
+            "hysteria2://pw@h2.example.com:443",
+            f"tuic://{UUID_V4}:pw@t.example.com:443",
+        ]
+    )
+    profiles = parse_subscription(_b64(links))
+    assert [p["core"] for p in profiles] == ["xray", "sing-box", "sing-box"]
+
+
 # --- Subscriptions ---
 
 
@@ -289,10 +361,15 @@ def test_validate_accepts_all_supported_schemes():
         assert is_valid, f"{url}: {error}"
 
 
+def test_validate_accepts_hysteria2_and_tuic():
+    assert validate_share_link("hysteria2://pw@h2.example.com:443")[0]
+    assert validate_share_link(f"tuic://{UUID_V4}:pw@t.example.com:443")[0]
+
+
 def test_validate_rejects_unsupported_scheme_with_hint():
-    is_valid, error = validate_share_link("hysteria2://x@example.com:443")
+    is_valid, error = validate_share_link("naive+https://x@example.com:443")
     assert not is_valid
-    assert "hysteria2" in error
+    assert error
 
 
 def test_validate_rejects_garbage():

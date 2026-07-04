@@ -16,7 +16,17 @@ from typing import Any, Dict, List, Optional, Tuple
 from uuid import UUID
 
 
-SUPPORTED_SCHEMES = ("vless", "vmess", "trojan", "ss")
+SUPPORTED_SCHEMES = ("vless", "vmess", "trojan", "ss", "hysteria2", "hy2", "tuic")
+
+# Which core each protocol runs on. xray-core handles the classic protocols;
+# hysteria2/tuic need the sing-box second core.
+_XRAY_PROTOCOLS = ("vless", "vmess", "trojan", "shadowsocks")
+_SINGBOX_PROTOCOLS = ("hysteria2", "tuic")
+
+
+def core_for_protocol(protocol: str) -> str:
+    """Return the core ('xray' or 'sing-box') that runs a given protocol."""
+    return "sing-box" if protocol in _SINGBOX_PROTOCOLS else "xray"
 
 # Legacy transport names normalized to what current xray-core expects.
 _NETWORK_ALIASES = {"raw": "tcp", "mkcp": "kcp", "splithttp": "xhttp"}
@@ -425,11 +435,92 @@ def _parse_vmess(url: str) -> Optional[Dict[str, Any]]:
     return profile
 
 
+def _parse_hysteria2(url: str) -> Optional[Dict[str, Any]]:
+    split = _split_url(url)
+    if not split:
+        return None
+    parts, host, port = split
+
+    # Auth is the userinfo (password) — optional in some panels.
+    auth = urllib.parse.unquote(parts.username or "")
+    if parts.password:
+        auth = f"{auth}:{urllib.parse.unquote(parts.password)}"
+
+    params = _parse_query(parts.query)
+    profile: Dict[str, Any] = {
+        "protocol": "hysteria2",
+        "core": "sing-box",
+        "password": auth,
+        "address": host,
+        "port": port,
+        "network": "udp",
+        "security": "tls",
+    }
+    tls: Dict[str, Any] = {}
+    if params.get("sni"):
+        tls["serverName"] = params["sni"]
+    if _is_truthy(params.get("insecure")) or _is_truthy(params.get("allowInsecure")):
+        tls["allowInsecure"] = True
+    if tls:
+        profile["tlsConfig"] = tls
+    if params.get("obfs"):
+        profile["obfs"] = params["obfs"]
+        if params.get("obfs-password"):
+            profile["obfsPassword"] = params["obfs-password"]
+    if parts.fragment:
+        profile["name"] = urllib.parse.unquote(parts.fragment)
+    return profile
+
+
+def _parse_tuic(url: str) -> Optional[Dict[str, Any]]:
+    split = _split_url(url)
+    if not split:
+        return None
+    parts, host, port = split
+
+    uuid_str = urllib.parse.unquote(parts.username or "")
+    if not validate_uuid(uuid_str):
+        return None
+    password = urllib.parse.unquote(parts.password) if parts.password else ""
+
+    params = _parse_query(parts.query)
+    profile: Dict[str, Any] = {
+        "protocol": "tuic",
+        "core": "sing-box",
+        "uuid": uuid_str.lower(),
+        "password": password,
+        "address": host,
+        "port": port,
+        "network": "udp",
+        "security": "tls",
+    }
+    if params.get("congestion_control"):
+        profile["congestionControl"] = params["congestion_control"]
+    if params.get("udp_relay_mode"):
+        profile["udpRelayMode"] = params["udp_relay_mode"]
+    tls: Dict[str, Any] = {}
+    if params.get("sni"):
+        tls["serverName"] = params["sni"]
+    if params.get("alpn"):
+        alpn = [a.strip() for a in params["alpn"].split(",") if a.strip()]
+        if alpn:
+            tls["alpn"] = alpn
+    if _is_truthy(params.get("allow_insecure")) or _is_truthy(params.get("insecure")):
+        tls["allowInsecure"] = True
+    if tls:
+        profile["tlsConfig"] = tls
+    if parts.fragment:
+        profile["name"] = urllib.parse.unquote(parts.fragment)
+    return profile
+
+
 def parse_share_link(url: str) -> Optional[Dict[str, Any]]:
     """
     Parse a single share link into a profile dictionary.
 
-    Supported schemes: vless://, vmess://, trojan://, ss://
+    Supported schemes: vless://, vmess://, trojan://, ss://,
+    hysteria2:// (hy2://), tuic://. Each profile carries a "core" field
+    ("xray" or "sing-box") naming the core that runs it.
 
     Returns:
         Profile dictionary, or None if the link is invalid/unsupported.
@@ -437,16 +528,27 @@ def parse_share_link(url: str) -> Optional[Dict[str, Any]]:
     if not url or not isinstance(url, str):
         return None
     url = url.strip()
+    lowered = url.lower()
 
-    if url.lower().startswith("vless://"):
-        return _parse_vless(url)
-    if url.lower().startswith("vmess://"):
-        return _parse_vmess(url)
-    if url.lower().startswith("trojan://"):
-        return _parse_trojan(url)
-    if url.lower().startswith("ss://"):
-        return _parse_ss(url)
-    return None
+    if lowered.startswith("vless://"):
+        profile = _parse_vless(url)
+    elif lowered.startswith("vmess://"):
+        profile = _parse_vmess(url)
+    elif lowered.startswith("trojan://"):
+        profile = _parse_trojan(url)
+    elif lowered.startswith("ss://"):
+        profile = _parse_ss(url)
+    elif lowered.startswith("hysteria2://") or lowered.startswith("hy2://"):
+        return _parse_hysteria2(url)
+    elif lowered.startswith("tuic://"):
+        return _parse_tuic(url)
+    else:
+        return None
+
+    # Tag the xray-core protocols with their core for uniform dispatch.
+    if profile is not None and "core" not in profile:
+        profile["core"] = "xray"
+    return profile
 
 
 def parse_subscription(text: str) -> List[Dict[str, Any]]:

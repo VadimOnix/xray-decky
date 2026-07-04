@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Hysteria2 / TUIC share links parse and import** (roadmap Phase 4, first
+  cut): `hysteria2://` (`hy2://`) and `tuic://` links are recognized and
+  stored as profiles tagged with the core they need (`"core": "sing-box"`);
+  the classic protocols are tagged `"core": "xray"`. Subscriptions with
+  mixed protocols no longer silently drop the sing-box nodes. `core_for_protocol`
+  centralizes the protocol → core mapping.
+- Connecting to a sing-box profile now fails with a clear "requires the
+  sing-box core, not available yet" message instead of feeding an
+  unsupported config to xray-core. The bundled sing-box core (download +
+  `SingBoxAdapter`) is the next Phase 4 step.
+
 - **QAM server picker** (roadmap Phase 2): the Quick Access Menu now shows a
   compact server dropdown (with per-server latency) when more than one
   profile is stored, so you can switch servers without opening the web

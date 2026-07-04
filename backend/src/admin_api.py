@@ -24,6 +24,7 @@ Handler = Callable[..., Awaitable[Dict[str, Any]]]
 _SUMMARY_FIELDS = (
     "id",
     "protocol",
+    "core",
     "name",
     "address",
     "port",
