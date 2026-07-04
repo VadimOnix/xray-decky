@@ -210,8 +210,9 @@ pointing at it.
     bind `0.0.0.0`. _(remaining — server currently binds `0.0.0.0` like the
     import page, mitigated by the token)_
   - Keep HTTPS (already needed for phone clipboard access); rate-limit auth
-    attempts; CSRF-safe (token header, not cookies). _(HTTPS + header token done;
-    rate-limiting remaining)_
+    attempts; CSRF-safe (token header, not cookies). _(HTTPS + header token +
+    per-client failed-auth rate limiting done — repeated bad tokens from one
+    client are locked out for a cooldown; CSRF-safe via the header token)_
 - QAM becomes: connect toggle, server picker, status/speed, TUN/kill-switch, and
   "Open admin panel" QR _(QR done)_. The old single-purpose import page folds
   into the panel.
