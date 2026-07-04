@@ -18,6 +18,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **sing-box JSON config import** (roadmap Phase 5 / Phase 2 stretch): pasting a
+  full sing-box config — or a bare `outbounds` array — now imports every server
+  outbound (`vless`, `vmess`, `trojan`, `shadowsocks`, `hysteria2`, `tuic`).
+  Structural outbounds (`direct`, `block`, `selector`, `urltest`, …) are skipped.
+  Each server is converted back into a standard share link and run through the
+  existing share-link parser, so transports (WS/gRPC/HTTPUpgrade), TLS/REALITY and
+  uTLS fingerprints are handled by one code path with no drift. Backend-only,
+  no new runtime dependency (`backend/src/singbox_import.py`).
+
 - **Named subscriptions** (roadmap Phase 2): the stored subscription now carries
   a user-facing label — it defaults to the subscription's URL host and can be
   renamed from the admin panel (a **Rename** button next to Refresh). The name
