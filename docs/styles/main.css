@@ -166,14 +166,30 @@ section { max-width: 1080px; margin: 0 auto; padding: 3.5rem 1.25rem; }
   width: 42%; height: 4px; border-radius: 2px; opacity: 0.8;
   background: repeating-linear-gradient(90deg, #05070a 0 4px, transparent 4px 8px);
 }
-.deck-side { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 11px; padding-top: 8px; }
+/* Real-device arrangement per grip, top to bottom: D-pad and stick side by
+   side on one line (D-pad outboard, stick inboard next to the screen; ABXY
+   and stick mirrored on the right), the square trackpad below them, and the
+   Steam / ··· system button below the trackpad. */
+.deck-side { position: relative; }
+.deck-side > * { position: absolute; }
 /* Tiny view/menu buttons at the top inner corner of each grip. */
 .deck-mini-btn {
-  position: absolute; top: 2px; width: 12px; height: 5px; border-radius: 3px;
+  top: 0; width: 12px; height: 5px; border-radius: 3px;
   background: #2c313b; border: 1px solid #454b58;
 }
-.deck-side-l .deck-mini-btn { right: 4px; }
-.deck-side-r .deck-mini-btn { left: 4px; }
+.deck-side-l .deck-mini-btn { right: 2px; }
+.deck-side-r .deck-mini-btn { left: 2px; }
+/* Row 1: D-pad + stick (left grip), stick + ABXY (right grip). */
+.deck-side-l .deck-dpad { top: 12%; left: 2px; }
+.deck-side-l .deck-stick { top: 11%; right: 3px; }
+.deck-side-r .deck-stick { top: 11%; left: 3px; }
+.deck-side-r .deck-btns { top: 13%; right: 9px; }
+/* Row 2: the trackpad, inboard toward the screen. */
+.deck-side-l .deck-trackpad { top: 46%; right: 5px; }
+.deck-side-r .deck-trackpad { top: 46%; left: 5px; }
+/* Row 3: system buttons below the trackpad. */
+.deck-side-l .deck-steam-btn { bottom: 2%; left: 12px; }
+.deck-side-r .deck-qam-btn { bottom: 2%; right: 12px; }
 .deck-stick {
   width: 34px; height: 34px; border-radius: 50%; flex: none;
   background: radial-gradient(circle at 50% 42%, #363b45 0 58%, #23272f 60%);
@@ -459,7 +475,6 @@ footer { border-top: 1px solid var(--line); background: rgba(23, 26, 33, 0.6); m
   .nav-links { gap: 0.7rem; }
   .nav-links a { font-size: 0.85rem; }
   .deck { grid-template-columns: 62px 1fr 62px; margin-right: 0; padding: 10px 7px 9px; border-radius: 24px; }
-  .deck-side { gap: 7px; padding-top: 6px; }
   .deck-stick { width: 25px; height: 25px; border-width: 2px; }
   .deck-dpad { width: 22px; height: 22px; background:
     linear-gradient(#292d36, #292d36) center/7px 22px no-repeat,
