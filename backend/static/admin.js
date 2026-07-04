@@ -54,6 +54,7 @@
       'servers.unnamed': 'Unnamed server',
       'servers.activate': 'Activate {name}',
       'servers.remove': 'Remove server',
+      'servers.singboxCore': 'Uses the sing-box core',
       'sub.info': 'Subscription · {n} servers · updated {date}',
       'sub.expires': 'expires {date}',
       'sub.refresh': 'Refresh',
@@ -160,6 +161,7 @@
       'servers.unnamed': 'Без имени',
       'servers.activate': 'Выбрать {name}',
       'servers.remove': 'Удалить сервер',
+      'servers.singboxCore': 'Использует ядро sing-box',
       'sub.info': 'Подписка · серверов: {n} · обновлено {date}',
       'sub.expires': 'истекает {date}',
       'sub.refresh': 'Обновить',
@@ -656,11 +658,22 @@
         t('servers.activate', { name: profile.name || profile.address || 'server' })
       )
 
+      var chips = document.createElement('span')
+      chips.className = 'server-row-chips'
       var chip = document.createElement('span')
       chip.className = 'chip chip-accent'
       // Keep chips narrow on phone screens.
       chip.textContent =
         profile.protocol === 'shadowsocks' ? 'ss' : profile.protocol || 'vless'
+      chips.appendChild(chip)
+      // Flag servers that need the second core (hysteria2 / tuic).
+      if (profile.core === 'sing-box') {
+        var coreChip = document.createElement('span')
+        coreChip.className = 'chip chip-core'
+        coreChip.textContent = 'sing-box'
+        coreChip.title = t('servers.singboxCore')
+        chips.appendChild(coreChip)
+      }
 
       var main = document.createElement('span')
       main.className = 'server-row-main'
@@ -718,7 +731,7 @@
         })
       })
 
-      row.appendChild(chip)
+      row.appendChild(chips)
       row.appendChild(main)
       row.appendChild(latencyBadge(profile))
       row.appendChild(del)
