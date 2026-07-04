@@ -26,10 +26,23 @@ from .profile_store import ProfileStore
 
 FETCH_TIMEOUT = 15.0
 _USER_AGENT = "xray-decky (Steam Deck; +https://github.com/VadimOnix/xray-decky)"
+# Subscription bodies are tiny (a few KB of links); cap reads so a hostile
+# or misconfigured server can't balloon memory.
+_MAX_BODY_BYTES = 2 * 1024 * 1024
 
 
 async def fetch_subscription(url: str, timeout: float = FETCH_TIMEOUT) -> Optional[str]:
-    """Fetch a subscription URL's body; None on any network/HTTP failure."""
+    """
+    Fetch a subscription URL's body; None on any network/HTTP failure.
+
+    Fetching a user-provided URL is this feature's purpose (CodeQL flags it
+    as SSRF): the URL is chosen by the device owner in the QAM or by a
+    token-authenticated admin — the same trust model as every proxy client
+    with subscription support. The response is never echoed back; it is
+    only parsed for share links, size-capped, and restricted to http(s).
+    """
+    if not url.lower().startswith(("http://", "https://")):
+        return None
     try:
         client_timeout = aiohttp.ClientTimeout(total=timeout)
         async with aiohttp.ClientSession(timeout=client_timeout) as session:
@@ -38,7 +51,11 @@ async def fetch_subscription(url: str, timeout: float = FETCH_TIMEOUT) -> Option
             ) as response:
                 if response.status != 200:
                     return None
-                return await response.text()
+                body = await response.content.read(_MAX_BODY_BYTES + 1)
+                if len(body) > _MAX_BODY_BYTES:
+                    return None
+                charset = response.charset or "utf-8"
+                return body.decode(charset, errors="replace")
     except Exception:
         return None
 
