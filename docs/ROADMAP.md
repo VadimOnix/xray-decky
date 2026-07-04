@@ -198,9 +198,10 @@ pointing at it.
     (`backend/static/admin.{html,css,js}`) styled after the Steam UI design
     language (Steam dark palette, Play-style action button, SteamOS toggles,
     ≥44px touch targets, visible focus rings, `prefers-reduced-motion`):
-    dashboard with live status, server summary, options, import. _Remaining:_
-    server list with latency, subscription manager, speed graph, log viewer,
-    diagnostics.
+    dashboard with live status, server summary, options, import; the hero card
+    now draws a live download/upload speed graph (Steam-styled canvas
+    sparkline, last two minutes, no dependencies). _Remaining:_ subscription
+    manager, log viewer, diagnostics.
 - **Security model** (copy DeckyClash's defaults):
   - Random per-install token, required for API access; shown in QAM as a QR
     code / pairing URL. _(done — token in `X-Admin-Token` header or `?token=`,

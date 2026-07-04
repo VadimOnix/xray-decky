@@ -78,6 +78,25 @@
             </button>
             <button id="unblock-btn" class="btn btn-danger" hidden>Unblock traffic</button>
           </div>
+          <div id="hero-graph" class="hero-graph" hidden>
+            <div class="graph-legend">
+              <span class="legend-item legend-down">
+                <span class="legend-swatch" aria-hidden="true"></span>
+                Download <b id="graph-down-peak">0 B/s</b>
+              </span>
+              <span class="legend-item legend-up">
+                <span class="legend-swatch" aria-hidden="true"></span>
+                Upload <b id="graph-up-peak">0 B/s</b>
+              </span>
+              <span class="graph-window">peak · last 2 min</span>
+            </div>
+            <canvas
+              id="speed-canvas"
+              class="speed-canvas"
+              role="img"
+              aria-label="Live download and upload speed over the last two minutes"
+            ></canvas>
+          </div>
         </section>
 
         <div class="grid">
@@ -145,14 +164,15 @@
             </div>
             <p class="card-sub">
               Paste a <span class="mono">vless://</span>, <span class="mono">vmess://</span>,
-              <span class="mono">trojan://</span> or <span class="mono">ss://</span> link, a
+              <span class="mono">trojan://</span>, <span class="mono">ss://</span>,
+              <span class="mono">hysteria2://</span> or <span class="mono">tuic://</span> link, a
               subscription URL (<span class="mono">https://…</span>) or its base64 content.
             </p>
             <form id="import-form" class="import-form">
               <input
                 id="import-input"
                 type="text"
-                placeholder="vless:// / vmess:// / trojan:// / ss://"
+                placeholder="vless:// / vmess:// / trojan:// / ss:// / hysteria2:// / tuic://"
                 autocomplete="off"
                 aria-label="Share link"
               />

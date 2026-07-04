@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Live traffic speed graph in the admin panel** (roadmap Phase 3): the hero
+  card now draws a real-time dual-line sparkline (download in green, upload in
+  blue) of the last two minutes of traffic, scaled to the in-view peak, with
+  per-direction peak labels — a dependency-free Steam-styled canvas that fills
+  as the existing stats poll streams in and clears on disconnect. The import
+  hints now also list the `hysteria2://` / `tuic://` schemes that already
+  parse and store.
+
 - **sing-box core substrate** (roadmap Phase 4): a config generator
   (`singbox_manager.build_singbox_config`) that turns hysteria2/tuic
   profiles into sing-box JSON (proxy outbound + SOCKS/HTTP/TUN inbounds on
