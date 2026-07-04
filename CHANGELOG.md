@@ -18,10 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Core update checker** (roadmap Phase 5): the admin panel's new Updates
-  card compares the pinned xray-core / sing-box versions against their latest
-  GitHub releases on demand and shows an "up to date" / "vX available" badge
-  per core. Telemetry-free — an anonymous request to the public releases API,
+- **Update checker for the plugin and cores** (roadmap Phase 5): the admin
+  panel's Updates card compares the plugin's own version (package.json) and
+  the pinned xray-core / sing-box versions against their latest GitHub
+  releases on demand, showing an "up to date" / "vX available" badge per
+  component. Telemetry-free — an anonymous request to the public releases API,
   made only when you press Check; new `check_updates` backend method and
   token-guarded `GET /api/v1/updates`. Version comparison is numeric (so
   `v1.10` &gt; `v1.9`) and pre-release tags are handled.

@@ -797,7 +797,7 @@
     api('/api/v1/updates')
       .then(function (res) {
         if (res.status === 200 && res.data.success) {
-          state.lastUpdates = res.data.cores || []
+          state.lastUpdates = res.data.components || []
           renderUpdates(state.lastUpdates)
         } else {
           toast(res.data.error || t('toast.updatesFail'), true)

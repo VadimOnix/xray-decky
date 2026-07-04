@@ -553,16 +553,16 @@ class Plugin:
 
     async def check_updates(self) -> Dict[str, Any]:
         """
-        Check the bundled cores against their latest GitHub releases.
+        Check the plugin and the bundled cores against their latest releases.
 
         Telemetry-free: an anonymous GET to the public releases API, made only
-        when requested. Returns per-core current/latest/updateAvailable.
+        when requested. Returns per-component current/latest/updateAvailable.
         """
         try:
-            from backend.src.update_checker import check_core_updates
+            from backend.src.update_checker import check_updates as _check
 
-            cores = await check_core_updates()
-            return {"success": True, "cores": cores}
+            components = await _check()
+            return {"success": True, "components": components}
         except Exception as e:
             return create_error_response(
                 ErrorCode.UNKNOWN_ERROR, f"Failed to check for updates: {str(e)}"
