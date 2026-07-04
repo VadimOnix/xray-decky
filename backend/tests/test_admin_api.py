@@ -71,6 +71,9 @@ def _make_handlers(overrides=None):
         "test_profiles_latency": handler(
             "test_profiles_latency", {"success": True, "results": {"p1": 42}}
         ),
+        "refresh_subscription": handler(
+            "refresh_subscription", {"success": True, "profileCount": 3}
+        ),
     }
     handlers.update(overrides or {})
     return handlers, calls
@@ -334,11 +337,18 @@ def test_profile_activate_remove_and_ping():
             data = await resp.json()
             assert data["results"] == {"p1": 42}
 
+            resp = await client.post(
+                "/api/v1/subscription/refresh", headers={"X-Admin-Token": TOKEN}
+            )
+            assert resp.status == 200
+            assert ("refresh_subscription", ()) in calls
+
             # All profile endpoints require the token.
             for path in (
                 "/api/v1/profiles/activate",
                 "/api/v1/profiles/remove",
                 "/api/v1/profiles/ping",
+                "/api/v1/subscription/refresh",
             ):
                 resp = await client.post(path, json={"id": "x"})
                 assert resp.status == 401, path

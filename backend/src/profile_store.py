@@ -112,17 +112,53 @@ class ProfileStore:
     def replace_all(self, profiles: List[Dict[str, Any]]) -> List[str]:
         """
         Replace the whole list (subscription import). The first profile
-        becomes active. Returns the new ids.
+        becomes active; if a previously active server (same protocol,
+        address and port) is still present, it stays active. Returns the
+        new ids. Subscription metadata is cleared — the importer sets it
+        again for URL-based subscriptions.
         """
-        data = {"version": SCHEMA_VERSION, "activeId": None, "items": []}
+        previous_active = self.get_active()
+        data: Dict[str, Any] = {
+            "version": SCHEMA_VERSION,
+            "activeId": None,
+            "items": [],
+        }
         for profile in profiles:
             item = dict(profile)
             item["id"] = _new_id()
             data["items"].append(item)
         if data["items"]:
             data["activeId"] = data["items"][0]["id"]
+            if previous_active is not None:
+                key = (
+                    previous_active.get("protocol"),
+                    previous_active.get("address"),
+                    previous_active.get("port"),
+                )
+                for item in data["items"]:
+                    if (
+                        item.get("protocol"),
+                        item.get("address"),
+                        item.get("port"),
+                    ) == key:
+                        data["activeId"] = item["id"]
+                        break
         self._save(data)
         return [item["id"] for item in data["items"]]
+
+    def set_subscription(self, url: str, node_count: int) -> None:
+        """Record where the current profile list came from (for refresh)."""
+        data = self._load()
+        data["subscription"] = {
+            "url": url,
+            "updatedAt": int(time.time()),
+            "nodeCount": node_count,
+        }
+        self._save(data)
+
+    def get_subscription(self) -> Optional[Dict[str, Any]]:
+        subscription = self._load().get("subscription")
+        return dict(subscription) if isinstance(subscription, dict) else None
 
     def set_active(self, profile_id: str) -> bool:
         data = self._load()

@@ -1,0 +1,146 @@
+"""Tests for backend.src.importer (shared import flow + subscriptions)."""
+
+import asyncio
+import base64
+from unittest.mock import patch
+
+from backend.src import importer
+from backend.src.config_parser import parse_subscription_content
+from backend.src.profile_store import ProfileStore
+
+
+UUID = "a5a075d3-b3d5-4a03-b2e0-8a1f04b1cf75"
+LINK_A = f"vless://{UUID}@a.example.com:443?security=tls"
+LINK_B = "trojan://pw@b.example.com:443"
+
+
+class _FakeSettings:
+    def __init__(self):
+        self.data = {}
+
+    def getSetting(self, key, default=None):
+        return self.data.get(key, default)
+
+    def setSetting(self, key, value):
+        self.data[key] = value
+
+    def commit(self):
+        pass
+
+
+def _b64(text: str) -> str:
+    return base64.b64encode(text.encode()).decode()
+
+
+def _store() -> ProfileStore:
+    return ProfileStore(_FakeSettings())
+
+
+def _run(coro):
+    return asyncio.run(coro)
+
+
+def _patched_fetch(body):
+    async def fake_fetch(_url, timeout=importer.FETCH_TIMEOUT):
+        return body
+
+    return patch.object(importer, "fetch_subscription", fake_fetch)
+
+
+# --- parse_subscription_content ---
+
+
+def test_content_base64_and_plaintext():
+    payload = f"{LINK_A}\n{LINK_B}\n"
+    assert len(parse_subscription_content(_b64(payload))) == 2
+    assert len(parse_subscription_content(payload)) == 2
+    assert parse_subscription_content("no links here") == []
+    assert parse_subscription_content("") == []
+
+
+# --- import_link ---
+
+
+def test_import_single_link_appends():
+    store = _store()
+    result = _run(importer.import_link(store, LINK_A))
+    assert result["success"] is True
+    assert result["profileCount"] == 1
+
+    result = _run(importer.import_link(store, LINK_B))
+    assert result["profileCount"] == 2
+    # Newest import becomes active.
+    assert store.get_active()["protocol"] == "trojan"
+
+
+def test_import_subscription_url_stores_all_and_meta():
+    store = _store()
+    with _patched_fetch(f"{LINK_A}\n{LINK_B}\n"):
+        result = _run(importer.import_link(store, "https://sub.example.com/s"))
+    assert result["success"] is True
+    assert result["profileCount"] == 2
+    subscription = store.get_subscription()
+    assert subscription["url"] == "https://sub.example.com/s"
+    assert subscription["nodeCount"] == 2
+
+
+def test_import_subscription_url_fetch_failure():
+    store = _store()
+    with _patched_fetch(None):
+        result = _run(importer.import_link(store, "https://sub.example.com/s"))
+    assert result["success"] is False
+    assert "fetch" in result["error"].lower()
+    assert store.list_profiles() == []
+
+
+def test_import_subscription_url_without_links():
+    store = _store()
+    with _patched_fetch("<html>not a subscription</html>"):
+        result = _run(importer.import_link(store, "https://sub.example.com/s"))
+    assert result["success"] is False
+
+
+def test_import_pasted_base64_subscription():
+    store = _store()
+    result = _run(importer.import_link(store, _b64(f"{LINK_A}\n{LINK_B}")))
+    assert result["success"] is True
+    assert result["profileCount"] == 2
+    # Pasted content is not a refreshable subscription.
+    assert store.get_subscription() is None
+
+
+def test_import_invalid_link():
+    store = _store()
+    result = _run(importer.import_link(store, "hysteria2://x@h:443"))
+    assert result["success"] is False
+    result = _run(importer.import_link(store, "   "))
+    assert result["success"] is False
+
+
+# --- refresh_subscription ---
+
+
+def test_refresh_replaces_list_and_preserves_active():
+    store = _store()
+    with _patched_fetch(f"{LINK_A}\n{LINK_B}\n"):
+        _run(importer.import_link(store, "https://sub.example.com/s"))
+
+    # Make the second server active, then refresh with reversed order.
+    second = next(
+        p for p in store.list_profiles() if p["protocol"] == "trojan"
+    )
+    store.set_active(second["id"])
+
+    with _patched_fetch(f"{LINK_B}\n{LINK_A}\n"):
+        result = _run(importer.refresh_subscription(store))
+    assert result["success"] is True
+    # Active server survived the refresh (matched by protocol/address/port).
+    active = store.get_active()
+    assert active["protocol"] == "trojan"
+    assert active["address"] == "b.example.com"
+
+
+def test_refresh_without_subscription():
+    store = _store()
+    result = _run(importer.refresh_subscription(store))
+    assert result["success"] is False

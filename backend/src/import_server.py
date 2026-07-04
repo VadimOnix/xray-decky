@@ -6,18 +6,12 @@ POST /import (validate and store the share link).
 Contract: specs/002-vless-import-qr/contracts/import-http-api.md
 """
 
-import time
 from pathlib import Path
 from typing import Awaitable, Callable, Optional
 
 from aiohttp import web
 
-from .config_parser import (
-    validate_share_link,
-    parse_share_link,
-    parse_subscription,
-    build_profile_config,
-)
+from .importer import import_link
 from .profile_store import ProfileStore
 
 
@@ -78,36 +72,16 @@ def create_import_app(
                 status=400,
             )
 
-        is_valid, error_msg = validate_share_link(link)
-        if not is_valid:
-            return web.json_response(
-                {"success": False, "error": error_msg or "Invalid share link format"},
-                status=400,
-            )
-
         try:
-            store = ProfileStore(settings)
-            now = int(time.time())
-            parsed = parse_share_link(link)
-            if parsed:
-                # Single link: append to the profile list and make it active.
-                config = build_profile_config(parsed, link, "single")
-                config["lastValidatedAt"] = now
-                store.add(config)
-            else:
-                # Subscription: store every node, first becomes active.
-                parsed_configs = parse_subscription(link)
-                if not parsed_configs:
-                    return web.json_response(
-                        {"success": False, "error": "Failed to parse share link"},
-                        status=400,
-                    )
-                configs = []
-                for node in parsed_configs:
-                    config = build_profile_config(node, link, "subscription")
-                    config["lastValidatedAt"] = now
-                    configs.append(config)
-                store.replace_all(configs)
+            result = await import_link(ProfileStore(settings), link)
+            if not result.get("success", False):
+                return web.json_response(
+                    {
+                        "success": False,
+                        "error": result.get("error") or "Invalid share link format",
+                    },
+                    status=400,
+                )
 
             if on_vless_saved is not None:
                 await on_vless_saved()

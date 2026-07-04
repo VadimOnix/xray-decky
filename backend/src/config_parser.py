@@ -486,6 +486,31 @@ def parse_subscription(text: str) -> List[Dict[str, Any]]:
     return []
 
 
+def parse_subscription_content(text: str) -> List[Dict[str, Any]]:
+    """
+    Parse a fetched subscription body into profiles.
+
+    Handles both the de facto standard (base64 of newline-delimited links,
+    via parse_subscription) and servers that return plain-text link lists.
+    """
+    if not text or not isinstance(text, str):
+        return []
+
+    profiles = parse_subscription(text)
+    if profiles:
+        return profiles
+
+    if "://" in text:
+        profiles = []
+        for line in text.splitlines():
+            parsed = parse_share_link(line.strip())
+            if parsed:
+                profiles.append(parsed)
+        return profiles
+
+    return []
+
+
 def validate_share_link(url: str) -> Tuple[bool, Optional[str]]:
     """
     Validate a share link (single node or base64 subscription).

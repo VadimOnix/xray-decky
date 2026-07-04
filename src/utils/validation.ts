@@ -23,6 +23,8 @@ export function validateVLESSURL(url: string): boolean {
     /^ss:\/\/.+/i,
     // vmess is a base64-encoded JSON payload
     /^vmess:\/\/[A-Za-z0-9+/=_-]+$/i,
+    // subscription URL, fetched by the backend
+    /^https?:\/\/.+/i,
   ];
   if (linkPatterns.some((pattern) => pattern.test(trimmed))) {
     return true;

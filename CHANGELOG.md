@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Subscription URLs** (roadmap Phase 2): importing an `http(s)://` link now
+  fetches the subscription and stores all its servers — both the de facto
+  standard body (base64 of newline-delimited share links) and plain-text
+  link lists are accepted. The subscription (URL, server count, last
+  updated) is remembered.
+- **Subscription refresh**: `refresh_subscription` backend method and
+  `POST /api/v1/subscription/refresh` re-fetch the stored URL and replace
+  the server list; the active server survives the refresh when still
+  present (matched by protocol/address/port). The admin panel shows a
+  subscription bar ("N servers · updated …") with a Refresh button.
+- Shared import flow (`backend/src/importer.py`) used by the plugin RPC,
+  the web import page and the admin API, so behavior can't drift between
+  entry points.
+
 - **Multi-server profiles** (roadmap Phase 2, first cut): settings schema v2
   stores a list of server profiles with an active selection; an existing
   single config is migrated automatically and the legacy `vlessConfig` key

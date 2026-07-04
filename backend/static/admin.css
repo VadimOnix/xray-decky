@@ -509,6 +509,24 @@ body {
   box-shadow: var(--focus-ring);
 }
 
+.subscription-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  margin-bottom: 10px;
+}
+
+.subscription-info {
+  font-size: 13px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .card-footnote {
   margin: 12px 0 0;
   font-size: 12.5px;
