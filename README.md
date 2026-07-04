@@ -1,15 +1,37 @@
 # Xray Decky
 
-Decky Loader plugin for Steam Deck that enables VLESS proxy connections with Reality protocol support.
+Decky Loader plugin for Steam Deck: a full-featured xray-core proxy client
+(VLESS/VMess/Trojan/Shadowsocks) with multi-server subscriptions, a Steam-styled
+web admin panel, and Gaming-Mode TUN routing.
 
 ## Features
 
-- **Import Configurations** — vless://, vmess://, trojan://, ss:// links or subscriptions
-- **Connection Toggle** — turn proxy on/off from Quick Access
-- **Web Admin Panel** — Steam-styled management UI on your phone/PC (QR pairing from the QAM)
-- **TUN Mode** — system-wide traffic routing, **recommended for Gaming Mode**
-- **Kill Switch** — block traffic when proxy disconnects (optional)
-- **Auto-restart** — a crashed xray-core is detected instantly and restarted with backoff
+- **Broad protocol & transport coverage** — imports **VLESS** (REALITY /
+  XTLS-Vision), **VMess**, **Trojan** and **Shadowsocks** (incl. 2022 ciphers)
+  over RAW/TCP, WebSocket, gRPC, HTTPUpgrade, XHTTP and mKCP, with full TLS /
+  REALITY / uTLS-fingerprint parameters.
+- **Multi-server profiles & subscriptions** — store many servers; import a
+  subscription URL (base64 or plain-text link lists) and refresh it in place.
+  Manually-added servers are preserved across refreshes, and the provider's
+  data quota / expiry (`Subscription-Userinfo`) is shown when available.
+- **Latency testing** — TCPing all servers, with color-coded per-server results
+  in both the QAM picker and the web panel.
+- **Live traffic stats** — download / upload speed and session totals in the
+  QAM, plus a real-time speed graph in the web panel.
+- **Web Admin Panel** — Steam-styled management UI on your phone/PC (QR pairing
+  from the QAM): live status + speed graph, server list, subscription info,
+  import, TUN / kill-switch toggles, and a core update checker. Guarded by a
+  random per-install token with failed-auth rate limiting.
+- **Quick Access Menu** — connect toggle, server picker, live status/speed,
+  TUN + kill-switch, and an admin-panel QR code.
+- **English / Russian** — both the QAM and the web panel are localized
+  (auto-detected from the Steam / browser locale).
+- **Connection Toggle** — turn proxy on/off from Quick Access.
+- **TUN Mode** — system-wide traffic routing, **recommended for Gaming Mode**.
+- **Kill Switch** — block traffic when the proxy disconnects (optional).
+- **Resilient** — a crashed xray-core is detected instantly and restarted with
+  backoff; TUN routes are re-applied after sleep/resume; the pinned core
+  self-heals if the immutable filesystem wipes the bundled binary.
 
 **Network recovery:** if the Deck ever loses connectivity because the plugin
 died uncleanly, run `sudo bash recover.sh` (shipped in the plugin folder,
