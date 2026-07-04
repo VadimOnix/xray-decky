@@ -242,6 +242,9 @@ class Plugin:
                             "test_profiles_latency": self.test_profiles_latency,
                             "refresh_subscription": self.refresh_subscription,
                             "rename_subscription": self.rename_subscription,
+                            "set_subscription_refresh_interval": (
+                                self.set_subscription_refresh_interval
+                            ),
                             "get_traffic_stats": self.get_traffic_stats,
                             "check_updates": self.check_updates,
                             "export_profiles": self.export_profiles,
@@ -290,6 +293,40 @@ class Plugin:
             print(
                 "Xray Decky Plugin: backend/static not found, import server not started"
             )
+
+        # Background subscription auto-refresh. Off unless the user set an
+        # interval, so this is a no-op for everyone else. It only re-fetches
+        # the stored subscription URL (preserving the active server) — it never
+        # touches or reconnects the live xray process.
+        self._refresh_task = asyncio.create_task(self._subscription_refresh_loop())
+
+    # Slow tick — the interval is measured in hours, so checking every few
+    # minutes is plenty and keeps this effectively idle.
+    _REFRESH_TICK_SECONDS = 300
+
+    async def _subscription_refresh_loop(self) -> None:
+        from backend.src.refresh_scheduler import is_refresh_due
+
+        while True:
+            try:
+                await asyncio.sleep(self._REFRESH_TICK_SECONDS)
+                subscription = profile_store.get_subscription()
+                if is_refresh_due(subscription, time.time()):
+                    print(
+                        "Xray Decky Plugin: subscription auto-refresh due, "
+                        "re-fetching"
+                    )
+                    result = await refresh_subscription_flow(profile_store)
+                    if not result.get("success", False):
+                        print(
+                            "Xray Decky Plugin: auto-refresh failed: "
+                            f"{result.get('error')}"
+                        )
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:
+                # Never let a transient error kill the loop.
+                print(f"Xray Decky Plugin: subscription refresh loop error: {e}")
 
     async def _ensure_xray_binary(self) -> Dict[str, Any]:
         """
@@ -368,6 +405,16 @@ class Plugin:
         print("Xray Decky Plugin: Backend unloading")
         # Stop crash supervision before tearing anything down
         await self._stop_supervisor()
+
+        # Stop the subscription auto-refresh loop.
+        refresh_task = getattr(self, "_refresh_task", None)
+        if refresh_task is not None:
+            refresh_task.cancel()
+            try:
+                await refresh_task
+            except (asyncio.CancelledError, Exception):
+                pass
+            self._refresh_task = None
 
         # Stop import HTTP server
         if getattr(self, "_import_runner", None) is not None:
@@ -709,6 +756,29 @@ class Plugin:
         except Exception as e:
             return create_error_response(
                 ErrorCode.UNKNOWN_ERROR, f"Rename failed: {str(e)}"
+            )
+
+    async def set_subscription_refresh_interval(self, hours: int) -> Dict[str, Any]:
+        """
+        Set the subscription's auto-refresh interval in hours (0 disables).
+
+        The background loop re-fetches the subscription URL once this much time
+        has passed since the last update. Off by default.
+        """
+        try:
+            hours = max(0, int(hours))
+            if profile_store.set_refresh_interval(hours):
+                return create_success_response({"refreshIntervalHours": hours})
+            return create_error_response(
+                ErrorCode.INVALID_CONFIG, "No subscription to schedule"
+            )
+        except (ValueError, TypeError):
+            return create_error_response(
+                ErrorCode.INVALID_CONFIG, "Interval must be a whole number of hours"
+            )
+        except Exception as e:
+            return create_error_response(
+                ErrorCode.UNKNOWN_ERROR, f"Failed to set interval: {str(e)}"
             )
 
     async def test_profiles_latency(self) -> Dict[str, Any]:

@@ -161,9 +161,12 @@ panels for VLESS/VMess/Trojan/SS import and connect without manual editing.
   plain-text bodies), manual refresh preserves the active server and manually-
   added servers, "last updated" + data quota/expiry shown in the admin panel.
   The subscription carries an editable **name** (defaulting to its URL host,
-  renamable in the panel). Pasting a **sing-box JSON config** (or a bare
-  outbounds array) imports every server outbound; remaining: multiple
-  subscriptions, scheduled refresh, Clash YAML import)_
+  renamable in the panel) and an optional **scheduled auto-refresh** interval
+  (off by default; a background tick re-fetches the URL once the interval
+  elapses, preserving the active server and never touching the live xray
+  process). Pasting a **sing-box JSON config** (or a bare outbounds array)
+  imports every server outbound; remaining: multiple subscriptions, Clash YAML
+  import)_
 - **Latency testing**: real-delay test through the proxy
   (`http://www.gstatic.com/generate_204`-style, configurable URL), concurrency
   limited; TCPing as the cheap fallback. Show results in the server list.
