@@ -318,15 +318,20 @@ class Plugin:
                     )
                     result = await refresh_subscription_flow(profile_store)
                     if not result.get("success", False):
-                        print(
-                            "Xray Decky Plugin: auto-refresh failed: "
-                            f"{result.get('error')}"
-                        )
+                        # Deliberately no error detail — the failure string can
+                        # be derived from the subscription URL / share links,
+                        # which may carry credentials (CodeQL clear-text logging).
+                        print("Xray Decky Plugin: subscription auto-refresh failed")
             except asyncio.CancelledError:
                 raise
             except Exception as e:
-                # Never let a transient error kill the loop.
-                print(f"Xray Decky Plugin: subscription refresh loop error: {e}")
+                # Never let a transient error kill the loop. Log only the
+                # exception type — a message could echo the subscription URL
+                # (which may carry credentials).
+                print(
+                    "Xray Decky Plugin: subscription refresh loop error: "
+                    f"{type(e).__name__}"
+                )
 
     async def _ensure_xray_binary(self) -> Dict[str, Any]:
         """
