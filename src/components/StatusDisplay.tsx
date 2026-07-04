@@ -1,6 +1,7 @@
 import { FC, useEffect, useState } from 'react';
 import { Field } from '@decky/ui';
 import { getTrafficStats, type ConnectionStatus } from '../services/api';
+import { t } from '../utils/i18n';
 
 interface StatusDisplayProps {
   status: ConnectionStatus;
@@ -86,15 +87,15 @@ export const StatusDisplay: FC<StatusDisplayProps> = ({
   const getStatusText = (): string => {
     switch (status) {
       case 'connected':
-        return 'Connected';
+        return t('status.connected');
       case 'connecting':
-        return 'Connecting...';
+        return t('status.connecting');
       case 'error':
-        return 'Error';
+        return t('status.error');
       case 'blocked':
-        return 'Blocked (Kill Switch)';
+        return t('status.blocked');
       default:
-        return 'Disconnected';
+        return t('status.disconnected');
     }
   };
 
@@ -139,21 +140,21 @@ export const StatusDisplay: FC<StatusDisplayProps> = ({
   return (
     <div style={cardStyle}>
       <Field
-        label="Connection status"
+        label={t('status.title')}
         bottomSeparator="none"
         description={<span style={leftDescriptionStyle}>{statusIndicator}</span>}
       />
 
       {status === 'connected' && uptime != null && (
         <Field
-          label="Uptime"
+          label={t('status.uptime')}
           bottomSeparator="none"
           description={<span style={leftDescriptionStyle}>{formatUptime(uptime)}</span>}
         />
       )}
       {status === 'connected' && connectedAt && (
         <Field
-          label="Connected at"
+          label={t('status.connectedAt')}
           bottomSeparator="none"
           description={
             <span style={leftDescriptionStyle}>
@@ -164,7 +165,7 @@ export const StatusDisplay: FC<StatusDisplayProps> = ({
       )}
       {status === 'connected' && speeds && (
         <Field
-          label="Speed"
+          label={t('status.speed')}
           bottomSeparator="none"
           description={
             <span style={{ ...leftDescriptionStyle, fontVariant: 'tabular-nums' }}>
@@ -172,7 +173,9 @@ export const StatusDisplay: FC<StatusDisplayProps> = ({
               {'   '}
               <span style={{ color: '#66c0f4' }}>▲ {formatBytes(speeds.up, true)}</span>
               {'   '}
-              <span style={{ color: '#8f98a0' }}>{formatBytes(speeds.total, false)} total</span>
+              <span style={{ color: '#8f98a0' }}>
+                {formatBytes(speeds.total, false)} {t('status.total')}
+              </span>
             </span>
           }
         />
@@ -180,7 +183,7 @@ export const StatusDisplay: FC<StatusDisplayProps> = ({
 
       {status === 'error' && errorMessage && (
         <Field
-          label="Error"
+          label={t('status.errorLabel')}
           bottomSeparator="none"
           description={
             <span style={{ ...leftDescriptionStyle, color: '#ff6b6b' }}>{errorMessage}</span>
@@ -190,11 +193,11 @@ export const StatusDisplay: FC<StatusDisplayProps> = ({
 
       {status === 'blocked' && (
         <Field
-          label="Kill Switch"
+          label={t('status.killSwitch')}
           bottomSeparator="none"
           description={
             <span style={{ ...leftDescriptionStyle, color: '#ff6b6b' }}>
-              All traffic is blocked. Reconnect to restore.
+              {t('status.blockedMsg')}
             </span>
           }
         />

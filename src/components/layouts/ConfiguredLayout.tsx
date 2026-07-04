@@ -22,15 +22,16 @@ import type {
   ToggleTUNModeResponse,
 } from '../../services/api';
 import type { ConnectionConfigSummary, ConnectionState, OptionsState } from '../../types/ui';
+import { t } from '../../utils/i18n';
 
 const TAB_MAIN = 'main';
 const TAB_CONFIG_INFO = 'config-info';
 const TAB_OPTIONS = 'options';
 
 const TAB_TITLES: Record<string, string> = {
-  [TAB_MAIN]: 'Connection',
-  [TAB_CONFIG_INFO]: 'Config',
-  [TAB_OPTIONS]: 'Options',
+  [TAB_MAIN]: t('tabs.connection'),
+  [TAB_CONFIG_INFO]: t('tabs.config'),
+  [TAB_OPTIONS]: t('tabs.options'),
 };
 
 const TAB_SIZE = 44;
@@ -155,7 +156,7 @@ export const ConfiguredLayout: FC<ConfiguredLayoutProps> = ({
   };
 
   return (
-    <PanelSection title={TAB_TITLES[activeTab] ?? 'Connection'}>
+    <PanelSection title={TAB_TITLES[activeTab] ?? t('tabs.connection')}>
       <PanelSectionRow>
         <Focusable {...{ 'flow-children': 'right' }} style={tabRowStyle}>
           <TabButton
@@ -202,8 +203,10 @@ export const ConfiguredLayout: FC<ConfiguredLayoutProps> = ({
                 gap: '8px',
               }}
             >
-              <span style={{ fontSize: '14px', fontWeight: 600, color: '#c7d5e0' }}>Status</span>
-              <HelpPopover label="Help: status" topic="configured.status" />
+              <span style={{ fontSize: '14px', fontWeight: 600, color: '#c7d5e0' }}>
+                {t('layout.status')}
+              </span>
+              <HelpPopover label={t('layout.helpStatus')} topic="configured.status" />
             </div>
           </PanelSectionRow>
           <PanelSectionRow>
@@ -254,9 +257,9 @@ export const ConfiguredLayout: FC<ConfiguredLayoutProps> = ({
               }}
             >
               <span style={{ fontSize: '14px', fontWeight: 600, color: '#c7d5e0' }}>
-                Reset configuration
+                {t('layout.reset')}
               </span>
-              <HelpPopover label="Help: reset configuration" topic="configured.reset" />
+              <HelpPopover label={t('layout.helpReset')} topic="configured.reset" />
             </div>
           </PanelSectionRow>
           <PanelSectionRow>

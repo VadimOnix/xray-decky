@@ -1,6 +1,7 @@
 import { FC, useMemo, useState } from 'react';
 import { Field, Toggle } from '@decky/ui';
 import type { ConnectionStatus, ToggleConnectionResponse } from '../services/api';
+import { t } from '../utils/i18n';
 
 interface ConnectionToggleProps {
   status: ConnectionStatus;
@@ -20,12 +21,12 @@ export const ConnectionToggle: FC<ConnectionToggleProps> = ({ status, onToggle }
 
   const description = useMemo(() => {
     if (status === 'blocked') {
-      return 'Kill switch is active. Disable it to reconnect.';
+      return t('conn.blockedDesc');
     }
     if (loading) {
-      return status === 'connecting' ? 'Connecting…' : 'Disconnecting…';
+      return status === 'connecting' ? t('conn.connecting') : t('conn.disconnecting');
     }
-    return isEnabled ? 'Proxy is active.' : 'Proxy is inactive';
+    return isEnabled ? t('conn.active') : t('conn.inactive');
   }, [isEnabled, loading, status]);
 
   const handleToggle = async (nextEnabled: boolean) => {
@@ -35,11 +36,11 @@ export const ConnectionToggle: FC<ConnectionToggleProps> = ({ status, onToggle }
     try {
       const result = await onToggle(nextEnabled);
       if (!result.success) {
-        setError(result.error || 'Failed to toggle connection');
+        setError(result.error || t('conn.toggleFail'));
       }
     } catch (err) {
       console.error('Toggle error:', err);
-      setError('Network error. Please check your connection and try again.');
+      setError(t('conn.netErr'));
     } finally {
       setLoading(false);
     }
@@ -48,7 +49,7 @@ export const ConnectionToggle: FC<ConnectionToggleProps> = ({ status, onToggle }
   return (
     <div style={{ padding: '10px' }}>
       <Field
-        label="Enable connection"
+        label={t('conn.enable')}
         description={<span style={leftDescriptionStyle}>{description}</span>}
         highlightOnFocus
         childrenLayout="inline"
@@ -68,7 +69,7 @@ export const ConnectionToggle: FC<ConnectionToggleProps> = ({ status, onToggle }
             fontSize: '14px',
           }}
         >
-          <strong>Error:</strong> {error}
+          <strong>{t('conn.errorLabel')}</strong> {error}
         </div>
       )}
 
@@ -83,8 +84,7 @@ export const ConnectionToggle: FC<ConnectionToggleProps> = ({ status, onToggle }
             fontSize: '14px',
           }}
         >
-          <strong>Kill Switch Active:</strong> Connection is blocked. Please disable kill switch
-          first.
+          <strong>{t('conn.ksActiveLabel')}</strong> {t('conn.ksActiveMsg')}
         </div>
       )}
     </div>
