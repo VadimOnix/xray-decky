@@ -112,6 +112,22 @@ def test_import_subscription_stores_userinfo():
     assert store.get_subscription()["userinfo"] == userinfo
 
 
+def test_import_subscription_preserves_manual_profile():
+    store = _store()
+    # A manually added single server.
+    _run(importer.import_link(store, LINK_A))
+    manual_count = len(store.list_profiles())
+    assert manual_count == 1
+
+    # Importing a subscription must not wipe the manual server.
+    with _patched_fetch("trojan://pw@s1.example.com:443\ntrojan://pw@s2.example.com:443\n"):
+        result = _run(importer.import_link(store, "https://sub.example.com/s"))
+    assert result["success"] is True
+    addresses = {p["address"] for p in store.list_profiles()}
+    assert "a.example.com" in addresses  # the manual server survived
+    assert "s1.example.com" in addresses and "s2.example.com" in addresses
+
+
 def test_import_subscription_url_fetch_failure():
     store = _store()
     with _patched_fetch(None):

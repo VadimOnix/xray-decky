@@ -94,6 +94,67 @@ def test_replace_all_for_subscription():
     assert settings.data[LEGACY_KEY]["address"] == "n1.example.com"
 
 
+def test_replace_subscription_profiles_preserves_manual():
+    settings = _FakeSettings()
+    store = ProfileStore(settings)
+    store.add(_profile("manual.example.com", configType="single"))
+    store.add(_profile("old-sub.example.com", configType="subscription"))
+
+    new_ids = store.replace_subscription_profiles(
+        [
+            _profile("s1.example.com", configType="subscription"),
+            _profile("s2.example.com", configType="subscription"),
+        ]
+    )
+    addresses = [p["address"] for p in store.list_profiles()]
+    # Manual server survives; the old subscription server is gone.
+    assert "manual.example.com" in addresses
+    assert "old-sub.example.com" not in addresses
+    assert "s1.example.com" in addresses and "s2.example.com" in addresses
+    assert len(new_ids) == 2
+
+
+def test_replace_subscription_keeps_active_manual():
+    settings = _FakeSettings()
+    store = ProfileStore(settings)
+    manual = store.add(_profile("manual.example.com", configType="single"))
+    store.add(_profile("sub.example.com", configType="subscription"))
+    # Make the manual server active, then refresh the subscription.
+    store.set_active(manual)
+    store.replace_subscription_profiles(
+        [_profile("s1.example.com", configType="subscription")]
+    )
+    # Active stays on the surviving manual server.
+    assert store.get_active_id() == manual
+    assert settings.data[LEGACY_KEY]["address"] == "manual.example.com"
+
+
+def test_replace_subscription_keeps_active_server_by_endpoint():
+    settings = _FakeSettings()
+    store = ProfileStore(settings)
+    store.add(_profile("keep.example.com", configType="subscription"))
+    active = store.get_active_id()
+    assert active is not None
+    # Refresh: the same server (protocol/address/port) is still present.
+    store.replace_subscription_profiles(
+        [
+            _profile("other.example.com", configType="subscription"),
+            _profile("keep.example.com", configType="subscription"),
+        ]
+    )
+    assert store.get_active()["address"] == "keep.example.com"
+
+
+def test_clear_subscription():
+    settings = _FakeSettings()
+    store = ProfileStore(settings)
+    store.add(_profile())
+    store.set_subscription("https://sub.example.com/s", 1)
+    assert store.get_subscription() is not None
+    store.clear_subscription()
+    assert store.get_subscription() is None
+
+
 def test_clear():
     settings = _FakeSettings()
     store = ProfileStore(settings)

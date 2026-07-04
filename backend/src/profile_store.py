@@ -146,6 +146,69 @@ class ProfileStore:
         self._save(data)
         return [item["id"] for item in data["items"]]
 
+    def replace_subscription_profiles(
+        self, profiles: List[Dict[str, Any]]
+    ) -> List[str]:
+        """
+        Replace only the subscription-sourced profiles, preserving manually
+        added ones (``configType`` != "subscription").
+
+        Used by subscription import/refresh so it no longer wipes single-link
+        servers the user added by hand. The active selection is preserved when
+        possible: it stays on the active profile if that survived (a kept
+        manual profile, or a subscription server still present by
+        protocol/address/port); otherwise it falls back to the first new
+        subscription server, then the first kept profile. Returns the new
+        subscription profile ids.
+        """
+        data = self._load()
+        previous_active = self.get_active()
+        kept = [i for i in data["items"] if i.get("configType") != "subscription"]
+
+        new_items: List[Dict[str, Any]] = []
+        for profile in profiles:
+            item = dict(profile)
+            item["id"] = _new_id()
+            new_items.append(item)
+
+        data["items"] = kept + new_items
+
+        kept_ids = {i.get("id") for i in kept}
+        active_id: Optional[str] = None
+        if previous_active is not None:
+            if previous_active.get("id") in kept_ids:
+                active_id = previous_active.get("id")
+            else:
+                key = (
+                    previous_active.get("protocol"),
+                    previous_active.get("address"),
+                    previous_active.get("port"),
+                )
+                for item in new_items:
+                    if (
+                        item.get("protocol"),
+                        item.get("address"),
+                        item.get("port"),
+                    ) == key:
+                        active_id = item["id"]
+                        break
+        if active_id is None:
+            if new_items:
+                active_id = new_items[0]["id"]
+            elif kept:
+                active_id = kept[0]["id"]
+        data["activeId"] = active_id
+
+        self._save(data)
+        return [item["id"] for item in new_items]
+
+    def clear_subscription(self) -> None:
+        """Forget the stored subscription metadata (no URL to refresh)."""
+        data = self._load()
+        if "subscription" in data:
+            del data["subscription"]
+            self._save(data)
+
     def set_subscription(self, url: str, node_count: int, userinfo=None) -> None:
         """Record where the current profile list came from (for refresh).
 
