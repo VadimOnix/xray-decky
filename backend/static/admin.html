@@ -224,6 +224,25 @@
             </form>
             <p id="import-msg" class="form-error" role="alert" hidden></p>
           </section>
+
+          <!-- Updates card -->
+          <section class="card" aria-labelledby="updates-title">
+            <div class="card-head">
+              <h2 id="updates-title" class="card-title" data-i18n="updates.title">Updates</h2>
+              <button
+                id="check-updates-btn"
+                class="btn btn-ghost btn-small"
+                type="button"
+                data-i18n="updates.check"
+              >
+                Check
+              </button>
+            </div>
+            <ul id="updates-list" class="updates-list" hidden></ul>
+            <p id="updates-hint" class="empty-note" data-i18n="updates.hint">
+              Check whether newer core versions are available.
+            </p>
+          </section>
         </div>
       </div>
     </main>

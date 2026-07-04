@@ -89,6 +89,14 @@
       'import.saved': 'Saved.',
       'import.enter': 'Please enter a share link',
       'import.failed': 'Import failed',
+      'updates.title': 'Updates',
+      'updates.check': 'Check',
+      'updates.checking': 'Checking…',
+      'updates.hint': 'Check whether newer core versions are available.',
+      'updates.upToDate': 'up to date',
+      'updates.available': '{v} available',
+      'updates.failed': 'check failed',
+      'toast.updatesFail': 'Update check failed',
       'toast.netErr': 'Network error',
       'toast.removed': 'Server removed',
       'toast.removeFail': 'Failed to remove server',
@@ -185,6 +193,14 @@
       'import.saved': 'Сохранено.',
       'import.enter': 'Введите ссылку',
       'import.failed': 'Ошибка импорта',
+      'updates.title': 'Обновления',
+      'updates.check': 'Проверить',
+      'updates.checking': 'Проверка…',
+      'updates.hint': 'Проверьте, доступны ли новые версии ядер.',
+      'updates.upToDate': 'актуально',
+      'updates.available': 'доступна {v}',
+      'updates.failed': 'ошибка проверки',
+      'toast.updatesFail': 'Не удалось проверить обновления',
       'toast.netErr': 'Ошибка сети',
       'toast.removed': 'Сервер удалён',
       'toast.removeFail': 'Не удалось удалить сервер',
@@ -275,6 +291,7 @@
       renderProfiles(state.lastProfiles.activeId, state.lastProfiles.profiles)
       renderSubscription(state.lastProfiles.subscription)
     }
+    if (state.lastUpdates) renderUpdates(state.lastUpdates)
   }
 
   var els = {
@@ -313,6 +330,9 @@
     importInput: document.getElementById('import-input'),
     importBtn: document.getElementById('import-btn'),
     importMsg: document.getElementById('import-msg'),
+    checkUpdatesBtn: document.getElementById('check-updates-btn'),
+    updatesList: document.getElementById('updates-list'),
+    updatesHint: document.getElementById('updates-hint'),
     toast: document.getElementById('toast'),
     langToggle: document.getElementById('lang-toggle'),
   }
@@ -327,6 +347,7 @@
     lang: 'en',
     lastData: null,
     lastProfiles: null,
+    lastUpdates: null,
   }
 
   // ----- token handling -----
@@ -736,6 +757,60 @@
         /* transient */
       })
   }
+
+  function renderUpdates(cores) {
+    els.updatesList.textContent = ''
+    var hasCores = cores && cores.length > 0
+    els.updatesHint.hidden = hasCores
+    els.updatesList.hidden = !hasCores
+    if (!hasCores) return
+    cores.forEach(function (core) {
+      var li = document.createElement('li')
+      li.className = 'update-row'
+      var name = document.createElement('span')
+      name.className = 'update-name'
+      name.textContent = core.name
+      var ver = document.createElement('span')
+      ver.className = 'update-ver'
+      ver.textContent = core.current
+      var badge = document.createElement('span')
+      if (core.updateAvailable && core.latest) {
+        badge.className = 'update-badge new'
+        badge.textContent = t('updates.available', { v: core.latest })
+      } else if (core.latest) {
+        badge.className = 'update-badge ok'
+        badge.textContent = t('updates.upToDate')
+      } else {
+        badge.className = 'update-badge err'
+        badge.textContent = t('updates.failed')
+      }
+      li.appendChild(name)
+      li.appendChild(ver)
+      li.appendChild(badge)
+      els.updatesList.appendChild(li)
+    })
+  }
+
+  els.checkUpdatesBtn.addEventListener('click', function () {
+    els.checkUpdatesBtn.disabled = true
+    els.checkUpdatesBtn.textContent = t('updates.checking')
+    api('/api/v1/updates')
+      .then(function (res) {
+        if (res.status === 200 && res.data.success) {
+          state.lastUpdates = res.data.cores || []
+          renderUpdates(state.lastUpdates)
+        } else {
+          toast(res.data.error || t('toast.updatesFail'), true)
+        }
+      })
+      .catch(function () {
+        toast(t('toast.netErr'), true)
+      })
+      .then(function () {
+        els.checkUpdatesBtn.disabled = false
+        els.checkUpdatesBtn.textContent = t('updates.check')
+      })
+  })
 
   els.refreshSubBtn.addEventListener('click', function () {
     els.refreshSubBtn.disabled = true

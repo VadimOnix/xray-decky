@@ -242,6 +242,7 @@ class Plugin:
                             "test_profiles_latency": self.test_profiles_latency,
                             "refresh_subscription": self.refresh_subscription,
                             "get_traffic_stats": self.get_traffic_stats,
+                            "check_updates": self.check_updates,
                         },
                         token=ensure_admin_token(settings),
                     )
@@ -548,6 +549,23 @@ class Plugin:
         except Exception as e:
             return create_error_response(
                 ErrorCode.UNKNOWN_ERROR, f"Failed to get admin panel URL: {str(e)}"
+            )
+
+    async def check_updates(self) -> Dict[str, Any]:
+        """
+        Check the bundled cores against their latest GitHub releases.
+
+        Telemetry-free: an anonymous GET to the public releases API, made only
+        when requested. Returns per-core current/latest/updateAvailable.
+        """
+        try:
+            from backend.src.update_checker import check_core_updates
+
+            cores = await check_core_updates()
+            return {"success": True, "cores": cores}
+        except Exception as e:
+            return create_error_response(
+                ErrorCode.UNKNOWN_ERROR, f"Failed to check for updates: {str(e)}"
             )
 
     # Server profiles (multi-server)
