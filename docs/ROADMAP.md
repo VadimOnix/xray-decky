@@ -157,9 +157,11 @@ panels for VLESS/VMess/Trojan/SS import and connect without manual editing.
   Named subscriptions, manual + scheduled refresh, "last updated" state. Clash YAML
   and sing-box JSON import are stretch goals (or offload via subconverter).
   _(mostly done — http(s) subscription URLs fetch and store all nodes (base64 or
-  plain-text bodies), manual refresh preserves the active server, "last updated"
-  shown in the admin panel; remaining: scheduled refresh, named subscriptions,
-  Clash/sing-box import)_
+  plain-text bodies), manual refresh preserves the active server and manually-
+  added servers, "last updated" + data quota/expiry shown in the admin panel.
+  The subscription carries an editable **name** (defaulting to its URL host,
+  renamable in the panel); remaining: multiple subscriptions, scheduled
+  refresh, Clash/sing-box import)_
 - **Latency testing**: real-delay test through the proxy
   (`http://www.gstatic.com/generate_204`-style, configurable URL), concurrency
   limited; TCPing as the cheap fallback. Show results in the server list.

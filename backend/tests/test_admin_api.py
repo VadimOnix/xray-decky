@@ -88,6 +88,7 @@ def _make_handlers(overrides=None):
         "refresh_subscription": handler(
             "refresh_subscription", {"success": True, "profileCount": 3}
         ),
+        "rename_subscription": handler("rename_subscription", {"success": True}),
         "get_traffic_stats": handler(
             "get_traffic_stats",
             {
@@ -410,6 +411,39 @@ def test_profile_activate_remove_and_ping():
                 resp = await client.post(path, json={"id": "x"})
                 assert resp.status == 401, path
             resp = await client.get("/api/v1/profiles")
+            assert resp.status == 401
+        finally:
+            await client.close()
+
+    _run(scenario())
+
+
+def test_subscription_rename_endpoint():
+    handlers, calls = _make_handlers()
+
+    async def scenario():
+        client = await _client(handlers=handlers)
+        try:
+            resp = await client.post(
+                "/api/v1/subscription/rename",
+                json={"name": "  Work VPN  "},
+                headers={"X-Admin-Token": TOKEN},
+            )
+            assert resp.status == 200
+            assert ("rename_subscription", ("Work VPN",)) in calls
+
+            # Blank name rejected before the handler.
+            resp = await client.post(
+                "/api/v1/subscription/rename",
+                json={"name": "   "},
+                headers={"X-Admin-Token": TOKEN},
+            )
+            assert resp.status == 400
+
+            # Token required.
+            resp = await client.post(
+                "/api/v1/subscription/rename", json={"name": "x"}
+            )
             assert resp.status == 401
         finally:
             await client.close()

@@ -241,6 +241,7 @@ class Plugin:
                             "remove_profile": self.remove_profile,
                             "test_profiles_latency": self.test_profiles_latency,
                             "refresh_subscription": self.refresh_subscription,
+                            "rename_subscription": self.rename_subscription,
                             "get_traffic_stats": self.get_traffic_stats,
                             "check_updates": self.check_updates,
                         },
@@ -673,6 +674,19 @@ class Plugin:
         except Exception as e:
             return create_error_response(
                 ErrorCode.UNKNOWN_ERROR, f"Subscription refresh failed: {str(e)}"
+            )
+
+    async def rename_subscription(self, name: str) -> Dict[str, Any]:
+        """Set the stored subscription's user-facing label."""
+        try:
+            if profile_store.rename_subscription(name):
+                return create_success_response({})
+            return create_error_response(
+                ErrorCode.INVALID_CONFIG, "No subscription to rename"
+            )
+        except Exception as e:
+            return create_error_response(
+                ErrorCode.UNKNOWN_ERROR, f"Rename failed: {str(e)}"
             )
 
     async def test_profiles_latency(self) -> Dict[str, Any]:

@@ -140,7 +140,7 @@ def register_admin_routes(
             import_config, toggle_tun_mode, toggle_kill_switch,
             deactivate_kill_switch, get_profiles, set_active_profile,
             remove_profile, test_profiles_latency, refresh_subscription,
-            get_traffic_stats, check_updates.
+            rename_subscription, get_traffic_stats, check_updates.
         token: The admin token (see ensure_admin_token).
         rate_limiter: Failed-auth limiter; a fresh per-install one is created
             when omitted (state is per app, never shared across installs).
@@ -321,6 +321,21 @@ def register_admin_routes(
         status = 200 if result.get("success", False) else 502
         return web.json_response(result, status=status)
 
+    async def api_subscription_rename(request: web.Request) -> web.Response:
+        denied = _guard(request)
+        if denied is not None:
+            return denied
+        body = await _body_json(request)
+        name = (body or {}).get("name")
+        if not isinstance(name, str) or not name.strip():
+            return web.json_response(
+                {"success": False, "error": "Expected JSON body {\"name\": str}"},
+                status=400,
+            )
+        result = await handlers["rename_subscription"](name.strip())
+        status = 200 if result.get("success", False) else 400
+        return web.json_response(result, status=status)
+
     async def api_stats(request: web.Request) -> web.Response:
         denied = _guard(request)
         if denied is not None:
@@ -366,5 +381,6 @@ def register_admin_routes(
     app.router.add_post("/api/v1/profiles/remove", api_profile_remove)
     app.router.add_post("/api/v1/profiles/ping", api_profiles_ping)
     app.router.add_post("/api/v1/subscription/refresh", api_subscription_refresh)
+    app.router.add_post("/api/v1/subscription/rename", api_subscription_rename)
     app.router.add_get("/api/v1/stats", api_stats)
     app.router.add_get("/api/v1/updates", api_updates)
