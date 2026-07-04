@@ -22,6 +22,7 @@ Handler = Callable[..., Awaitable[Dict[str, Any]]]
 
 # Profile fields safe to show in the panel (never credentials).
 _SUMMARY_FIELDS = (
+    "id",
     "protocol",
     "name",
     "address",
@@ -31,6 +32,8 @@ _SUMMARY_FIELDS = (
     "configType",
     "importedAt",
     "isValid",
+    "latencyMs",
+    "latencyTestedAt",
 )
 
 
@@ -70,7 +73,8 @@ def register_admin_routes(
         handlers: Async callables provided by the plugin:
             get_connection_status, toggle_connection, get_vless_config,
             import_config, toggle_tun_mode, toggle_kill_switch,
-            deactivate_kill_switch.
+            deactivate_kill_switch, get_profiles, set_active_profile,
+            remove_profile, test_profiles_latency.
         token: The admin token (see ensure_admin_token).
     """
 
@@ -168,6 +172,50 @@ def register_admin_routes(
         status = 200 if result.get("success", False) else 502
         return web.json_response(result, status=status)
 
+    async def api_profiles(request: web.Request) -> web.Response:
+        if not _authorized(request):
+            return _unauthorized()
+        result = await handlers["get_profiles"]()
+        profiles = [
+            config_summary(p) for p in result.get("profiles", []) if isinstance(p, dict)
+        ]
+        return web.json_response(
+            {
+                "success": bool(result.get("success", False)),
+                "activeId": result.get("activeId"),
+                "profiles": profiles,
+            }
+        )
+
+    async def _profile_id_action(
+        request: web.Request, handler_name: str
+    ) -> web.Response:
+        if not _authorized(request):
+            return _unauthorized()
+        body = await _body_json(request)
+        profile_id = (body or {}).get("id")
+        if not profile_id or not isinstance(profile_id, str):
+            return web.json_response(
+                {"success": False, "error": "Expected JSON body {\"id\": str}"},
+                status=400,
+            )
+        result = await handlers[handler_name](profile_id)
+        status = 200 if result.get("success", False) else 400
+        return web.json_response(result, status=status)
+
+    async def api_profile_activate(request: web.Request) -> web.Response:
+        return await _profile_id_action(request, "set_active_profile")
+
+    async def api_profile_remove(request: web.Request) -> web.Response:
+        return await _profile_id_action(request, "remove_profile")
+
+    async def api_profiles_ping(request: web.Request) -> web.Response:
+        if not _authorized(request):
+            return _unauthorized()
+        result = await handlers["test_profiles_latency"]()
+        status = 200 if result.get("success", False) else 502
+        return web.json_response(result, status=status)
+
     async def api_import(request: web.Request) -> web.Response:
         if not _authorized(request):
             return _unauthorized()
@@ -191,3 +239,7 @@ def register_admin_routes(
     app.router.add_post("/api/v1/killswitch", api_killswitch)
     app.router.add_post("/api/v1/killswitch/deactivate", api_killswitch_deactivate)
     app.router.add_post("/api/v1/import", api_import)
+    app.router.add_get("/api/v1/profiles", api_profiles)
+    app.router.add_post("/api/v1/profiles/activate", api_profile_activate)
+    app.router.add_post("/api/v1/profiles/remove", api_profile_remove)
+    app.router.add_post("/api/v1/profiles/ping", api_profiles_ping)

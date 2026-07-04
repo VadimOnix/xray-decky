@@ -68,37 +68,22 @@
         </section>
 
         <div class="grid">
-          <!-- Server card -->
-          <section class="card" aria-labelledby="server-title">
+          <!-- Servers card -->
+          <section class="card card-servers" aria-labelledby="servers-title">
             <div class="card-head">
-              <h2 id="server-title" class="card-title">Server</h2>
-              <span id="server-protocol" class="chip chip-accent" hidden></span>
+              <h2 id="servers-title" class="card-title">Servers</h2>
+              <button id="ping-btn" class="btn btn-ghost btn-small" type="button">
+                Ping all
+              </button>
             </div>
-            <div id="server-empty" class="empty-note">
-              No configuration imported yet. Use the import form to add one.
+            <div id="servers-empty" class="empty-note">
+              No servers yet. Use the import form to add one.
             </div>
-            <dl id="server-info" class="kv" hidden>
-              <div class="kv-row">
-                <dt>Name</dt>
-                <dd id="server-name">—</dd>
-              </div>
-              <div class="kv-row">
-                <dt>Address</dt>
-                <dd id="server-address" class="mono">—</dd>
-              </div>
-              <div class="kv-row">
-                <dt>Transport</dt>
-                <dd><span id="server-network" class="chip">tcp</span></dd>
-              </div>
-              <div class="kv-row">
-                <dt>Security</dt>
-                <dd><span id="server-security" class="chip">none</span></dd>
-              </div>
-              <div class="kv-row">
-                <dt>Imported</dt>
-                <dd id="server-imported">—</dd>
-              </div>
-            </dl>
+            <ul id="server-list" class="server-list" hidden></ul>
+            <p class="card-footnote">
+              Tap a server to make it active — a live connection switches over
+              automatically.
+            </p>
           </section>
 
           <!-- Options card -->

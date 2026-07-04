@@ -100,6 +100,8 @@ from backend.src.system_proxy import SystemProxyManager
 from backend.src.import_server import create_import_app
 from backend.src.admin_api import ensure_admin_token, register_admin_routes
 from backend.src.supervisor import XraySupervisor
+from backend.src.profile_store import ProfileStore
+from backend.src.latency import test_profiles
 from backend.src.cert_utils import ensure_cert_key
 from aiohttp import web
 
@@ -109,6 +111,7 @@ if not settings_dir:
     raise RuntimeError("DECKY_PLUGIN_SETTINGS_DIR environment variable not set")
 
 settings = SettingsManager(name="settings", settings_directory=settings_dir)
+profile_store = ProfileStore(settings)
 settings.read()
 
 
@@ -232,6 +235,10 @@ class Plugin:
                             "toggle_tun_mode": self.toggle_tun_mode,
                             "toggle_kill_switch": self.toggle_kill_switch,
                             "deactivate_kill_switch": self.deactivate_kill_switch,
+                            "get_profiles": self.get_profiles,
+                            "set_active_profile": self.set_active_profile,
+                            "remove_profile": self.remove_profile,
+                            "test_profiles_latency": self.test_profiles_latency,
                         },
                         token=ensure_admin_token(settings),
                     )
@@ -466,34 +473,34 @@ class Plugin:
 
             # Try parsing as single node first
             parsed = parse_share_link(url)
-            config_type = "single"
+            now = int(time.time())
 
-            # If not single node, try subscription
-            if not parsed:
-                parsed_configs = parse_subscription(url)
-                if not parsed_configs:
-                    return create_error_response(
-                        ErrorCode.INVALID_URL, "Failed to parse share link"
-                    )
+            if parsed:
+                # Single link: append to the profile list and make it active.
+                config = build_profile_config(parsed, url, "single")
+                config["lastValidatedAt"] = now
+                profile_store.add(config)
+                return create_success_response(
+                    {"config": config, "profileCount": len(profile_store.list_profiles())}
+                )
 
-                # For subscription, use first node (can be extended later)
-                if len(parsed_configs) > 0:
-                    parsed = parsed_configs[0]
-                    config_type = "subscription"
-                else:
-                    return create_error_response(
-                        ErrorCode.INVALID_URL, "Subscription contains no valid nodes"
-                    )
+            # Subscription: store every node, first becomes active.
+            parsed_configs = parse_subscription(url)
+            if not parsed_configs:
+                return create_error_response(
+                    ErrorCode.INVALID_URL, "Failed to parse share link"
+                )
 
-            # Build complete config
-            config = build_profile_config(parsed, url, config_type)
-            config["lastValidatedAt"] = int(time.time())
+            configs = []
+            for node in parsed_configs:
+                config = build_profile_config(node, url, "subscription")
+                config["lastValidatedAt"] = now
+                configs.append(config)
+            profile_store.replace_all(configs)
 
-            # Store in SettingsManager
-            settings.setSetting("vlessConfig", config)
-            settings.commit()
-
-            return create_success_response({"config": config})
+            return create_success_response(
+                {"config": configs[0], "profileCount": len(configs)}
+            )
 
         except Exception as e:
             return create_error_response(
@@ -561,6 +568,106 @@ class Plugin:
         except Exception as e:
             return create_error_response(
                 ErrorCode.UNKNOWN_ERROR, f"Failed to get admin panel URL: {str(e)}"
+            )
+
+    # Server profiles (multi-server)
+    async def get_profiles(self) -> Dict[str, Any]:
+        """
+        List stored server profiles and the active profile id.
+
+        Returns:
+            { 'success': bool, 'activeId': str | None, 'profiles': [...] }
+        """
+        try:
+            return create_success_response(
+                {
+                    "activeId": profile_store.get_active_id(),
+                    "profiles": profile_store.list_profiles(),
+                }
+            )
+        except Exception as e:
+            return create_error_response(
+                ErrorCode.UNKNOWN_ERROR, f"Failed to list profiles: {str(e)}"
+            )
+
+    async def set_active_profile(self, profile_id: str) -> Dict[str, Any]:
+        """
+        Switch the active profile. If currently connected, reconnects
+        through the newly selected server.
+
+        Returns:
+            { 'success': bool, 'activeId': str, 'reconnected': bool }
+        """
+        try:
+            was_connected = (
+                get_connection_state().status == ConnectionStatus.CONNECTED
+            )
+            if not profile_store.set_active(profile_id):
+                return create_error_response(
+                    ErrorCode.INVALID_CONFIG, "Profile not found"
+                )
+
+            reconnected = False
+            if was_connected:
+                await self.toggle_connection(False)
+                result = await self.toggle_connection(True)
+                reconnected = bool(result.get("success", False))
+
+            return create_success_response(
+                {"activeId": profile_id, "reconnected": reconnected}
+            )
+        except Exception as e:
+            return create_error_response(
+                ErrorCode.UNKNOWN_ERROR, f"Failed to switch profile: {str(e)}"
+            )
+
+    async def remove_profile(self, profile_id: str) -> Dict[str, Any]:
+        """
+        Remove a profile from the list. The active profile of a live
+        connection cannot be removed.
+
+        Returns:
+            { 'success': bool, 'activeId': str | None }
+        """
+        try:
+            connection_state = get_connection_state()
+            if (
+                connection_state.status
+                in (ConnectionStatus.CONNECTED, ConnectionStatus.CONNECTING)
+                and profile_store.get_active_id() == profile_id
+            ):
+                return create_error_response(
+                    ErrorCode.CONNECTION_ACTIVE,
+                    "Disconnect before removing the active profile.",
+                )
+            if not profile_store.remove(profile_id):
+                return create_error_response(
+                    ErrorCode.INVALID_CONFIG, "Profile not found"
+                )
+            return create_success_response(
+                {"activeId": profile_store.get_active_id()}
+            )
+        except Exception as e:
+            return create_error_response(
+                ErrorCode.UNKNOWN_ERROR, f"Failed to remove profile: {str(e)}"
+            )
+
+    async def test_profiles_latency(self) -> Dict[str, Any]:
+        """
+        TCPing every stored profile concurrently and persist the results.
+
+        Returns:
+            { 'success': bool, 'results': { profileId: ms | None } }
+        """
+        try:
+            profiles = profile_store.list_profiles()
+            results = await test_profiles(profiles)
+            for profile_id, latency_ms in results.items():
+                profile_store.set_latency(profile_id, latency_ms)
+            return create_success_response({"results": results})
+        except Exception as e:
+            return create_error_response(
+                ErrorCode.UNKNOWN_ERROR, f"Latency test failed: {str(e)}"
             )
 
     async def validate_vless_config(self) -> Dict[str, Any]:
@@ -651,8 +758,8 @@ class Plugin:
                 system_proxy_pref["enabled"] = False
                 settings.setSetting("systemProxy", system_proxy_pref)
 
-            settings.setSetting("vlessConfig", None)
-            settings.commit()
+            # Clears the whole profile list and the legacy vlessConfig mirror.
+            profile_store.clear()
 
             try:
                 from decky import emit

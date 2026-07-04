@@ -18,6 +18,7 @@ from .config_parser import (
     parse_subscription,
     build_profile_config,
 )
+from .profile_store import ProfileStore
 
 
 def create_import_app(
@@ -85,23 +86,28 @@ def create_import_app(
             )
 
         try:
+            store = ProfileStore(settings)
+            now = int(time.time())
             parsed = parse_share_link(link)
-            config_type = "single"
-            if not parsed:
+            if parsed:
+                # Single link: append to the profile list and make it active.
+                config = build_profile_config(parsed, link, "single")
+                config["lastValidatedAt"] = now
+                store.add(config)
+            else:
+                # Subscription: store every node, first becomes active.
                 parsed_configs = parse_subscription(link)
                 if not parsed_configs:
                     return web.json_response(
                         {"success": False, "error": "Failed to parse share link"},
                         status=400,
                     )
-                parsed = parsed_configs[0]
-                config_type = "subscription"
-
-            config = build_profile_config(parsed, link, config_type)
-            config["lastValidatedAt"] = int(time.time())
-
-            settings.setSetting("vlessConfig", config)
-            settings.commit()
+                configs = []
+                for node in parsed_configs:
+                    config = build_profile_config(node, link, "subscription")
+                    config["lastValidatedAt"] = now
+                    configs.append(config)
+                store.replace_all(configs)
 
             if on_vless_saved is not None:
                 await on_vless_saved()

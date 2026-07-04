@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Multi-server profiles** (roadmap Phase 2, first cut): settings schema v2
+  stores a list of server profiles with an active selection; an existing
+  single config is migrated automatically and the legacy `vlessConfig` key
+  is kept in sync so older flows keep working. Importing a subscription now
+  stores **all** its nodes (previously only the first); importing a single
+  link appends to the list.
+- **Latency testing**: TCPing all profiles concurrently (bounded), results
+  persisted per profile (`test_profiles_latency` / `POST /api/v1/profiles/ping`).
+- **Server list in the web admin panel**: pick the active server (a live
+  connection reconnects through it automatically), per-row latency badges
+  (color-coded, `offline` for unreachable), protocol chips, remove buttons,
+  and a "Ping all" action — in the same Steam UI style.
+- New backend methods: `get_profiles`, `set_active_profile` (reconnects when
+  connected), `remove_profile` (refuses to remove the active profile of a
+  live connection), `test_profiles_latency`; admin REST endpoints
+  `GET /api/v1/profiles`, `POST /api/v1/profiles/activate|remove|ping`
+  (token-guarded, credentials redacted).
+
 - **Suspend/resume handling** (roadmap Phase 0): when the Deck wakes from
   sleep, the frontend notifies the backend (`handle_resume` via
   `SteamClient.System.RegisterForOnResumeFromSuspend`), which re-adds the
