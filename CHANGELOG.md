@@ -18,6 +18,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Subscription quota & expiry** (roadmap Phase 5): the standard
+  `Subscription-Userinfo` header (upload / download / total / expire) returned
+  by most subscription panels is now parsed on import and refresh, stored with
+  the subscription, and shown in the admin panel's subscription line as
+  used / total data and an expiry date.
+
 - **Update checker for the plugin and cores** (roadmap Phase 5): the admin
   panel's Updates card compares the plugin's own version (package.json) and
   the pinned xray-core / sing-box versions against their latest GitHub

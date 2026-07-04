@@ -263,7 +263,10 @@ see zero change.
 - Routing rules editor in the admin panel (direct/proxy/block by domain/geosite,
   per-app is not feasible with TUN alone — needs cgroup marking, research spike).
 - Profile import via Clash YAML / sing-box JSON; export.
-- Per-subscription user-info headers (traffic quota / expiry display).
+- Per-subscription user-info headers (traffic quota / expiry display). _(done —
+  the `Subscription-Userinfo` header is parsed on fetch/refresh, stored with the
+  subscription, and shown in the admin panel as used/total data and an expiry
+  date.)_
 - DNS hardening options (DoH upstream through the proxy, leak tests in diagnostics).
 - Localization of QAM + admin panel (EN/RU first). _(admin panel done —
   EN/RU with a top-bar language switch, auto-detected from the browser and

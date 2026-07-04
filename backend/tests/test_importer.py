@@ -40,9 +40,9 @@ def _run(coro):
     return asyncio.run(coro)
 
 
-def _patched_fetch(body):
+def _patched_fetch(body, userinfo=None):
     async def fake_fetch(_url, timeout=importer.FETCH_TIMEOUT):
-        return body
+        return importer.SubscriptionResponse(body, userinfo)
 
     return patch.object(importer, "fetch_subscription", fake_fetch)
 
@@ -82,6 +82,34 @@ def test_import_subscription_url_stores_all_and_meta():
     subscription = store.get_subscription()
     assert subscription["url"] == "https://sub.example.com/s"
     assert subscription["nodeCount"] == 2
+
+
+def test_parse_subscription_userinfo():
+    info = importer.parse_subscription_userinfo(
+        "upload=100; download=200; total=1000; expire=1719705600"
+    )
+    assert info == {
+        "upload": 100,
+        "download": 200,
+        "total": 1000,
+        "expire": 1719705600,
+    }
+    # Partial / messy input keeps what it can.
+    assert importer.parse_subscription_userinfo("total=500; junk; download=x") == {
+        "total": 500
+    }
+    assert importer.parse_subscription_userinfo("") is None
+    assert importer.parse_subscription_userinfo(None) is None
+    assert importer.parse_subscription_userinfo("nothing-here") is None
+
+
+def test_import_subscription_stores_userinfo():
+    store = _store()
+    userinfo = {"upload": 1, "download": 2, "total": 1000, "expire": 1719705600}
+    with _patched_fetch(f"{LINK_A}\n{LINK_B}\n", userinfo=userinfo):
+        result = _run(importer.import_link(store, "https://sub.example.com/s"))
+    assert result["success"] is True
+    assert store.get_subscription()["userinfo"] == userinfo
 
 
 def test_import_subscription_url_fetch_failure():
