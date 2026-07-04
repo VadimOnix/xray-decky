@@ -106,11 +106,10 @@ def test_replace_subscription_profiles_preserves_manual():
             _profile("s2.example.com", configType="subscription"),
         ]
     )
-    addresses = [p["address"] for p in store.list_profiles()]
-    # Manual server survives; the old subscription server is gone.
-    assert "manual.example.com" in addresses
-    assert "old-sub.example.com" not in addresses
-    assert "s1.example.com" in addresses and "s2.example.com" in addresses
+    addresses = {p["address"] for p in store.list_profiles()}
+    # Manual server survives; the old subscription server is gone; the two
+    # new subscription servers are present (exact set — no substring checks).
+    assert addresses == {"manual.example.com", "s1.example.com", "s2.example.com"}
     assert len(new_ids) == 2
 
 

@@ -124,8 +124,8 @@ def test_import_subscription_preserves_manual_profile():
         result = _run(importer.import_link(store, "https://sub.example.com/s"))
     assert result["success"] is True
     addresses = {p["address"] for p in store.list_profiles()}
-    assert "a.example.com" in addresses  # the manual server survived
-    assert "s1.example.com" in addresses and "s2.example.com" in addresses
+    # The manual server survives alongside the two new subscription servers.
+    assert addresses == {"a.example.com", "s1.example.com", "s2.example.com"}
 
 
 def test_import_subscription_url_fetch_failure():
