@@ -18,6 +18,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Admin panel localization (English / Russian)** (roadmap Phase 5): the
+  whole web panel is now translatable, with a top-bar language switch. The
+  language is auto-detected from the browser (`ru*` → Russian, otherwise
+  English) and remembered across visits; switching re-renders everything
+  live, including status text, toasts, the server list and the import hints.
+  Built as a dependency-free `data-i18n` layer over the existing vanilla JS.
+
 - **Live traffic speed graph in the admin panel** (roadmap Phase 3): the hero
   card now draws a real-time dual-line sparkline (download in green, upload in
   blue) of the last two minutes of traffic, scaled to the in-view peak, with

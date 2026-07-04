@@ -4,8 +4,278 @@
 
   var POLL_INTERVAL_MS = 3000
   var TOKEN_KEY = 'xray-decky-admin-token'
+  var LANG_KEY = 'xray-decky-admin-lang'
   // 40 samples at 3s each ≈ the last two minutes of traffic.
   var SPEED_HISTORY_MAX = 40
+
+  // ----- i18n (EN / RU) -----
+
+  var I18N = {
+    en: {
+      'lang.self': 'EN',
+      'lang.switch': 'Switch to Russian',
+      'lock.title': 'Pairing required',
+      'lock.desc':
+        'This panel is protected by a per-install token. Open the plugin on ' +
+        'your Steam Deck and scan the Admin panel QR code from the Options ' +
+        'tab, or paste the token below.',
+      'lock.ph': 'Admin token',
+      'lock.unlock': 'Unlock',
+      'lock.rejected': 'That token was rejected. Check the QR code in the plugin.',
+      'lock.expired': 'Session expired or token is invalid. Pair again.',
+      'st.connected.t': 'Connected',
+      'st.connected.s': 'Traffic is routed through the proxy',
+      'st.connecting.t': 'Connecting…',
+      'st.connecting.s': 'Starting xray-core',
+      'st.disconnected.t': 'Disconnected',
+      'st.disconnected.s': 'Proxy is idle',
+      'st.error.t': 'Error',
+      'st.error.s': 'Something went wrong',
+      'st.blocked.t': 'Blocked',
+      'st.blocked.s': 'Kill switch is active — traffic is stopped',
+      'st.unknown.t': 'Loading…',
+      'st.unknown.s': 'Fetching current status',
+      'hero.connect': 'Connect',
+      'hero.disconnect': 'Disconnect',
+      'hero.unblock': 'Unblock traffic',
+      'hero.upFor': 'Up for {t}',
+      'stat.total': 'total',
+      'graph.download': 'Download',
+      'graph.upload': 'Upload',
+      'graph.window': 'peak · last 2 min',
+      'servers.title': 'Servers',
+      'servers.pingAll': 'Ping all',
+      'servers.pinging': 'Pinging…',
+      'servers.empty': 'No servers yet. Use the import form to add one.',
+      'servers.footnote':
+        'Tap a server to make it active — a live connection switches over ' +
+        'automatically.',
+      'servers.offline': 'offline',
+      'servers.unnamed': 'Unnamed server',
+      'servers.activate': 'Activate {name}',
+      'servers.remove': 'Remove server',
+      'sub.info': 'Subscription · {n} servers · updated {date}',
+      'sub.refresh': 'Refresh',
+      'sub.refreshing': 'Refreshing…',
+      'options.title': 'Options',
+      'options.tun': 'TUN mode',
+      'options.tunDesc': 'Route all system traffic through the proxy',
+      'options.ks': 'Kill switch',
+      'options.ksDesc': 'Block all traffic if the proxy drops unexpectedly',
+      'options.tunNote':
+        'TUN mode is enabled but privileges are missing — see ' +
+        'INSTALLATION.md on the Deck.',
+      'import.title': 'Import configuration',
+      'import.seg': [
+        'Paste a ',
+        { mono: 'vless://' },
+        ', ',
+        { mono: 'vmess://' },
+        ', ',
+        { mono: 'trojan://' },
+        ', ',
+        { mono: 'ss://' },
+        ', ',
+        { mono: 'hysteria2://' },
+        ' or ',
+        { mono: 'tuic://' },
+        ' link, a subscription URL (',
+        { mono: 'https://…' },
+        ') or its base64 content.',
+      ],
+      'import.ph': 'vless:// / vmess:// / trojan:// / ss:// / hysteria2:// / tuic://',
+      'import.aria': 'Share link',
+      'import.save': 'Save',
+      'import.saved': 'Saved.',
+      'import.enter': 'Please enter a share link',
+      'import.failed': 'Import failed',
+      'toast.netErr': 'Network error',
+      'toast.removed': 'Server removed',
+      'toast.removeFail': 'Failed to remove server',
+      'toast.switched': 'Switched and reconnected',
+      'toast.activated': 'Server activated',
+      'toast.switchFail': 'Failed to switch server',
+      'toast.subRefreshed': 'Subscription refreshed',
+      'toast.refreshFail': 'Refresh failed',
+      'toast.latency': 'Latency updated',
+      'toast.pingFail': 'Ping failed',
+      'toast.connected': 'Connected',
+      'toast.disconnected': 'Disconnected',
+      'toast.actionFail': 'Action failed',
+      'toast.unblocked': 'Traffic unblocked',
+      'toast.unblockFail': 'Failed to unblock',
+      'toast.toggleOn': '{label} enabled',
+      'toast.toggleOff': '{label} disabled',
+      'toast.toggleFail': 'Failed to toggle {label}',
+    },
+    ru: {
+      'lang.self': 'RU',
+      'lang.switch': 'Переключить на английский',
+      'lock.title': 'Требуется сопряжение',
+      'lock.desc':
+        'Панель защищена персональным токеном. Откройте плагин на Steam Deck ' +
+        'и отсканируйте QR-код «Admin panel» на вкладке «Опции» или вставьте ' +
+        'токен ниже.',
+      'lock.ph': 'Токен доступа',
+      'lock.unlock': 'Разблокировать',
+      'lock.rejected': 'Токен отклонён. Проверьте QR-код в плагине.',
+      'lock.expired': 'Сессия истекла или токен неверен. Выполните сопряжение заново.',
+      'st.connected.t': 'Подключено',
+      'st.connected.s': 'Трафик идёт через прокси',
+      'st.connecting.t': 'Подключение…',
+      'st.connecting.s': 'Запуск xray-core',
+      'st.disconnected.t': 'Отключено',
+      'st.disconnected.s': 'Прокси не активен',
+      'st.error.t': 'Ошибка',
+      'st.error.s': 'Что-то пошло не так',
+      'st.blocked.t': 'Заблокировано',
+      'st.blocked.s': 'Kill switch активен — трафик остановлен',
+      'st.unknown.t': 'Загрузка…',
+      'st.unknown.s': 'Получение статуса',
+      'hero.connect': 'Подключить',
+      'hero.disconnect': 'Отключить',
+      'hero.unblock': 'Разблокировать трафик',
+      'hero.upFor': 'В сети {t}',
+      'stat.total': 'всего',
+      'graph.download': 'Загрузка',
+      'graph.upload': 'Отдача',
+      'graph.window': 'пик · за 2 мин',
+      'servers.title': 'Серверы',
+      'servers.pingAll': 'Пинг всех',
+      'servers.pinging': 'Пинг…',
+      'servers.empty': 'Серверов пока нет. Добавьте через форму импорта.',
+      'servers.footnote':
+        'Коснитесь сервера, чтобы сделать его активным — активное ' +
+        'подключение переключится автоматически.',
+      'servers.offline': 'недоступен',
+      'servers.unnamed': 'Без имени',
+      'servers.activate': 'Выбрать {name}',
+      'servers.remove': 'Удалить сервер',
+      'sub.info': 'Подписка · серверов: {n} · обновлено {date}',
+      'sub.refresh': 'Обновить',
+      'sub.refreshing': 'Обновление…',
+      'options.title': 'Опции',
+      'options.tun': 'Режим TUN',
+      'options.tunDesc': 'Направлять весь системный трафик через прокси',
+      'options.ks': 'Kill switch',
+      'options.ksDesc': 'Блокировать весь трафик при внезапном обрыве прокси',
+      'options.tunNote':
+        'Режим TUN включён, но нет прав — см. INSTALLATION.md на Deck.',
+      'import.title': 'Импорт конфигурации',
+      'import.seg': [
+        'Вставьте ссылку ',
+        { mono: 'vless://' },
+        ', ',
+        { mono: 'vmess://' },
+        ', ',
+        { mono: 'trojan://' },
+        ', ',
+        { mono: 'ss://' },
+        ', ',
+        { mono: 'hysteria2://' },
+        ' или ',
+        { mono: 'tuic://' },
+        ', URL подписки (',
+        { mono: 'https://…' },
+        ') или её base64-содержимое.',
+      ],
+      'import.ph': 'vless:// / vmess:// / trojan:// / ss:// / hysteria2:// / tuic://',
+      'import.aria': 'Ссылка',
+      'import.save': 'Сохранить',
+      'import.saved': 'Сохранено.',
+      'import.enter': 'Введите ссылку',
+      'import.failed': 'Ошибка импорта',
+      'toast.netErr': 'Ошибка сети',
+      'toast.removed': 'Сервер удалён',
+      'toast.removeFail': 'Не удалось удалить сервер',
+      'toast.switched': 'Переключено и переподключено',
+      'toast.activated': 'Сервер выбран',
+      'toast.switchFail': 'Не удалось сменить сервер',
+      'toast.subRefreshed': 'Подписка обновлена',
+      'toast.refreshFail': 'Не удалось обновить',
+      'toast.latency': 'Задержка обновлена',
+      'toast.pingFail': 'Ошибка пинга',
+      'toast.connected': 'Подключено',
+      'toast.disconnected': 'Отключено',
+      'toast.actionFail': 'Действие не выполнено',
+      'toast.unblocked': 'Трафик разблокирован',
+      'toast.unblockFail': 'Не удалось разблокировать',
+      'toast.toggleOn': '{label} включён',
+      'toast.toggleOff': '{label} выключен',
+      'toast.toggleFail': 'Не удалось переключить: {label}',
+    },
+  }
+
+  function detectLang() {
+    var saved = window.localStorage.getItem(LANG_KEY)
+    if (saved === 'en' || saved === 'ru') return saved
+    var nav = (window.navigator.language || 'en').toLowerCase()
+    return nav.indexOf('ru') === 0 ? 'ru' : 'en'
+  }
+
+  function t(key, params) {
+    var dict = I18N[state.lang] || I18N.en
+    var str = dict[key]
+    if (str === undefined) str = I18N.en[key] !== undefined ? I18N.en[key] : key
+    if (params) {
+      Object.keys(params).forEach(function (k) {
+        str = str.replace('{' + k + '}', params[k])
+      })
+    }
+    return str
+  }
+
+  function applyStaticI18n() {
+    document.documentElement.lang = state.lang
+    var nodes = document.querySelectorAll('[data-i18n]')
+    var i
+    for (i = 0; i < nodes.length; i++) {
+      nodes[i].textContent = t(nodes[i].getAttribute('data-i18n'))
+    }
+    renderImportHint()
+    var phNodes = document.querySelectorAll('[data-i18n-ph]')
+    for (i = 0; i < phNodes.length; i++) {
+      phNodes[i].setAttribute('placeholder', t(phNodes[i].getAttribute('data-i18n-ph')))
+    }
+    var ariaNodes = document.querySelectorAll('[data-i18n-aria]')
+    for (i = 0; i < ariaNodes.length; i++) {
+      ariaNodes[i].setAttribute('aria-label', t(ariaNodes[i].getAttribute('data-i18n-aria')))
+    }
+    if (els.langToggle) els.langToggle.textContent = t('lang.self')
+  }
+
+  // Build the import hint from structured segments (text + mono chips) using
+  // DOM nodes only — never innerHTML — so the scheme tokens can't be
+  // reinterpreted as markup.
+  function renderImportHint() {
+    var el = els.importSub
+    if (!el) return
+    var dict = I18N[state.lang] || I18N.en
+    var segs = dict['import.seg'] || I18N.en['import.seg']
+    el.textContent = ''
+    segs.forEach(function (seg) {
+      if (typeof seg === 'string') {
+        el.appendChild(document.createTextNode(seg))
+      } else {
+        var span = document.createElement('span')
+        span.className = 'mono'
+        span.textContent = seg.mono
+        el.appendChild(span)
+      }
+    })
+  }
+
+  function setLang(lang) {
+    state.lang = lang
+    window.localStorage.setItem(LANG_KEY, lang)
+    applyStaticI18n()
+    // Re-render dynamic strings that aren't driven by data-i18n attributes.
+    if (state.lastData) render(state.lastData)
+    if (state.lastProfiles) {
+      renderProfiles(state.lastProfiles.activeId, state.lastProfiles.profiles)
+      renderSubscription(state.lastProfiles.subscription)
+    }
+  }
 
   var els = {
     locked: document.getElementById('locked'),
@@ -39,10 +309,12 @@
     killswitchToggle: document.getElementById('killswitch-toggle'),
     optionsNote: document.getElementById('options-note'),
     importForm: document.getElementById('import-form'),
+    importSub: document.getElementById('import-sub'),
     importInput: document.getElementById('import-input'),
     importBtn: document.getElementById('import-btn'),
     importMsg: document.getElementById('import-msg'),
     toast: document.getElementById('toast'),
+    langToggle: document.getElementById('lang-toggle'),
   }
 
   var state = {
@@ -52,6 +324,9 @@
     pollTimer: null,
     toastTimer: null,
     speedHistory: [],
+    lang: 'en',
+    lastData: null,
+    lastProfiles: null,
   }
 
   // ----- token handling -----
@@ -111,13 +386,18 @@
 
   // ----- rendering -----
 
-  var STATUS_TEXT = {
-    connected: ['Connected', 'Traffic is routed through the proxy'],
-    connecting: ['Connecting…', 'Starting xray-core'],
-    disconnected: ['Disconnected', 'Proxy is idle'],
-    error: ['Error', 'Something went wrong'],
-    blocked: ['Blocked', 'Kill switch is active — traffic is stopped'],
-    unknown: ['Loading…', 'Fetching current status'],
+  var STATUS_KEYS = {
+    connected: 'connected',
+    connecting: 'connecting',
+    disconnected: 'disconnected',
+    error: 'error',
+    blocked: 'blocked',
+    unknown: 'unknown',
+  }
+
+  function statusText(status) {
+    var s = STATUS_KEYS[status] ? status : 'unknown'
+    return [t('st.' + s + '.t'), t('st.' + s + '.s')]
   }
 
   function formatBytes(bytes, perSecond) {
@@ -137,7 +417,7 @@
       els.statDown.textContent = formatBytes(stats.downlinkSpeed, true)
       els.statUp.textContent = formatBytes(stats.uplinkSpeed, true)
       els.statTotal.textContent =
-        formatBytes((stats.uplink || 0) + (stats.downlink || 0)) + ' total'
+        formatBytes((stats.uplink || 0) + (stats.downlink || 0)) + ' ' + t('stat.total')
       els.heroStats.hidden = false
       pushSpeedSample(stats.downlinkSpeed || 0, stats.uplinkSpeed || 0)
     } else {
@@ -273,11 +553,12 @@
   }
 
   function render(data) {
+    state.lastData = data
     var connection = data.connection || {}
     var status = connection.status || 'unknown'
     state.status = status
 
-    var text = STATUS_TEXT[status] || STATUS_TEXT.unknown
+    var text = statusText(status)
     els.statusPill.dataset.status = status
     els.statusPillText.textContent = text[0]
     els.statusOrb.dataset.status = status
@@ -286,7 +567,7 @@
     var sub = text[1]
     if (status === 'connected') {
       var uptime = formatUptime(connection.uptime)
-      if (uptime) sub = 'Up for ' + uptime
+      if (uptime) sub = t('hero.upFor', { t: uptime })
     } else if (status === 'error' && connection.errorMessage) {
       sub = connection.errorMessage
     }
@@ -297,10 +578,10 @@
     els.connectBtn.disabled = state.busy || (!connectable && status !== 'connected') || (connectable && !hasConfig)
     if (status === 'connected') {
       els.connectBtn.dataset.mode = 'disconnect'
-      els.connectBtnLabel.textContent = 'Disconnect'
+      els.connectBtnLabel.textContent = t('hero.disconnect')
     } else {
       delete els.connectBtn.dataset.mode
-      els.connectBtnLabel.textContent = 'Connect'
+      els.connectBtnLabel.textContent = t('hero.connect')
     }
     els.unblockBtn.hidden = status !== 'blocked'
 
@@ -310,8 +591,7 @@
       els.killswitchToggle.checked = Boolean(data.killSwitch && data.killSwitch.enabled)
     }
     if (data.tun && data.tun.enabled && !data.tun.hasPrivileges) {
-      els.optionsNote.textContent =
-        'TUN mode is enabled but privileges are missing — see INSTALLATION.md on the Deck.'
+      els.optionsNote.textContent = t('options.tunNote')
       els.optionsNote.hidden = false
     } else {
       els.optionsNote.hidden = true
@@ -327,7 +607,7 @@
       span.textContent = ms + ' ms'
       span.className = 'latency ' + (ms < 150 ? 'good' : ms < 400 ? 'ok' : 'bad')
     } else if (profile.latencyTestedAt) {
-      span.textContent = 'offline'
+      span.textContent = t('servers.offline')
       span.className = 'latency bad'
     } else {
       span.textContent = '— ms'
@@ -350,7 +630,7 @@
       row.className = 'server-row' + (profile.id === activeId ? ' active' : '')
       row.setAttribute(
         'aria-label',
-        'Activate ' + (profile.name || profile.address || 'server')
+        t('servers.activate', { name: profile.name || profile.address || 'server' })
       )
 
       var chip = document.createElement('span')
@@ -363,7 +643,7 @@
       main.className = 'server-row-main'
       var name = document.createElement('span')
       name.className = 'server-row-name'
-      name.textContent = profile.name || profile.address || 'Unnamed server'
+      name.textContent = profile.name || profile.address || t('servers.unnamed')
       var addr = document.createElement('span')
       addr.className = 'server-row-addr'
       addr.textContent =
@@ -381,7 +661,7 @@
       del.type = 'button'
       del.className = 'server-delete'
       del.textContent = '✕'
-      del.setAttribute('aria-label', 'Remove server')
+      del.setAttribute('aria-label', t('servers.remove'))
       del.addEventListener('click', function (e) {
         e.stopPropagation()
         api('/api/v1/profiles/remove', {
@@ -389,10 +669,10 @@
           body: JSON.stringify({ id: profile.id }),
         }).then(function (res) {
           if (res.status === 200 && res.data.success) {
-            toast('Server removed')
+            toast(t('toast.removed'))
             fetchProfiles()
           } else {
-            toast(res.data.error || 'Failed to remove server', true)
+            toast(res.data.error || t('toast.removeFail'), true)
           }
         })
       })
@@ -407,13 +687,9 @@
         ).then(function (res) {
           if (!res) return
           if (res.status === 200 && res.data.success) {
-            toast(
-              res.data.reconnected
-                ? 'Switched and reconnected'
-                : 'Server activated'
-            )
+            toast(res.data.reconnected ? t('toast.switched') : t('toast.activated'))
           } else {
-            toast(res.data.error || 'Failed to switch server', true)
+            toast(res.data.error || t('toast.switchFail'), true)
           }
           fetchProfiles()
         })
@@ -432,12 +708,11 @@
     if (subscription && subscription.url) {
       var updated = subscription.updatedAt
         ? new Date(subscription.updatedAt * 1000).toLocaleString()
-        : 'unknown'
-      els.subscriptionInfo.textContent =
-        'Subscription · ' +
-        (subscription.nodeCount || 0) +
-        ' servers · updated ' +
-        updated
+        : '—'
+      els.subscriptionInfo.textContent = t('sub.info', {
+        n: subscription.nodeCount || 0,
+        date: updated,
+      })
       els.subscriptionRow.hidden = false
     } else {
       els.subscriptionRow.hidden = true
@@ -448,6 +723,11 @@
     return api('/api/v1/profiles')
       .then(function (res) {
         if (res.status === 200 && res.data.success) {
+          state.lastProfiles = {
+            activeId: res.data.activeId,
+            profiles: res.data.profiles || [],
+            subscription: res.data.subscription,
+          }
           renderProfiles(res.data.activeId, res.data.profiles || [])
           renderSubscription(res.data.subscription)
         }
@@ -459,43 +739,43 @@
 
   els.refreshSubBtn.addEventListener('click', function () {
     els.refreshSubBtn.disabled = true
-    els.refreshSubBtn.textContent = 'Refreshing…'
+    els.refreshSubBtn.textContent = t('sub.refreshing')
     api('/api/v1/subscription/refresh', { method: 'POST' })
       .then(function (res) {
         if (res.status === 200 && res.data.success) {
-          toast('Subscription refreshed')
+          toast(t('toast.subRefreshed'))
         } else {
-          toast(res.data.error || 'Refresh failed', true)
+          toast(res.data.error || t('toast.refreshFail'), true)
         }
         return fetchProfiles()
       })
       .catch(function () {
-        toast('Network error', true)
+        toast(t('toast.netErr'), true)
       })
       .then(function () {
         els.refreshSubBtn.disabled = false
-        els.refreshSubBtn.textContent = 'Refresh'
+        els.refreshSubBtn.textContent = t('sub.refresh')
       })
   })
 
   els.pingBtn.addEventListener('click', function () {
     els.pingBtn.disabled = true
-    els.pingBtn.textContent = 'Pinging…'
+    els.pingBtn.textContent = t('servers.pinging')
     api('/api/v1/profiles/ping', { method: 'POST' })
       .then(function (res) {
         if (res.status === 200 && res.data.success) {
-          toast('Latency updated')
+          toast(t('toast.latency'))
         } else {
-          toast(res.data.error || 'Ping failed', true)
+          toast(res.data.error || t('toast.pingFail'), true)
         }
         return fetchProfiles()
       })
       .catch(function () {
-        toast('Network error', true)
+        toast(t('toast.netErr'), true)
       })
       .then(function () {
         els.pingBtn.disabled = false
-        els.pingBtn.textContent = 'Ping all'
+        els.pingBtn.textContent = t('servers.pingAll')
       })
   })
 
@@ -516,7 +796,7 @@
       if (res.status === 401) {
         stopPolling()
         sessionStorage.removeItem(TOKEN_KEY)
-        showLocked('Session expired or token is invalid. Pair again.')
+        showLocked(t('lock.expired'))
         return
       }
       if (res.status === 200 && res.data.success) {
@@ -553,7 +833,7 @@
     els.connectBtn.disabled = true
     return promise
       .catch(function () {
-        toast('Network error', true)
+        toast(t('toast.netErr'), true)
         return null
       })
       .then(function (res) {
@@ -574,9 +854,9 @@
     ).then(function (res) {
       if (!res) return
       if (res.status === 200 && res.data.success) {
-        toast(enable ? 'Connected' : 'Disconnected')
+        toast(enable ? t('toast.connected') : t('toast.disconnected'))
       } else {
-        toast(res.data.error || 'Action failed', true)
+        toast(res.data.error || t('toast.actionFail'), true)
       }
     })
   })
@@ -586,15 +866,15 @@
       function (res) {
         if (!res) return
         if (res.status === 200 && res.data.success) {
-          toast('Traffic unblocked')
+          toast(t('toast.unblocked'))
         } else {
-          toast(res.data.error || 'Failed to unblock', true)
+          toast(res.data.error || t('toast.unblockFail'), true)
         }
       }
     )
   })
 
-  function bindToggle(input, path, key, label) {
+  function bindToggle(input, path, key, labelKey) {
     input.addEventListener('change', function () {
       var value = input.checked
       var body = {}
@@ -602,26 +882,27 @@
       withBusy(api(path, { method: 'POST', body: JSON.stringify(body) })).then(
         function (res) {
           if (!res) return
+          var label = t(labelKey)
           if (res.status === 200 && res.data.success !== false) {
-            toast(label + (value ? ' enabled' : ' disabled'))
+            toast(t(value ? 'toast.toggleOn' : 'toast.toggleOff', { label: label }))
           } else {
             input.checked = !value
-            toast(res.data.error || 'Failed to toggle ' + label, true)
+            toast(res.data.error || t('toast.toggleFail', { label: label }), true)
           }
         }
       )
     })
   }
 
-  bindToggle(els.tunToggle, '/api/v1/tun', 'enabled', 'TUN mode')
-  bindToggle(els.killswitchToggle, '/api/v1/killswitch', 'enabled', 'Kill switch')
+  bindToggle(els.tunToggle, '/api/v1/tun', 'enabled', 'options.tun')
+  bindToggle(els.killswitchToggle, '/api/v1/killswitch', 'enabled', 'options.ks')
 
   els.importForm.addEventListener('submit', function (e) {
     e.preventDefault()
     var link = (els.importInput.value || '').trim()
     els.importMsg.hidden = true
     if (!link) {
-      els.importMsg.textContent = 'Please enter a share link'
+      els.importMsg.textContent = t('import.enter')
       els.importMsg.className = 'form-error'
       els.importMsg.hidden = false
       return
@@ -630,19 +911,19 @@
     api('/api/v1/import', { method: 'POST', body: JSON.stringify({ link: link }) })
       .then(function (res) {
         if (res.status === 200 && res.data.success) {
-          els.importMsg.textContent = 'Saved.'
+          els.importMsg.textContent = t('import.saved')
           els.importMsg.className = 'form-error ok'
           els.importInput.value = ''
           fetchProfiles()
         } else {
-          els.importMsg.textContent = res.data.error || 'Import failed'
+          els.importMsg.textContent = res.data.error || t('import.failed')
           els.importMsg.className = 'form-error'
         }
         els.importMsg.hidden = false
         return poll()
       })
       .catch(function () {
-        els.importMsg.textContent = 'Network error'
+        els.importMsg.textContent = t('toast.netErr')
         els.importMsg.className = 'form-error'
         els.importMsg.hidden = false
       })
@@ -665,10 +946,17 @@
         fetchProfiles()
       } else {
         state.token = null
-        showLocked('That token was rejected. Check the QR code in the plugin.')
+        showLocked(t('lock.rejected'))
       }
     })
   })
+
+  // Language toggle: flip EN ↔ RU, persist, re-render.
+  if (els.langToggle) {
+    els.langToggle.addEventListener('click', function () {
+      setLang(state.lang === 'ru' ? 'en' : 'ru')
+    })
+  }
 
   // Keep the canvas backing store aligned with its CSS size on resize.
   window.addEventListener('resize', function () {
@@ -677,6 +965,8 @@
 
   // ----- init -----
 
+  state.lang = detectLang()
+  applyStaticI18n()
   state.token = loadToken()
   if (state.token) {
     startPolling()

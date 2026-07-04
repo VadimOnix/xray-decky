@@ -265,7 +265,9 @@ see zero change.
 - Profile import via Clash YAML / sing-box JSON; export.
 - Per-subscription user-info headers (traffic quota / expiry display).
 - DNS hardening options (DoH upstream through the proxy, leak tests in diagnostics).
-- Localization of QAM + admin panel (EN/RU first).
+- Localization of QAM + admin panel (EN/RU first). _(admin panel done —
+  EN/RU with a top-bar language switch, auto-detected from the browser and
+  persisted; QAM localization remaining.)_
 - Telemetry-free update checker for the plugin and cores.
 - Automatic "connect on boot / on Wi-Fi X" rules.
 
