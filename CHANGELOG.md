@@ -18,6 +18,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Profile export** (roadmap Phase 5): the admin panel gains an **Export
+  servers** card that reveals a standard share link for every saved server
+  (`vless`/`vmess`/`trojan`/`ss`/`hysteria2`/`tuic`) plus a base64 subscription
+  blob, with copy-to-clipboard. Export is the exact inverse of the share-link
+  parser (round-trip tested), so a server survives a parse → export → parse
+  cycle unchanged. Because a share link *is* the credential, export is
+  deliberately un-redacted but produced only on an explicit, token-guarded
+  request (revealed behind a button, never in the passive list view). New
+  backend `export_profiles` RPC + token-guarded `GET /api/v1/export`
+  (`backend/src/exporter.py`).
+
 - **sing-box JSON config import** (roadmap Phase 5 / Phase 2 stretch): pasting a
   full sing-box config — or a bare `outbounds` array — now imports every server
   outbound (`vless`, `vmess`, `trojan`, `shadowsocks`, `hysteria2`, `tuic`).

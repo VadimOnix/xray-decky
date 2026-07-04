@@ -251,6 +251,56 @@
               Check whether newer core versions are available.
             </p>
           </section>
+
+          <!-- Export card -->
+          <section class="card" aria-labelledby="export-title">
+            <div class="card-head">
+              <h2 id="export-title" class="card-title" data-i18n="export.title">
+                Export servers
+              </h2>
+              <button
+                id="export-btn"
+                class="btn btn-ghost btn-small"
+                type="button"
+                data-i18n="export.reveal"
+              >
+                Reveal
+              </button>
+            </div>
+            <p id="export-hint" class="empty-note" data-i18n="export.hint">
+              Reveal share links for every saved server. They contain
+              credentials — handle with care.
+            </p>
+            <div id="export-result" hidden>
+              <p id="export-count" class="export-count"></p>
+              <textarea
+                id="export-text"
+                class="export-text"
+                readonly
+                rows="4"
+                aria-label="Exported servers"
+                data-i18n-aria="export.aria"
+              ></textarea>
+              <div class="export-actions">
+                <button
+                  id="export-copy-links"
+                  class="btn btn-ghost btn-small"
+                  type="button"
+                  data-i18n="export.copyLinks"
+                >
+                  Copy links
+                </button>
+                <button
+                  id="export-copy-sub"
+                  class="btn btn-ghost btn-small"
+                  type="button"
+                  data-i18n="export.copySub"
+                >
+                  Copy subscription
+                </button>
+              </div>
+            </div>
+          </section>
         </div>
       </div>
     </main>
