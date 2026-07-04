@@ -81,6 +81,41 @@ body {
   gap: 10px;
 }
 
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.lang-toggle {
+  appearance: none;
+  cursor: pointer;
+  min-width: 44px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--line);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  transition:
+    border-color 0.15s,
+    color 0.15s;
+}
+
+.lang-toggle:hover {
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.lang-toggle:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
 .brand-glyph {
   width: 26px;
   height: 26px;
