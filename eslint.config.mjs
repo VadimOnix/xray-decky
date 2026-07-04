@@ -24,6 +24,18 @@ export default [
       },
     },
   },
+  {
+    // No-build browser scripts for the GitHub Pages site.
+    files: ['docs/scripts/**/*.js'],
+    languageOptions: {
+      sourceType: 'script',
+      globals: {
+        window: 'readonly',
+        document: 'readonly',
+        IntersectionObserver: 'readonly',
+      },
+    },
+  },
   ...tseslint.configs.recommended,
   {
     files: ['**/*.{ts,tsx}'],
