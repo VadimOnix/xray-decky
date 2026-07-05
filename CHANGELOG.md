@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0-alpha.1] - 2026-07-05
+
+> **⚠️ Work in progress.** This alpha is being tested by the author on real
+> hardware and is not ready for daily use — please don't install it yet.
+> Grab it only if you want to help test and develop the project.
+
 ### Added
 
 - **Release automation on master** (`.github/workflows/auto-release.yml`):

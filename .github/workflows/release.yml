@@ -114,10 +114,25 @@ jobs:
           cd release
           zip -r "${PLUGIN_NAME}-v${VERSION}.zip" "$PLUGIN_NAME"
 
+      - name: Compose release notes header
+        run: |
+          : > release-body.md
+          # Pre-release versions get a prominent WIP warning on top of the
+          # auto-generated notes.
+          if [[ "${GITHUB_REF_NAME}" == *-* ]]; then
+            cat > release-body.md <<'BODY'
+          > [!WARNING]
+          > **Work in progress.** This pre-release is currently being tested by the author on real hardware and is **not ready for daily use** — please don't install it yet.
+          > Grab it only if you want to help test and develop the project: rough edges are expected, and every [reported issue](https://github.com/VadimOnix/xray-decky/issues) helps.
+
+          BODY
+          fi
+
       - name: Upload release
         uses: softprops/action-gh-release@v3
         with:
           files: release/*.zip
+          body_path: release-body.md
           generate_release_notes: true
           # v2.0.0-alpha.1 / -beta / -rc versions are marked as pre-releases.
           prerelease: ${{ contains(github.ref_name, '-') }}

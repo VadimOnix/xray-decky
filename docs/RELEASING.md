@@ -43,8 +43,15 @@ Before creating a release tag:
 
 Releases are fully automated by `.github/workflows/auto-release.yml`:
 
-1. Bump `version` in `package.json` and move `[Unreleased]` CHANGELOG entries into a new version section (one PR).
+1. Run `scripts/prepare-release.sh <version>` (e.g. `2.0.0-alpha.1`) — it bumps
+   `package.json` and rolls the `[Unreleased]` CHANGELOG entries into a new
+   dated version section in one step. Review the diff and open a PR.
 2. Merge it to `master`.
+
+CI refuses a `package.json` version that has no matching CHANGELOG section
+(unless that version is already tagged), so a release can't ship without its
+changelog slice. Pre-release versions (`-alpha`/`-beta`/`-rc`) additionally
+get a prominent work-in-progress warning on top of the GitHub release notes.
 
 On the push to `master`, the Auto Release workflow sees that `package.json`
 now carries a version with no matching `v<version>` tag, creates the tag on
