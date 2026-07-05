@@ -6,36 +6,53 @@ Setting up the environment from scratch (Decky on Deck, SSH, one-time sudo for w
 
 ## Watch mode (continuous UI delivery)
 
-For UI development the plugin is configured so that on each save the frontend is rebuilt and automatically synced to the Steam Deck.
-
-### Running watch with auto-deploy
-
-**Option 1 — from terminal**
+For UI development, rebuild the frontend on each save and sync to the Deck when ready:
 
 ```bash
-pnpm run watch
+pnpm run watch     # rebuilds src/ on every save
+pnpm run deploy    # build + sync to the Deck over SSH (set DECK_RESTART=1 to restart Decky too)
 ```
 
-After each rebuild (when files in `src/` change), the `deploy-sync.sh` script copies the plugin to the Deck over SSH. Ensure SSH access to host `steamdeck` is configured (see below).
-
-**How to see changes on the Deck:** after deploy, close Quick Access (⋯) and open it again — the plugin will pick up the new bundle. If passwordless sudo for `systemctl restart plugin_loader` is set up on the Deck, Decky will restart automatically and this step is not needed (see the Decky restart section below).
-
-**Option 2 — from VS Code / Cursor**
-
-1. **Terminal → Run Task…** (or `Cmd+Shift+P` → "Tasks: Run Task").
-2. Select the **watch** (or **watch-and-deploy**) task.
-3. In the terminal panel, `pnpm run watch` will run; after each build, sync to the Deck will run.
+**How to see changes on the Deck:** after deploy, close Quick Access (⋯) and open it again — the plugin will pick up the new bundle. If passwordless sudo for `systemctl restart plugin_loader` is set up on the Deck, `DECK_RESTART=1 pnpm run deploy` restarts Decky automatically (see the Decky restart section below).
 
 ### Manual deploy
 
-- Full build + deploy: `pnpm run deploy` or `./deploy.sh`
-- Sync only (no build): `./deploy-sync.sh`
+- Full build + deploy: `pnpm run deploy` (or `./deploy.sh`)
+- Build + zip + upload the zip to the Deck: `pnpm run package`
+- Build + zip locally (no device): `pnpm run package:local`
+
+All three share the same staging step (`scripts/stage-plugin.sh`), so the
+file set on the device always matches the packaged one.
+
+### Deploy configuration
+
+Nothing is hardcoded — the deploy scripts read environment variables, with
+an optional `.deckdeployrc` file in the repo root (gitignored, plain shell
+assignments) for per-developer defaults:
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `DECK_HOST` | `steamdeck` | ssh destination (host alias or `user@ip`) |
+| `DECK_PLUGINS_DIR` | `/home/deck/homebrew/plugins` | Decky plugins dir on the device |
+| `DECK_RESTART` | `0` | `1` = restart `plugin_loader` after deploy (needs sudo on the device) |
+| `DECK_UPLOAD_DIR` | `~/Downloads` | where `pnpm run package` uploads the zip |
+
+Example `.deckdeployrc`:
+
+```bash
+DECK_HOST=deck@192.168.1.50
+DECK_RESTART=1
+```
+
+The plugin name and version come from `package.json`; the device's `bin/`
+directory (the self-healed xray-core) is preserved across deploys.
 
 ---
 
 ## SSH connection to Steam Deck
 
-Deploy goes over SSH to host `steamdeck` into directory `/home/deck/homebrew/plugins/xray-decky/`.
+Deploy goes over SSH to `DECK_HOST` (default `steamdeck`) into
+`DECK_PLUGINS_DIR/<plugin name>` (default `/home/deck/homebrew/plugins/xray-decky`).
 
 ### 1. Check connection
 
@@ -44,12 +61,6 @@ ssh steamdeck "echo OK"
 ```
 
 If it prompts for a password — enter it once or set up keys (see below).
-
-Check with password from environment variable (no interactive input):
-
-```bash
-DECK_SSH_PASS=0000 ./scripts/test-ssh.expect deck@steamdeck
-```
 
 ### 2. Host configuration (if needed)
 

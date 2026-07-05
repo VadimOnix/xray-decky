@@ -67,3 +67,8 @@ backend/out/xray-core
 backend/out/geoip.dat
 backend/out/geosite.dat
 backend/out/*.zip
+
+# Local deploy configuration (per-developer Deck host/paths)
+.deckdeployrc
+# Locally packaged plugin zips (repo root only)
+/*.zip

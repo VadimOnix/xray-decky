@@ -14,9 +14,8 @@
     "format": "prettier --write 'src/**/*.{ts,tsx,js,json}' '*.{json,mjs}'",
     "test": "echo 'No frontend tests configured'",
     "deploy": "./deploy.sh",
-    "deploy:simple": "pnpm run build && rsync -avz --delete --progress --timeout=30 --partial -e 'ssh -o ServerAliveInterval=10 -o ServerAliveCountMax=3' dist/ package.json plugin.json main.py LICENSE.md backend/src/ backend/static/ steamdeck:/home/deck/homebrew/plugins/xray-decky/",
     "package": "./package-and-deploy.sh",
-    "package:local": "pnpm run build && mkdir -p dist-package/xray-decky && cp -r dist package.json plugin.json main.py LICENSE.md dist-package/xray-decky/ && mkdir -p dist-package/xray-decky/backend && cp -r backend/src dist-package/xray-decky/backend/ && (test -d backend/static && cp -r backend/static dist-package/xray-decky/backend/ || true) && cd dist-package && zip -r ../xray-decky-v0.3.0-alpha.1.zip xray-decky && cd .. && rm -rf dist-package && echo '✅ ZIP created: xray-decky-v0.3.0-alpha.1.zip'"
+    "package:local": "./scripts/package-local.sh"
   },
   "repository": {
     "type": "git",
