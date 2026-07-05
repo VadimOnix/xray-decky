@@ -140,6 +140,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          # Tags are needed by the CHANGELOG check to exempt versions that
+          # are already released.
+          fetch-tags: true
       - name: Check mandatory files
         run: |
           test -f plugin.json || (echo "plugin.json missing" && exit 1)
@@ -166,6 +170,23 @@ jobs:
             done
           done
           echo "Metadata and pin files OK (version: $VERSION)"
+      - name: Require a CHANGELOG section for the current version
+        run: |
+          # Merging a version bump to master publishes a release
+          # (auto-release.yml), so the release must never ship without its
+          # CHANGELOG slice. scripts/prepare-release.sh creates both at once.
+          VERSION=$(jq -r '.version' package.json)
+          if grep -q "^## \[${VERSION}\]" CHANGELOG.md; then
+            echo "CHANGELOG.md has a [${VERSION}] section"
+          elif git rev-parse -q --verify "refs/tags/v${VERSION}" >/dev/null 2>&1; then
+            # Already-released versions (e.g. historical 1.0.1) are exempt —
+            # the check only gates versions that would trigger a new release.
+            echo "v${VERSION} is already tagged; CHANGELOG section not required"
+          else
+            echo "::error::package.json is at ${VERSION}, but CHANGELOG.md has no '## [${VERSION}]' section."
+            echo "::error::Run scripts/prepare-release.sh ${VERSION} to roll [Unreleased] into it."
+            exit 1
+          fi
 
   package-plugin:
     name: Package Plugin (dry run)
