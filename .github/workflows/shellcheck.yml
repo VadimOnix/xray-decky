@@ -12,6 +12,9 @@ on:
       - "*.sh"
       - ".github/workflows/shellcheck.yml"
 
+permissions:
+  contents: read
+
 jobs:
   shellcheck:
     name: Check shell scripts
@@ -23,4 +26,5 @@ jobs:
         with:
           # Cover both scripts/ and the root deploy scripts.
           scandir: "."
-          ignore_paths: node_modules dist
+          # .specify is third-party spec-kit scaffolding, not shipped code.
+          ignore_paths: node_modules dist .specify
