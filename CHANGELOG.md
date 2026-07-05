@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Deploy tooling has no hardcoded values anymore**: `deploy.sh`,
+  `package-and-deploy.sh` and the new `scripts/package-local.sh` read the
+  Deck host / plugins dir / upload dir from environment variables (or an
+  optional gitignored `.deckdeployrc`), and take the plugin name, version
+  and zip filename from `package.json`. All three now share one staging
+  step (`scripts/stage-plugin.sh`), so the deployed file set can't drift
+  from the packaged one; a deploy also preserves the device's `bin/`
+  directory (the self-healed xray-core) instead of deleting it. The stale
+  `deploy:simple` / `package:local` inline npm scripts (hardcoded host and
+  an old zip name) were replaced.
+
 ### Security
 
 - **Admin API auth rate limiting** (roadmap Phase 3): repeated failed token
