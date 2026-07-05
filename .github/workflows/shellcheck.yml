@@ -4,10 +4,12 @@ on:
   push:
     paths:
       - "scripts/**"
+      - "*.sh"
       - ".github/workflows/shellcheck.yml"
   pull_request:
     paths:
       - "scripts/**"
+      - "*.sh"
       - ".github/workflows/shellcheck.yml"
 
 jobs:
@@ -19,4 +21,6 @@ jobs:
       - name: Run ShellCheck
         uses: ludeeus/action-shellcheck@master
         with:
-          scandir: "scripts"
+          # Cover both scripts/ and the root deploy scripts.
+          scandir: "."
+          ignore_paths: node_modules dist

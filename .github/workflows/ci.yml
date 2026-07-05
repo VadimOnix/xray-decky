@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [ master ]
 
+# Superseded runs on the same branch/PR are cancelled to save queue time.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   prepare-frontend:
     name: Prepare Frontend
@@ -139,3 +144,51 @@ jobs:
           test -f LICENSE.md || (echo "LICENSE.md missing" && exit 1)
           test -f main.py || (echo "main.py missing" && exit 1)
           echo "All mandatory files present"
+      - name: Validate metadata and pinned-version files
+        run: |
+          # plugin.json / package.json must be valid JSON.
+          jq -e . plugin.json > /dev/null
+          jq -e . package.json > /dev/null
+          # package.json version must be semver-ish (release automation tags v<version>).
+          VERSION=$(jq -r '.version' package.json)
+          echo "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$' \
+            || (echo "package.json version '$VERSION' is not semver" && exit 1)
+          # Core pin files are read at runtime by the self-heal downloader and
+          # at release time by the workflow — a broken pin breaks both.
+          for pin in backend/src/xray_version.json backend/src/singbox_version.json; do
+            jq -e . "$pin" > /dev/null || (echo "$pin is not valid JSON" && exit 1)
+            for field in repo asset version; do
+              jq -er ".${field} // empty" "$pin" | grep -q . \
+                || (echo "$pin missing '$field'" && exit 1)
+            done
+          done
+          echo "Metadata and pin files OK (version: $VERSION)"
+
+  package-plugin:
+    name: Package Plugin (dry run)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 9
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '18'
+          cache: 'pnpm'
+      - run: pnpm install
+      - name: Build and package (same staging as deploy/release)
+        run: ./scripts/package-local.sh
+      - name: Verify package contents
+        run: |
+          NAME=$(node -p "require('./package.json').name")
+          VERSION=$(node -p "require('./package.json').version")
+          ZIP="${NAME}-v${VERSION}.zip"
+          test -f "$ZIP" || (echo "$ZIP was not produced" && exit 1)
+          for f in dist/index.js main.py package.json plugin.json LICENSE.md \
+                   recover.sh backend/__init__.py backend/src/__init__.py \
+                   backend/src/xray_version.json backend/static/admin.html; do
+            unzip -l "$ZIP" | grep -q "${NAME}/${f}" \
+              || (echo "Missing ${f} in ${ZIP}" && exit 1)
+          done
+          echo "Package contains all required files"

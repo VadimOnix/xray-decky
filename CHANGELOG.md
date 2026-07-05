@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Release automation on master** (`.github/workflows/auto-release.yml`):
+  merging a `package.json` version bump to `master` now tags that commit
+  (`v<version>`) and dispatches the Release workflow automatically — the
+  version bump is the single deliberate release act. Versions with a `-`
+  (e.g. `2.0.0-alpha.1`) are published as pre-releases. Manually pushed
+  `v*` tags keep working.
+- **New CI checks**: a *Package Plugin (dry run)* job builds the real zip
+  through the shared staging script on every PR and asserts the required
+  files are inside (a broken release file set now fails CI, not the
+  release); plugin/package metadata and the xray-core / sing-box pin files
+  are validated (valid JSON, semver version, repo/asset/version fields);
+  ShellCheck now also covers the root `deploy.sh` / `package-and-deploy.sh`;
+  superseded CI runs on the same PR are cancelled.
+
 ### Changed
 
 - **Deploy tooling has no hardcoded values anymore**: `deploy.sh`,
