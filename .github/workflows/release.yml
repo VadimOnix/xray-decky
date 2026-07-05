@@ -1,9 +1,12 @@
 name: Release
 
+# Fires on a manually pushed v* tag, or dispatched on a tag ref by the
+# Auto Release workflow (tags pushed with GITHUB_TOKEN don't fire `on: push`).
 on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 env:
   PLUGIN_NAME: "xray-decky"
@@ -15,6 +18,17 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Ensure this runs on a release tag
+        run: |
+          case "$GITHUB_REF" in
+            refs/tags/v*) echo "Releasing $GITHUB_REF" ;;
+            *)
+              echo "::error::Release must run on a v* tag ref (got $GITHUB_REF)."
+              echo "::error::Dispatch it with --ref v<version>, or push the tag."
+              exit 1
+              ;;
+          esac
+
       - uses: actions/checkout@v6
 
       - uses: pnpm/action-setup@v6
@@ -105,5 +119,7 @@ jobs:
         with:
           files: release/*.zip
           generate_release_notes: true
+          # v2.0.0-alpha.1 / -beta / -rc versions are marked as pre-releases.
+          prerelease: ${{ contains(github.ref_name, '-') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,52 @@
+name: Auto Release
+
+# Release automation: when a push to master changes package.json and its
+# version has no matching v<version> tag yet, tag that commit and kick off
+# the Release workflow. Bumping the version in package.json (plus moving
+# CHANGELOG entries) is therefore the one deliberate act that publishes a
+# release — see docs/RELEASING.md.
+on:
+  push:
+    branches: [master]
+    paths:
+      - package.json
+
+permissions:
+  contents: write # push the release tag
+  actions: write # dispatch the Release workflow
+
+jobs:
+  tag-and-release:
+    name: Tag & trigger release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0 # full history so existing tags are visible
+
+      - name: Create tag for the package.json version (if missing)
+        id: tag
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          TAG="v${VERSION}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+            echo "Tag ${TAG} already exists — no release to make."
+            echo "created=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "${TAG}" -m "Release ${TAG}"
+          git push origin "${TAG}"
+          echo "created=true" >> "$GITHUB_OUTPUT"
+          echo "Created and pushed ${TAG}"
+
+      # Tags pushed with GITHUB_TOKEN deliberately do not fire `on: push`
+      # workflows (recursion guard), so dispatch the Release workflow
+      # explicitly — workflow_dispatch is the documented exception.
+      - name: Trigger the Release workflow
+        if: steps.tag.outputs.created == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run release.yml --ref "${{ steps.tag.outputs.tag }}"
