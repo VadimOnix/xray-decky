@@ -3,211 +3,348 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Xray Decky — Decky Loader plugin for Steam Deck that enables VLESS proxy connections with Reality protocol support.">
-  <title>Xray Decky – VLESS Proxy for Steam Deck</title>
-  <link rel="preload" href="styles/main.css" as="style">
-  <link rel="preload" href="assets/hero-banner-800w.avif" as="image">
+  <meta name="description" content="Xray Decky — a full proxy client for Steam Deck. VLESS, VMess, Trojan and Shadowsocks, multi-server subscriptions, TUN mode, kill switch and a LAN web admin panel.">
+  <title>Xray Decky — Proxy Client for Steam Deck</title>
+  <meta property="og:title" content="Xray Decky — Proxy Client for Steam Deck">
+  <meta property="og:description" content="VLESS, VMess, Trojan and Shadowsocks on Steam Deck: subscriptions, TUN mode, kill switch and a web admin panel on your phone.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://vadimonix.github.io/xray-decky/assets/hero-banner-800w.png">
   <link rel="stylesheet" href="styles/main.css">
 </head>
 <body>
   <!-- Navigation -->
-  <nav class="site-nav" aria-label="Main navigation">
+  <nav class="site-nav" id="site-nav" aria-label="Main navigation">
     <div class="nav-inner">
-      <a href="#" class="nav-brand">Xray Decky</a>
+      <a href="#" class="nav-brand"><span class="nav-logo" aria-hidden="true"></span>Xray&nbsp;<b>Decky</b></a>
       <ul class="nav-links">
         <li><a href="#features">Features</a></li>
+        <li><a href="#panel">Admin panel</a></li>
         <li><a href="#install">Install</a></li>
-        <li><a href="#usage">Usage</a></li>
-        <li><a href="#troubleshooting">Help</a></li>
-        <li><a href="https://github.com/VadimOnix/xray-decky" class="nav-github" target="_blank" rel="noopener"><span class="nav-github-long">GitHub ↗</span><span class="nav-github-short">GitHub</span></a></li>
+        <li><a href="#faq">Help</a></li>
+        <li><a href="https://github.com/VadimOnix/xray-decky" class="nav-github" target="_blank" rel="noopener">GitHub&nbsp;↗</a></li>
       </ul>
     </div>
   </nav>
 
   <!-- Hero -->
-  <header>
-    <section class="hero" aria-labelledby="hero-title">
-      <picture>
-        <source type="image/avif" srcset="assets/hero-banner-400w.avif 400w, assets/hero-banner-800w.avif 800w, assets/hero-banner-1200w.avif 1200w" sizes="(max-width: 800px) 100vw, 800px">
-        <source type="image/webp" srcset="assets/hero-banner-400w.webp 400w, assets/hero-banner-800w.webp 800w, assets/hero-banner-1200w.webp 1200w" sizes="(max-width: 800px) 100vw, 800px">
-        <img src="assets/hero-banner-800w.png" srcset="assets/hero-banner-800w.png 800w" sizes="(max-width: 800px) 100vw, 800px" alt="Xray Decky — Steam Deck with secure proxy connection visualization" class="hero-image" width="1200" height="400" fetchpriority="high">
-      </picture>
-      <h1 id="hero-title">Xray Decky</h1>
-      <p class="hero-purpose">VLESS proxy connections with Reality protocol support for Steam Deck.</p>
-      <p class="hero-platform">Steam Deck &middot; Decky Loader &middot; Open Source</p>
-      <div class="hero-actions">
-        <a href="#install" class="btn btn-primary">Install Plugin</a>
-        <a href="https://github.com/VadimOnix/xray-decky" class="btn btn-secondary" target="_blank" rel="noopener">View on GitHub</a>
+  <header class="hero" id="top">
+    <div class="hero-glow" aria-hidden="true"></div>
+    <div class="hero-inner">
+      <div class="hero-copy">
+        <p class="hero-badge"><span class="badge-alpha">ALPHA</span> Steam Deck · Decky Loader · Open source</p>
+        <h1 id="hero-title">A real proxy client.<br>On your <span class="grad">Steam&nbsp;Deck</span>.</h1>
+        <p class="hero-purpose">
+          VLESS · VMess · Trojan · Shadowsocks with REALITY and modern transports.
+          Subscriptions with a managed server list, TUN mode, kill switch, live
+          traffic stats — and a full web admin panel you open from your phone.
+        </p>
+        <div class="hero-actions">
+          <a href="#install" class="btn btn-primary">Install plugin</a>
+          <a href="https://github.com/VadimOnix/xray-decky" class="btn btn-secondary" target="_blank" rel="noopener">View on GitHub</a>
+        </div>
+        <ul class="hero-stats" aria-label="Project facts">
+          <li><b data-countup="7">0</b><span>protocols parsed</span></li>
+          <li><b data-countup="185">0</b><span>backend tests</span></li>
+          <li><b>EN·RU</b><span>two languages</span></li>
+          <li><b>MIT</b><span>license</span></li>
+        </ul>
       </div>
-    </section>
+
+      <!-- Animated demo: Steam Deck (QAM) + phone (admin panel) -->
+      <div class="hero-demo" id="demo" data-state="idle" aria-label="Animated demo: the plugin on a Steam Deck next to the web admin panel on a phone">
+        <div class="demo-stage">
+        <!-- Steam Deck -->
+        <div class="deck" aria-hidden="true">
+          <div class="deck-side deck-side-l">
+            <span class="deck-mini-btn"></span>
+            <div class="deck-stick"></div>
+            <div class="deck-dpad"></div>
+            <div class="deck-trackpad"></div>
+            <span class="deck-sys-btn deck-steam-btn"></span>
+          </div>
+          <div class="deck-screen">
+            <div class="deck-game">
+              <div class="deck-game-sky"></div>
+              <div class="deck-game-hills"></div>
+              <div class="deck-game-hud"><span></span><span></span></div>
+            </div>
+            <div class="qam">
+              <div class="qam-head">
+                <span class="qam-logo"></span>
+                <span class="qam-title">XRAY DECKY</span>
+              </div>
+              <div class="qam-status">
+                <span class="qam-dot"></span>
+                <span class="qam-status-text" data-demo="deck-status">Disconnected</span>
+              </div>
+              <div class="qam-row">
+                <span>Enable connection</span>
+                <span class="qam-switch"><span class="qam-knob"></span></span>
+              </div>
+              <div class="qam-speed">
+                <span class="spd-down">▼ <b data-demo="deck-down">0 KB/s</b></span>
+                <span class="spd-up">▲ <b data-demo="deck-up">0 KB/s</b></span>
+              </div>
+              <div class="qam-server">
+                <span class="qam-proto">VLESS</span>
+                <span class="qam-server-name">DE · Frankfurt</span>
+                <span class="qam-lat" data-demo="deck-lat">— ms</span>
+              </div>
+              <div class="qam-opts">
+                <span class="qam-opt on">TUN</span>
+                <span class="qam-opt">Kill switch</span>
+              </div>
+            </div>
+          </div>
+          <div class="deck-side deck-side-r">
+            <span class="deck-mini-btn"></span>
+            <div class="deck-stick"></div>
+            <div class="deck-btns"><i></i><i></i><i></i><i></i></div>
+            <div class="deck-trackpad"></div>
+            <span class="deck-sys-btn deck-qam-btn">···</span>
+          </div>
+        </div>
+
+        <!-- Phone with the admin panel -->
+        <div class="phone" aria-hidden="true">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="ph-topbar">
+              <span class="ph-brand">XRAY <b>DECKY</b></span>
+              <span class="ph-pill" data-demo="phone-pill">OFFLINE</span>
+            </div>
+            <div class="ph-hero">
+              <span class="ph-orb"></span>
+              <span class="ph-hero-text">
+                <b data-demo="phone-status">Disconnected</b>
+                <i data-demo="phone-sub">Proxy is idle</i>
+              </span>
+            </div>
+            <div class="ph-chips">
+              <span class="chip chip-down">▼ <b data-demo="phone-down">0 KB/s</b></span>
+              <span class="chip chip-up">▲ <b data-demo="phone-up">0 KB/s</b></span>
+            </div>
+            <svg class="ph-graph" viewBox="0 0 100 26" preserveAspectRatio="none">
+              <polyline class="ph-line ph-line-down" data-demo="line-down" points=""></polyline>
+              <polyline class="ph-line ph-line-up" data-demo="line-up" points=""></polyline>
+            </svg>
+            <div class="ph-servers">
+              <div class="ph-server is-active">
+                <span class="ph-proto">VLESS</span><span class="ph-name">DE · Frankfurt</span><span class="ph-lat" data-demo="lat-1">—</span>
+              </div>
+              <div class="ph-server">
+                <span class="ph-proto">TROJAN</span><span class="ph-name">NL · Amsterdam</span><span class="ph-lat" data-demo="lat-2">—</span>
+              </div>
+              <div class="ph-server">
+                <span class="ph-proto">SS</span><span class="ph-name">FI · Helsinki</span><span class="ph-lat" data-demo="lat-3">—</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        </div>
+
+        <p class="demo-caption">Quick Access on the Deck&nbsp;·&nbsp;admin panel on your phone — one tap to connect</p>
+      </div>
+    </div>
   </header>
 
   <main>
+    <!-- Protocol strip -->
+    <section class="protocols reveal" aria-label="Supported protocols">
+      <div class="proto-strip">
+        <span class="proto-chip">VLESS + REALITY</span>
+        <span class="proto-chip">VMess</span>
+        <span class="proto-chip">Trojan</span>
+        <span class="proto-chip">Shadowsocks</span>
+        <span class="proto-chip proto-chip-soon">Hysteria2*</span>
+        <span class="proto-chip proto-chip-soon">TUIC*</span>
+        <span class="proto-note">* import today, connectivity via the sing-box core is on the roadmap</span>
+      </div>
+    </section>
+
     <!-- Features -->
     <section class="features" id="features" aria-labelledby="features-title">
-      <h2 id="features-title">Features</h2>
-      <ul class="feature-list">
-        <li class="feature-card">
-          <picture>
-            <source type="image/avif" srcset="assets/features/import-128w.avif 128w, assets/features/import-256w.avif 256w" sizes="64px">
-            <source type="image/webp" srcset="assets/features/import-128w.webp 128w, assets/features/import-256w.webp 256w" sizes="64px">
-            <img src="assets/features/import-256w.png" alt="Import VLESS configuration icon" class="feature-icon" width="256" height="256" loading="lazy">
-          </picture>
-          <div class="feature-text">
-            <h3>Import VLESS Configurations</h3>
-            <p>Import VLESS configurations via URL — single node or subscription. Supports the standard <code>vless://</code> URL format with Reality protocol parameters.</p>
-          </div>
+      <h2 id="features-title" class="reveal">Everything a proxy client should do</h2>
+      <ul class="feature-grid">
+        <li class="feature-card reveal">
+          <span class="f-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v10m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg></span>
+          <h3>One-paste import</h3>
+          <p>Paste any <code>vless://</code>, <code>vmess://</code>, <code>trojan://</code> or <code>ss://</code> link, a subscription URL, its base64 body — or a whole sing-box JSON config.</p>
         </li>
-        <li class="feature-card">
-          <picture>
-            <source type="image/avif" srcset="assets/features/toggle-128w.avif 128w, assets/features/toggle-256w.avif 256w" sizes="64px">
-            <source type="image/webp" srcset="assets/features/toggle-128w.webp 128w, assets/features/toggle-256w.webp 256w" sizes="64px">
-            <img src="assets/features/toggle-256w.png" alt="Connection toggle icon" class="feature-icon" width="256" height="256" loading="lazy">
-          </picture>
-          <div class="feature-text">
-            <h3>Connection Toggle</h3>
-            <p>Turn your proxy connection on or off with a single tap in the Quick Access menu. Real-time status: disconnected, connecting, connected, or error.</p>
-          </div>
+        <li class="feature-card reveal">
+          <span class="f-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/><circle cx="19" cy="18" r="2"/></svg></span>
+          <h3>Subscriptions &amp; server list</h3>
+          <p>Multi-server subscriptions with quota &amp; expiry, editable names, manual and <b>scheduled auto-refresh</b>. Manually added servers always survive a refresh.</p>
         </li>
-        <li class="feature-card">
-          <picture>
-            <source type="image/avif" srcset="assets/features/tun-128w.avif 128w, assets/features/tun-256w.avif 256w" sizes="64px">
-            <source type="image/webp" srcset="assets/features/tun-128w.webp 128w, assets/features/tun-256w.webp 256w" sizes="64px">
-            <img src="assets/features/tun-256w.png" alt="TUN mode network tunnel icon" class="feature-icon" width="256" height="256" loading="lazy">
-          </picture>
-          <div class="feature-text">
-            <h3>TUN Mode <span style="font-size:.75em;color:var(--accent)">(Recommended)</span></h3>
-            <p>Route all system traffic through the proxy with TUN mode. <strong>Highly recommended for Gaming Mode</strong> — Steam does not respect SOCKS proxy settings, so TUN is the only reliable way to proxy game and system traffic. No extra setup required; just enable it in the plugin.</p>
-          </div>
+        <li class="feature-card reveal">
+          <span class="f-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M13 3 4 14h6l-1 7 9-11h-6l1-7z"/></svg></span>
+          <h3>Latency testing</h3>
+          <p>Ping every server concurrently, see results in the list, switch with one tap — a live connection reconnects through the new server automatically.</p>
         </li>
-        <li class="feature-card">
-          <picture>
-            <source type="image/avif" srcset="assets/features/kill-switch-128w.avif 128w, assets/features/kill-switch-256w.avif 256w" sizes="64px">
-            <source type="image/webp" srcset="assets/features/kill-switch-128w.webp 128w, assets/features/kill-switch-256w.webp 256w" sizes="64px">
-            <img src="assets/features/kill-switch-256w.png" alt="Kill switch shield icon" class="feature-icon" width="256" height="256" loading="lazy">
-          </picture>
-          <div class="feature-text">
-            <h3>Kill Switch</h3>
-            <p>Optional kill switch blocks all network traffic if the proxy disconnects unexpectedly — your real IP is never exposed.</p>
-          </div>
+        <li class="feature-card reveal">
+          <span class="f-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 17l4-6 4 3 4-8 6 11"/><path d="M3 21h18"/></svg></span>
+          <h3>Live traffic stats</h3>
+          <p>Real up/down speed and session totals from xray's stats API — in the Quick Access card and as a live graph in the admin panel.</p>
+        </li>
+        <li class="feature-card reveal">
+          <span class="f-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 9h4m-4 3h7"/></svg></span>
+          <h3>TUN mode</h3>
+          <p>Routes <b>all</b> system traffic through the proxy — the only reliable way in Gaming Mode, where Steam ignores SOCKS settings. Survives suspend/resume.</p>
+        </li>
+        <li class="feature-card reveal">
+          <span class="f-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7l8-4z"/></svg></span>
+          <h3>Kill switch that cleans up</h3>
+          <p>Blocks traffic if the proxy drops — and reliably removes its firewall rules afterwards. A recovery script ships with the plugin, just in case.</p>
+        </li>
+        <li class="feature-card reveal">
+          <span class="f-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4z"/><path d="M14 14h3v3h-3zM17 17h3v3h-3z"/></svg></span>
+          <h3>Web admin panel</h3>
+          <p>Scan a QR from the Deck and manage everything from your phone: servers, import/export, options, updates. Token-guarded, rate-limited, with a LAN on/off switch.</p>
+        </li>
+        <li class="feature-card reveal">
+          <span class="f-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 21a9 9 0 1 0-9-9"/><path d="M3 12h9m0 0V3"/></svg></span>
+          <h3>Resilient by design</h3>
+          <p>Process supervisor restarts a crashed core in seconds, routes are repaired after suspend, versions are pinned — and everything is covered by 185 backend tests.</p>
         </li>
       </ul>
     </section>
 
+    <!-- Admin panel spotlight -->
+    <section class="panel-spot" id="panel" aria-labelledby="panel-title">
+      <div class="panel-spot-inner reveal">
+        <div class="panel-copy">
+          <h2 id="panel-title">The Quick Access Menu is for playing.<br>The panel is for managing.</h2>
+          <p>The QAM stays minimal: connect, pick a server, watch the speed. For everything else there's a <b>Steam-styled web admin panel</b> served by the plugin itself over HTTPS:</p>
+          <ul class="panel-list">
+            <li>Dashboard with live status and a two-minute speed graph</li>
+            <li>Server list sorted by latency, with protocol and core badges</li>
+            <li>Subscription bar: refresh, rename, auto-refresh schedule, quota &amp; expiry</li>
+            <li>Import anything · export every server as share links or a subscription</li>
+            <li>Update checker for the plugin and its cores — telemetry-free</li>
+            <li>English &amp; Russian, switchable on the fly</li>
+          </ul>
+          <p class="panel-security"><b>Security model:</b> per-install token (QR-paired), constant-time comparison, failed-auth rate limiting, credentials never shown in list views — and a QAM toggle to restrict the whole thing to the Deck only.</p>
+        </div>
+      </div>
+    </section>
+
     <!-- Installation -->
     <section class="install" id="install" aria-labelledby="install-title">
-      <h2 id="install-title">Installation</h2>
+      <h2 id="install-title" class="reveal">Installation</h2>
 
-      <div class="install-prereq">
+      <div class="install-prereq reveal">
         <h3>Prerequisites</h3>
         <ul>
           <li>Steam Deck with <a href="https://wiki.deckbrew.xyz/" target="_blank" rel="noopener">Decky Loader</a> installed</li>
-          <li>For TUN mode: one-time elevated privileges setup (see below)</li>
+          <li><span class="badge-alpha">ALPHA</span> not yet validated on real hardware — expect rough edges and please <a href="https://github.com/VadimOnix/xray-decky/issues" target="_blank" rel="noopener">report issues</a></li>
         </ul>
       </div>
 
       <div class="install-methods">
-        <div class="install-method install-method--primary">
-          <h3>Option 1: Plugin Store (Recommended)</h3>
+        <div class="install-method install-method--primary reveal">
+          <h3>Option 1 · Plugin Store</h3>
           <ol>
             <li>Open <strong>Decky Loader</strong> settings (Quick Access → ⋯)</li>
             <li>Navigate to <strong>Plugin Store</strong></li>
-            <li>Search for <strong>"Xray Decky"</strong></li>
+            <li>Search for <strong>“Xray Decky”</strong></li>
             <li>Click <strong>Install</strong></li>
           </ol>
         </div>
 
-        <div class="install-method">
-          <h3>Option 2: Desktop Mode (One-Click)</h3>
+        <div class="install-method reveal">
+          <h3>Option 2 · Desktop Mode</h3>
           <ol>
-            <li>Switch to Desktop Mode (Power menu → Desktop Mode)</li>
-            <li>Download <a href="https://raw.githubusercontent.com/VadimOnix/xray-decky/master/scripts/Install-Xray-Decky.desktop" target="_blank" rel="noopener">Install-Xray-Decky.desktop</a></li>
-            <li>Right-click → Properties → Permissions → enable "Is executable"</li>
+            <li>Switch to Desktop Mode</li>
+            <li>Download <a href="https://raw.githubusercontent.com/VadimOnix/xray-decky/master/scripts/Install-Xray-Decky.desktop" target="_blank" rel="noopener">Install‑Xray‑Decky.desktop</a></li>
+            <li>Properties → Permissions → “Is executable”</li>
             <li>Double-click to run the installer</li>
-            <li>Switch back to Gaming Mode; the plugin appears in Quick Access (⋯)</li>
           </ol>
         </div>
 
-        <div class="install-method">
-          <h3>Option 3: Manual Install</h3>
+        <div class="install-method reveal">
+          <h3>Option 3 · Manual</h3>
           <ol>
-            <li>Download the <a href="https://github.com/VadimOnix/xray-decky/releases/latest" target="_blank" rel="noopener">latest release</a> zip file</li>
-            <li>In Decky Loader → Settings → Developer → Install Plugin from URL</li>
-            <li>Enter the URL to the zip file</li>
+            <li>Grab the <a href="https://github.com/VadimOnix/xray-decky/releases/latest" target="_blank" rel="noopener">latest release</a> zip</li>
+            <li>Decky → Settings → Developer → Install Plugin from URL</li>
+            <li>Paste the zip URL</li>
           </ol>
         </div>
       </div>
 
-      <div class="tun-setup" style="margin-top:1.5rem">
-        <h3>TUN Mode <span style="font-size:.75em;color:var(--accent)">(Recommended for Gaming Mode)</span></h3>
-        <p>In Gaming Mode, Steam does not respect system SOCKS proxy settings — games and most system services ignore it. <strong>TUN mode creates a virtual network interface that routes all system traffic through the proxy</strong>, making it the only reliable way to proxy traffic in Gaming Mode.</p>
-        <p>No extra setup is required — just enable TUN in the plugin settings. The plugin runs with elevated privileges and handles everything automatically.</p>
-        <p class="text-muted">Without TUN, the plugin falls back to SOCKS proxy mode, which works well in Desktop Mode but may not cover games and system services in Gaming Mode.</p>
+      <div class="tun-setup reveal">
+        <h3>Why TUN mode?</h3>
+        <p>In Gaming Mode Steam ignores system SOCKS settings — games and system services bypass the proxy. <b>TUN creates a virtual network interface that routes everything</b>, so it's the mode you actually want. Just flip the toggle; the plugin handles routes and cleanup itself.</p>
       </div>
     </section>
 
     <!-- Usage -->
     <section class="usage" id="usage" aria-labelledby="usage-title">
-      <h2 id="usage-title">Usage</h2>
+      <h2 id="usage-title" class="reveal">From zero to proxied in three steps</h2>
       <div class="usage-steps">
-        <div class="usage-step">
+        <div class="usage-step reveal">
           <span class="step-number">1</span>
           <div>
-            <h3>Import Configuration</h3>
-            <p>Open the plugin in Decky Loader, enter your VLESS URL in the import field, and click Import. The configuration will be validated and stored.</p>
-            <p class="text-muted">VLESS URL format: <code>vless://uuid@host:port?params#name</code></p>
+            <h3>Import</h3>
+            <p>Paste a share link or subscription URL in the QAM — or scan the QR and paste it from your phone. Every server in a subscription is stored.</p>
           </div>
         </div>
-        <div class="usage-step">
+        <div class="usage-step reveal">
           <span class="step-number">2</span>
           <div>
             <h3>Connect</h3>
-            <p>Use the connection toggle to turn the proxy on. Status shows in real-time: disconnected, connecting, connected, or error. Toggle off to disconnect.</p>
+            <p>One toggle. Live status and speed right in the Quick Access card. Pick a different server any time — reconnection is automatic.</p>
           </div>
         </div>
-        <div class="usage-step">
+        <div class="usage-step reveal">
           <span class="step-number">3</span>
           <div>
-            <h3>Enable TUN Mode (Recommended)</h3>
-            <p>Enable TUN mode in the plugin settings for reliable system-wide routing — especially important in Gaming Mode, where SOCKS proxy is not enough. Optionally, activate the kill switch for extra safety.</p>
+            <h3>Go system-wide</h3>
+            <p>Enable TUN mode for Gaming Mode coverage, add the kill switch if you want strict leak protection, and manage the rest from the web panel.</p>
           </div>
         </div>
       </div>
     </section>
 
     <!-- Troubleshooting -->
-    <section class="troubleshooting" id="troubleshooting" aria-labelledby="troubleshooting-title">
-      <h2 id="troubleshooting-title">Troubleshooting</h2>
-      <div class="faq-list">
+    <section class="troubleshooting" id="faq" aria-labelledby="troubleshooting-title">
+      <h2 id="troubleshooting-title" class="reveal">Troubleshooting</h2>
+      <div class="faq-list reveal">
         <details class="faq-item">
           <summary>Connection fails</summary>
           <ul>
-            <li>Verify your VLESS configuration URL is valid</li>
+            <li>Verify the share link or subscription URL is valid — invalid links are rejected before they can break a working config</li>
             <li>Check network connectivity on your Steam Deck</li>
-            <li>Review error messages in the plugin UI</li>
+            <li>Ping the servers from the list and try the fastest one</li>
           </ul>
         </details>
         <details class="faq-item">
           <summary>TUN mode not working</summary>
           <ul>
-            <li>Verify privileges are set up correctly (see <a href="#install">TUN Mode Setup</a>)</li>
-            <li>Ensure the plugin has required permissions</li>
-            <li>Check Konsole for error messages</li>
+            <li>Ensure the plugin has the required privileges (see the repository's INSTALLATION.md)</li>
+            <li>Re-toggle TUN after a system update — SteamOS updates can wipe permissions</li>
           </ul>
         </details>
         <details class="faq-item">
-          <summary>Kill switch is blocking all traffic</summary>
+          <summary>Kill switch is blocking traffic</summary>
           <ul>
-            <li>Reconnect the proxy to deactivate kill switch automatically</li>
-            <li>Or manually disable kill switch in the plugin settings</li>
+            <li>Reconnect the proxy — the kill switch releases automatically</li>
+            <li>Or press <b>Unblock traffic</b> in the plugin / admin panel</li>
+            <li>Worst case: <code>scripts/recover.sh</code> ships with the plugin and restores networking unconditionally</li>
+          </ul>
+        </details>
+        <details class="faq-item">
+          <summary>Can't open the admin panel from my phone</summary>
+          <ul>
+            <li>Check the <b>Allow LAN access</b> toggle in the QAM options — in Deck-only mode the panel is deliberately unreachable from other devices</li>
+            <li>Both devices must be on the same network; accept the self-signed certificate warning</li>
+            <li>The QR embeds a per-install token — pair by scanning, don't retype the URL</li>
           </ul>
         </details>
         <details class="faq-item">
           <summary>xray-core binary missing</summary>
           <ul>
-            <li>Download from <a href="https://github.com/XTLS/Xray-core/releases" target="_blank" rel="noopener">Xray-core releases</a></li>
-            <li>Place in <code>backend/out/xray-core</code></li>
-            <li>Make executable: <code>chmod +x backend/out/xray-core</code></li>
+            <li>The plugin re-downloads its pinned core automatically on next start</li>
+            <li>Offline? Download from <a href="https://github.com/XTLS/Xray-core/releases" target="_blank" rel="noopener">Xray-core releases</a> into <code>backend/out/</code></li>
           </ul>
         </details>
       </div>
@@ -218,14 +355,17 @@
   <footer>
     <div class="footer-inner">
       <div class="footer-links">
-        <a href="https://github.com/VadimOnix/xray-decky" target="_blank" rel="noopener">GitHub Repository</a>
+        <a href="https://github.com/VadimOnix/xray-decky" target="_blank" rel="noopener">GitHub</a>
         <a href="https://github.com/VadimOnix/xray-decky/releases" target="_blank" rel="noopener">Releases</a>
-        <a href="https://github.com/VadimOnix/xray-decky/issues" target="_blank" rel="noopener">Report Issue</a>
-        <a href="https://wiki.deckbrew.xyz/" target="_blank" rel="noopener">Decky Loader Docs</a>
-        <a href="https://xtls.github.io/" target="_blank" rel="noopener">Xray-core Docs</a>
+        <a href="https://github.com/VadimOnix/xray-decky/issues" target="_blank" rel="noopener">Report an issue</a>
+        <a href="https://github.com/VadimOnix/xray-decky/blob/master/docs/ROADMAP.md" target="_blank" rel="noopener">Roadmap</a>
+        <a href="https://wiki.deckbrew.xyz/" target="_blank" rel="noopener">Decky Loader</a>
+        <a href="https://xtls.github.io/" target="_blank" rel="noopener">Xray-core</a>
       </div>
-      <p class="footer-copy">Xray Decky &middot; MIT License &middot; Made for Steam Deck</p>
+      <p class="footer-copy">Xray Decky · MIT License · Made for Steam Deck</p>
     </div>
   </footer>
+
+  <script src="scripts/demo.js" defer></script>
 </body>
 </html>

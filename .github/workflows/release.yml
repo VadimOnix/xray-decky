@@ -1,9 +1,12 @@
 name: Release
 
+# Fires on a manually pushed v* tag, or dispatched on a tag ref by the
+# Auto Release workflow (tags pushed with GITHUB_TOKEN don't fire `on: push`).
 on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 env:
   PLUGIN_NAME: "xray-decky"
@@ -15,9 +18,20 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v6
+      - name: Ensure this runs on a release tag
+        run: |
+          case "$GITHUB_REF" in
+            refs/tags/v*) echo "Releasing $GITHUB_REF" ;;
+            *)
+              echo "::error::Release must run on a v* tag ref (got $GITHUB_REF)."
+              echo "::error::Dispatch it with --ref v<version>, or push the tag."
+              exit 1
+              ;;
+          esac
 
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
         with:
           version: 9
 
@@ -31,14 +45,27 @@ jobs:
           pnpm install
           pnpm run build
 
-      - name: Download xray-core (latest release)
+      - name: Download xray-core (pinned release)
         run: |
-          # Fetch the latest stable xray-core release tag from GitHub API
-          XRAY_VERSION=$(curl -s https://api.github.com/repos/XTLS/Xray-core/releases/latest | jq -r .tag_name)
-          echo "Using xray-core ${XRAY_VERSION}"
+          # Read the pinned version from the single source of truth shared with
+          # the runtime downloader (backend/src/xray_downloader.py), so the
+          # bundled binary and any re-downloaded one can never drift.
+          VERSION_FILE="backend/src/xray_version.json"
+          XRAY_REPO=$(jq -r '.repo' "$VERSION_FILE")
+          XRAY_ASSET=$(jq -r '.asset' "$VERSION_FILE")
+          XRAY_VERSION=$(jq -r '.version' "$VERSION_FILE")
+          XRAY_SHA256=$(jq -r '.sha256 // empty' "$VERSION_FILE")
+          echo "Using xray-core ${XRAY_VERSION} (${XRAY_REPO})"
 
-          XRAY_ZIP="Xray-linux-64.zip"
-          wget -q "https://github.com/XTLS/Xray-core/releases/download/${XRAY_VERSION}/${XRAY_ZIP}" -O /tmp/xray.zip
+          wget -q "https://github.com/${XRAY_REPO}/releases/download/${XRAY_VERSION}/${XRAY_ASSET}" -O /tmp/xray.zip
+
+          # Verify the checksum when the pin provides one.
+          if [ -n "$XRAY_SHA256" ]; then
+            echo "${XRAY_SHA256}  /tmp/xray.zip" | sha256sum -c -
+          else
+            echo "No sha256 pinned; skipping checksum verification"
+          fi
+
           unzip -o /tmp/xray.zip -d /tmp/xray-extract
 
           mkdir -p xray-bin
@@ -65,12 +92,16 @@ jobs:
           cp -r dist "$PLUGIN_DIR/"
           cp package.json plugin.json main.py LICENSE.md "$PLUGIN_DIR/"
           [ -f README.md ] && cp README.md "$PLUGIN_DIR/"
+          # Network recovery script (run manually if the Deck loses connectivity)
+          cp scripts/recover.sh "$PLUGIN_DIR/"
 
           # Backend
           mkdir -p "$PLUGIN_DIR/backend/src"
           cp backend/__init__.py "$PLUGIN_DIR/backend/" 2>/dev/null || echo "# Backend package" > "$PLUGIN_DIR/backend/__init__.py"
           cp backend/src/__init__.py "$PLUGIN_DIR/backend/src/" 2>/dev/null || echo "# Backend src package" > "$PLUGIN_DIR/backend/src/__init__.py"
           cp backend/src/*.py "$PLUGIN_DIR/backend/src/"
+          # Pinned-version metadata, read at runtime by the self-heal downloader.
+          cp backend/src/*.json "$PLUGIN_DIR/backend/src/"
           cp -r backend/static "$PLUGIN_DIR/backend/"
 
           # xray-core binary + geo data files
@@ -83,10 +114,27 @@ jobs:
           cd release
           zip -r "${PLUGIN_NAME}-v${VERSION}.zip" "$PLUGIN_NAME"
 
+      - name: Compose release notes header
+        run: |
+          : > release-body.md
+          # Pre-release versions get a prominent WIP warning on top of the
+          # auto-generated notes.
+          if [[ "${GITHUB_REF_NAME}" == *-* ]]; then
+            cat > release-body.md <<'BODY'
+          > [!WARNING]
+          > **Work in progress.** This pre-release is currently being tested by the author on real hardware and is **not ready for daily use** — please don't install it yet.
+          > Grab it only if you want to help test and develop the project: rough edges are expected, and every [reported issue](https://github.com/VadimOnix/xray-decky/issues) helps.
+
+          BODY
+          fi
+
       - name: Upload release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: release/*.zip
+          body_path: release-body.md
           generate_release_notes: true
+          # v2.0.0-alpha.1 / -beta / -rc versions are marked as pre-releases.
+          prerelease: ${{ contains(github.ref_name, '-') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

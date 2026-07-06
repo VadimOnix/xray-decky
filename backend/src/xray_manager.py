@@ -11,6 +11,8 @@ import os
 import tempfile
 from typing import Dict, Any, Optional
 
+from .stats import API_PORT
+
 
 class XrayManager:
     """
@@ -78,72 +80,201 @@ class XrayManager:
         Build xray-core JSON configuration structure.
 
         Args:
-            vless_config: VLESSConfig dictionary
+            vless_config: Profile dictionary (see config_parser.parse_share_link);
+                profiles imported before multi-protocol support lack the
+                "protocol" key and default to VLESS.
             tun_mode: Whether to enable TUN mode
 
         Returns:
             xray-core configuration dictionary
         """
-        # Extract VLESS config components
-        uuid = vless_config.get("uuid")
+        protocol = vless_config.get("protocol", "vless")
         address = vless_config.get("address")
         port = vless_config.get("port")
-        flow = vless_config.get("flow")
-        encryption = vless_config.get("encryption", "none")
-        network = vless_config.get("network", "tcp")
-        security = vless_config.get("security", "none")
-        reality_config = vless_config.get("realityConfig", {})
+        network = vless_config.get("network") or "tcp"
+        security = vless_config.get("security") or "none"
+        transport = vless_config.get("transport") or {}
+        tls_config = vless_config.get("tlsConfig") or {}
+        reality_config = vless_config.get("realityConfig") or {}
 
-        # Build outbound configuration (tag "proxy" for routing)
-        outbound = {
-            "protocol": "vless",
-            "tag": "proxy",
-            "settings": {
-                "vnext": [
+        # Protocol-specific outbound settings
+        if protocol in ("vless", "vmess"):
+            user: Dict[str, Any] = {"id": vless_config.get("uuid")}
+            if protocol == "vless":
+                user["encryption"] = vless_config.get("encryption") or "none"
+                flow = vless_config.get("flow")
+                user["flow"] = flow if flow else ""
+            else:
+                user["alterId"] = int(vless_config.get("alterId") or 0)
+                user["security"] = vless_config.get("vmessSecurity") or "auto"
+            settings = {
+                "vnext": [{"address": address, "port": port, "users": [user]}]
+            }
+        elif protocol == "trojan":
+            settings = {
+                "servers": [
                     {
                         "address": address,
                         "port": port,
-                        "users": [
-                            {
-                                "id": uuid,
-                                "encryption": encryption,
-                                "flow": flow if flow else "",
-                            }
-                        ],
+                        "password": vless_config.get("password"),
                     }
                 ]
-            },
-            "streamSettings": {
-                "network": network,
-                "security": security,
-            },
-        }
+            }
+        elif protocol == "shadowsocks":
+            settings = {
+                "servers": [
+                    {
+                        "address": address,
+                        "port": port,
+                        "method": vless_config.get("method"),
+                        "password": vless_config.get("password"),
+                    }
+                ]
+            }
+        else:
+            raise ValueError(f"Unsupported protocol: {protocol}")
 
-        # Add Reality-specific settings (CLIENT configuration)
-        # Note: Client uses publicKey, serverName, shortId, fingerprint
-        # Server uses privateKey, dest, xver - these are NOT for client!
-        if security == "reality" and reality_config:
-            outbound["streamSettings"]["realitySettings"] = {
+        stream: Dict[str, Any] = {"network": network, "security": security}
+
+        # Transport-specific settings
+        if network == "ws":
+            ws_settings: Dict[str, Any] = {"path": transport.get("path") or "/"}
+            if transport.get("host"):
+                ws_settings["host"] = transport["host"]
+            stream["wsSettings"] = ws_settings
+        elif network == "grpc":
+            grpc_settings: Dict[str, Any] = {
+                "serviceName": transport.get("serviceName") or ""
+            }
+            if transport.get("authority"):
+                grpc_settings["authority"] = transport["authority"]
+            if transport.get("multiMode"):
+                grpc_settings["multiMode"] = True
+            stream["grpcSettings"] = grpc_settings
+        elif network == "httpupgrade":
+            hu_settings: Dict[str, Any] = {"path": transport.get("path") or "/"}
+            if transport.get("host"):
+                hu_settings["host"] = transport["host"]
+            stream["httpupgradeSettings"] = hu_settings
+        elif network == "xhttp":
+            xhttp_settings: Dict[str, Any] = {"path": transport.get("path") or "/"}
+            if transport.get("host"):
+                xhttp_settings["host"] = transport["host"]
+            if transport.get("mode"):
+                xhttp_settings["mode"] = transport["mode"]
+            stream["xhttpSettings"] = xhttp_settings
+        elif network == "kcp":
+            kcp_settings: Dict[str, Any] = {
+                "header": {"type": transport.get("headerType") or "none"}
+            }
+            if transport.get("seed"):
+                kcp_settings["seed"] = transport["seed"]
+            stream["kcpSettings"] = kcp_settings
+        elif network == "tcp" and transport.get("headerType") == "http":
+            request: Dict[str, Any] = {}
+            if transport.get("path"):
+                request["path"] = [transport["path"]]
+            if transport.get("host"):
+                request["headers"] = {"Host": [transport["host"]]}
+            stream["tcpSettings"] = {"header": {"type": "http", "request": request}}
+
+        # Security-specific settings
+        if security == "tls":
+            tls_settings: Dict[str, Any] = {
+                "serverName": tls_config.get("serverName")
+                or transport.get("host")
+                or address
+            }
+            if tls_config.get("alpn"):
+                tls_settings["alpn"] = tls_config["alpn"]
+            if tls_config.get("fingerprint"):
+                tls_settings["fingerprint"] = tls_config["fingerprint"]
+            if tls_config.get("allowInsecure"):
+                tls_settings["allowInsecure"] = True
+            stream["tlsSettings"] = tls_settings
+        elif security == "reality" and reality_config:
+            # CLIENT configuration only: publicKey, serverName, shortId,
+            # fingerprint (never privateKey/dest/xver - those are server-side).
+            reality_settings = {
                 "serverName": reality_config.get("serverName", address),
                 "publicKey": reality_config.get("publicKey", ""),
                 "shortId": reality_config.get("shortId", ""),
                 "fingerprint": reality_config.get("fingerprint", "chrome"),
             }
-
-        # Network-specific settings
-        if network == "ws":
-            outbound["streamSettings"]["wsSettings"] = {"path": "/", "headers": {}}
+            if reality_config.get("spiderX"):
+                reality_settings["spiderX"] = reality_config["spiderX"]
+            stream["realitySettings"] = reality_settings
 
         # TUN mode: bind proxy outbound to physical interface to bypass routing (avoid loop)
         if tun_mode and outbound_interface:
-            outbound["streamSettings"]["sockopt"] = {"interface": outbound_interface}
+            stream["sockopt"] = {"interface": outbound_interface}
+
+        # Build outbound configuration (tag "proxy" for routing)
+        outbound = {
+            "protocol": protocol,
+            "tag": "proxy",
+            "settings": settings,
+            "streamSettings": stream,
+        }
+
+        # Direct outbound for bypassing (private/LAN IPs - geoip:private)
+        direct_outbound = {
+            "protocol": "freedom",
+            "settings": {"domainStrategy": "UseIP"},
+            "tag": "direct",
+        }
+
+        # Sniffing restores the destination domain so domain-based routing
+        # rules work for transparently redirected traffic.
+        sniffing = {"enabled": True, "destOverride": ["http", "tls", "quic"]}
 
         # Build complete config
         config = {
             "log": {"loglevel": "warning"},
             "inbounds": [],
-            "outbounds": [outbound],
+            "outbounds": [outbound, direct_outbound],
         }
+
+        # Routing: private/LAN IPs bypass via direct; everything else falls
+        # through to the first outbound (proxy).
+        # Requires geoip.dat alongside the xray-core binary (shipped in release).
+        routing_rules = [
+            # Stats API traffic must be matched before the private-IP bypass
+            # (its destination is 127.0.0.1).
+            {"type": "field", "inboundTag": ["api"], "outboundTag": "api"},
+            # Bypass private/LAN IPs (127.x, 10.x, 192.168.x, etc.)
+            {"type": "field", "ip": ["geoip:private"], "outboundTag": "direct"},
+            # SOCKS/HTTP inbound traffic goes through proxy
+            {
+                "type": "field",
+                "inboundTag": ["socks", "http"],
+                "outboundTag": "proxy",
+            },
+        ]
+        config["routing"] = {
+            "domainStrategy": "IPIfNonMatch",
+            "rules": routing_rules,
+        }
+
+        # Traffic statistics: StatsService on a localhost-only API inbound,
+        # queried with `xray api statsquery`.
+        config["stats"] = {}
+        config["policy"] = {
+            "system": {
+                "statsOutboundUplink": True,
+                "statsOutboundDownlink": True,
+            }
+        }
+        config["api"] = {"tag": "api", "services": ["StatsService"]}
+        config["inbounds"].append(
+            {
+                "listen": "127.0.0.1",
+                "port": API_PORT,
+                "protocol": "dokodemo-door",
+                "settings": {"address": "127.0.0.1"},
+                "tag": "api",
+            }
+        )
 
         # Always add SOCKS proxy inbound (needed for System Proxy mode)
         # This allows System Proxy to work both with and without TUN mode
@@ -153,6 +284,7 @@ class XrayManager:
                 "listen": "127.0.0.1",
                 "port": 10808,  # Standard SOCKS port, avoids Steam ports
                 "settings": {"udp": True},
+                "sniffing": sniffing,
                 "tag": "socks",
             }
         )
@@ -163,37 +295,18 @@ class XrayManager:
                 "protocol": "http",
                 "listen": "127.0.0.1",
                 "port": 10809,  # HTTP proxy port
+                "sniffing": sniffing,
                 "tag": "http",
             }
         )
 
         # Add TUN mode configuration if enabled
         if tun_mode:
-            # Direct outbound for bypassing (private/LAN IPs - geoip:private)
-            direct_outbound = {
-                "protocol": "freedom",
-                "settings": {"domainStrategy": "UseIP"},
-                "tag": "direct",
-            }
-
-            # Routing: TUN inbound -> proxy (VLESS); private IPs bypass via direct
-            # SOCKS/HTTP inbounds also route to proxy.
-            # Requires geoip.dat alongside the xray-core binary (shipped in release).
-            config["routing"] = {
-                "domainStrategy": "IPIfNonMatch",
-                "rules": [
-                    # Bypass private/LAN IPs (127.x, 10.x, 192.168.x, etc.)
-                    {"type": "field", "ip": ["geoip:private"], "outboundTag": "direct"},
-                    # All TUN traffic goes through VLESS proxy
-                    {"type": "field", "inboundTag": ["tun"], "outboundTag": "proxy"},
-                    # SOCKS/HTTP inbound traffic goes through proxy
-                    {
-                        "type": "field",
-                        "inboundTag": ["socks", "http"],
-                        "outboundTag": "proxy",
-                    },
-                ],
-            }
+            # All TUN traffic goes through the proxy
+            routing_rules.insert(
+                1,
+                {"type": "field", "inboundTag": ["tun"], "outboundTag": "proxy"},
+            )
 
             # TUN inbound — supported since xray-core v26.1.23.
             # xray-core creates the TUN interface; no settings required.
@@ -201,11 +314,10 @@ class XrayManager:
             config["inbounds"].append(
                 {
                     "protocol": "tun",
+                    "sniffing": sniffing,
                     "tag": "tun",
                 }
             )
-
-            config["outbounds"].append(direct_outbound)
 
         return config
 
@@ -286,15 +398,22 @@ class XrayManager:
             if self.process is None:
                 return {"success": True, "message": "No process running"}
 
-            # Terminate process
-            self.process.terminate()
+            # Terminate process (it may already have exited, e.g. after a
+            # crash handled by the supervisor — that's not an error).
+            try:
+                self.process.terminate()
+            except ProcessLookupError:
+                pass
 
             # Wait for process to terminate (with timeout)
             try:
                 await asyncio.wait_for(self.process.wait(), timeout=5.0)
             except asyncio.TimeoutError:
                 # Force kill if process doesn't terminate
-                self.process.kill()
+                try:
+                    self.process.kill()
+                except ProcessLookupError:
+                    pass
                 await self.process.wait()
 
             # Cleanup config file

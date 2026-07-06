@@ -1,6 +1,7 @@
 import { FC, useState } from 'react';
 import { ButtonItem } from '@decky/ui';
 import { FaUndoAlt } from 'react-icons/fa';
+import { t } from '../utils/i18n';
 
 interface ResetConfigurationButtonProps {
   disabled: boolean;
@@ -15,10 +16,8 @@ export const ResetConfigurationButton: FC<ResetConfigurationButtonProps> = ({
   const [error, setError] = useState<string | null>(null);
   const leftDescriptionStyle = { display: 'block', textAlign: 'left' } as const;
 
-  const labelText = loading ? 'Resetting…' : 'Reset configuration';
-  const description = disabled
-    ? 'Disconnect before resetting configuration.'
-    : 'Clears the saved VLESS link and returns to setup.';
+  const labelText = loading ? t('reset.resetting') : t('reset.reset');
+  const description = disabled ? t('reset.disabledDesc') : t('reset.desc');
 
   const handleReset = async () => {
     setError(null);
@@ -26,11 +25,11 @@ export const ResetConfigurationButton: FC<ResetConfigurationButtonProps> = ({
     try {
       const result = await onReset();
       if (!result.success) {
-        setError(result.error || 'Failed to reset configuration');
+        setError(result.error || t('reset.fail'));
       }
     } catch (err) {
       console.error('Reset error:', err);
-      setError('Network error. Please try again.');
+      setError(t('reset.netErr'));
     } finally {
       setLoading(false);
     }
@@ -57,7 +56,7 @@ export const ResetConfigurationButton: FC<ResetConfigurationButtonProps> = ({
             borderRadius: '5px',
           }}
         >
-          <strong>Error:</strong> {error}
+          <strong>{t('common.errorLabel')}</strong> {error}
         </div>
       )}
     </div>

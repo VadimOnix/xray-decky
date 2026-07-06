@@ -3,6 +3,7 @@ import { DialogButtonPrimary, Field, Toggle } from '@decky/ui';
 import { FaPowerOff } from 'react-icons/fa';
 import { HelpPopover } from './ui/HelpPopover';
 import type { DeactivateKillSwitchResponse, ToggleKillSwitchResponse } from '../services/api';
+import { t } from '../utils/i18n';
 
 interface KillSwitchToggleProps {
   enabled: boolean;
@@ -30,11 +31,11 @@ export const KillSwitchToggle: FC<KillSwitchToggleProps> = ({
     try {
       const result = await onToggle(nextEnabled);
       if (!result.success) {
-        setError('Failed to toggle kill switch');
+        setError(t('ks.toggleFail'));
       }
     } catch (err) {
       console.error('Toggle error:', err);
-      setError('Network error. Please check your connection and try again.');
+      setError(t('common.netErr'));
     } finally {
       setLoading(false);
     }
@@ -47,11 +48,11 @@ export const KillSwitchToggle: FC<KillSwitchToggleProps> = ({
     try {
       const result = await onDeactivate();
       if (!result.success) {
-        setError(result.error || 'Failed to deactivate kill switch');
+        setError(result.error || t('ks.deactivateFail'));
       }
     } catch (err) {
       console.error('Deactivate error:', err);
-      setError('Network error. Please check your connection and try again.');
+      setError(t('common.netErr'));
     } finally {
       setLoading(false);
     }
@@ -73,18 +74,14 @@ export const KillSwitchToggle: FC<KillSwitchToggleProps> = ({
           marginBottom: '4px',
         }}
       >
-        <span style={{ fontSize: '14px', fontWeight: 600, color: '#c7d5e0' }}>Kill Switch</span>
-        <HelpPopover label="Help: Kill switch" topic="options.kill_switch" />
+        <span style={{ fontSize: '14px', fontWeight: 600, color: '#c7d5e0' }}>{t('ks.title')}</span>
+        <HelpPopover label={t('ks.help')} topic="options.kill_switch" />
       </div>
 
       <div style={{ marginBottom: '15px' }}>
         <Field
-          label="Enable Kill Switch"
-          description={
-            <span style={leftDescriptionStyle}>
-              Blocks all traffic if the proxy disconnects unexpectedly.
-            </span>
-          }
+          label={t('ks.enable')}
+          description={<span style={leftDescriptionStyle}>{t('ks.enableDesc')}</span>}
           bottomSeparator="none"
           highlightOnFocus
           childrenLayout="inline"
@@ -105,15 +102,12 @@ export const KillSwitchToggle: FC<KillSwitchToggleProps> = ({
             }}
           >
             <p>
-              <strong>⚠️ KILL SWITCH ACTIVE</strong>
+              <strong>{t('ks.activeTitle')}</strong>
             </p>
-            <p style={{ marginTop: '5px' }}>
-              All system traffic is currently blocked. This happened because the proxy disconnected
-              unexpectedly.
-            </p>
+            <p style={{ marginTop: '5px' }}>{t('ks.activeMsg')}</p>
             {activatedAt && (
               <p style={{ marginTop: '5px', fontSize: '12px' }}>
-                Activated at: {formatTime(activatedAt)}
+                {t('ks.activatedAt', { time: formatTime(activatedAt) })}
               </p>
             )}
             <DialogButtonPrimary
@@ -123,7 +117,7 @@ export const KillSwitchToggle: FC<KillSwitchToggleProps> = ({
             >
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
                 <FaPowerOff />
-                {loading ? 'Deactivating...' : 'Deactivate Kill Switch'}
+                {loading ? t('ks.deactivating') : t('ks.deactivate')}
               </span>
             </DialogButtonPrimary>
           </div>
@@ -142,11 +136,9 @@ export const KillSwitchToggle: FC<KillSwitchToggleProps> = ({
             }}
           >
             <p>
-              <strong>✓ Kill Switch Enabled</strong>
+              <strong>{t('ks.enabledTitle')}</strong>
             </p>
-            <p style={{ marginTop: '5px' }}>
-              Traffic will be blocked if the proxy disconnects unexpectedly.
-            </p>
+            <p style={{ marginTop: '5px' }}>{t('ks.enabledMsg')}</p>
           </div>
         )}
 
@@ -162,13 +154,13 @@ export const KillSwitchToggle: FC<KillSwitchToggleProps> = ({
               fontSize: '14px',
             }}
           >
-            <strong>Error:</strong> {error}
+            <strong>{t('common.errorLabel')}</strong> {error}
           </div>
         )}
 
         {loading && (
           <div style={{ marginTop: '10px', color: '#aaa', fontSize: '14px' }}>
-            {enabled ? 'Disabling kill switch...' : 'Enabling kill switch...'}
+            {enabled ? t('ks.disabling') : t('ks.enabling')}
           </div>
         )}
       </div>

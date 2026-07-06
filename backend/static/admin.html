@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#171a21" />
+    <meta name="color-scheme" content="dark" />
+    <title>Xray Decky – Admin Panel</title>
+    <link rel="icon" type="image/x-icon" href="/import/static/assets/image/favicon.ico" />
+    <link rel="icon" type="image/svg+xml" href="/import/static/assets/image/favicon.svg" />
+    <link rel="apple-touch-icon" href="/import/static/assets/image/apple-touch-icon.png" />
+    <link rel="stylesheet" href="/admin/static/admin.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div class="brand">
+          <span class="brand-glyph" aria-hidden="true"></span>
+          <span class="brand-name">XRAY <em>DECKY</em></span>
+        </div>
+        <div class="topbar-right">
+          <button
+            id="lang-toggle"
+            class="lang-toggle"
+            type="button"
+            data-i18n-aria="lang.switch"
+            aria-label="Switch language"
+          >
+            EN
+          </button>
+          <div id="status-pill" class="status-pill" data-status="unknown">
+            <span class="status-dot" aria-hidden="true"></span>
+            <span id="status-pill-text">Connecting…</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="page">
+      <!-- Shown until a valid token is provided -->
+      <section id="locked" class="card locked" hidden>
+        <h2 data-i18n="lock.title">Pairing required</h2>
+        <p data-i18n="lock.desc">
+          This panel is protected by a per-install token. Open the plugin on your Steam Deck and
+          scan the <strong>Admin panel</strong> QR code from the Options tab, or paste the token
+          below.
+        </p>
+        <form id="token-form" class="token-form">
+          <input
+            id="token-input"
+            type="password"
+            placeholder="Admin token"
+            autocomplete="off"
+            data-i18n-ph="lock.ph"
+            data-i18n-aria="lock.ph"
+            aria-label="Admin token"
+          />
+          <button type="submit" class="btn btn-primary" data-i18n="lock.unlock">Unlock</button>
+        </form>
+        <p id="token-error" class="form-error" role="alert" hidden></p>
+      </section>
+
+      <div id="panel" hidden>
+        <!-- Hero: connection -->
+        <section class="card hero" aria-labelledby="hero-title">
+          <div class="hero-status">
+            <div id="status-orb" class="status-orb" data-status="unknown" aria-hidden="true">
+              <span class="orb-core"></span>
+            </div>
+            <div class="hero-text">
+              <h1 id="hero-title" class="hero-state">Loading…</h1>
+              <p id="hero-sub" class="hero-sub">Fetching current status</p>
+              <div id="hero-stats" class="hero-stats" hidden>
+                <span class="stat-chip stat-down" aria-label="Download speed">
+                  <span aria-hidden="true">▼</span>
+                  <span id="stat-down">0 B/s</span>
+                </span>
+                <span class="stat-chip stat-up" aria-label="Upload speed">
+                  <span aria-hidden="true">▲</span>
+                  <span id="stat-up">0 B/s</span>
+                </span>
+                <span class="stat-chip stat-total" aria-label="Session traffic">
+                  <span id="stat-total">0 B</span>
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="hero-actions">
+            <button id="connect-btn" class="btn btn-play" disabled>
+              <span id="connect-btn-label">Connect</span>
+            </button>
+            <button id="unblock-btn" class="btn btn-danger" data-i18n="hero.unblock" hidden>
+              Unblock traffic
+            </button>
+          </div>
+          <div id="hero-graph" class="hero-graph" hidden>
+            <div class="graph-legend">
+              <span class="legend-item legend-down">
+                <span class="legend-swatch" aria-hidden="true"></span>
+                <span data-i18n="graph.download">Download</span>
+                <b id="graph-down-peak">0 B/s</b>
+              </span>
+              <span class="legend-item legend-up">
+                <span class="legend-swatch" aria-hidden="true"></span>
+                <span data-i18n="graph.upload">Upload</span>
+                <b id="graph-up-peak">0 B/s</b>
+              </span>
+              <span class="graph-window" data-i18n="graph.window">peak · last 2 min</span>
+            </div>
+            <canvas
+              id="speed-canvas"
+              class="speed-canvas"
+              role="img"
+              aria-label="Live download and upload speed over the last two minutes"
+            ></canvas>
+          </div>
+        </section>
+
+        <div class="grid">
+          <!-- Servers card -->
+          <section class="card card-servers" aria-labelledby="servers-title">
+            <div class="card-head">
+              <h2 id="servers-title" class="card-title" data-i18n="servers.title">Servers</h2>
+              <button
+                id="ping-btn"
+                class="btn btn-ghost btn-small"
+                type="button"
+                data-i18n="servers.pingAll"
+              >
+                Ping all
+              </button>
+            </div>
+            <div id="subscription-row" class="subscription-row" hidden>
+              <span id="subscription-info" class="subscription-info"></span>
+              <label
+                id="sub-interval-label"
+                class="sub-interval-label"
+                for="sub-interval"
+                data-i18n="sub.auto"
+                >Auto-refresh</label
+              >
+              <select
+                id="sub-interval"
+                class="sub-interval"
+                data-i18n-aria="sub.autoAria"
+                aria-label="Auto-refresh interval"
+              >
+                <option value="0" data-i18n="sub.intervalOff">Off</option>
+                <option value="6" data-i18n="sub.interval6">Every 6h</option>
+                <option value="12" data-i18n="sub.interval12">Every 12h</option>
+                <option value="24" data-i18n="sub.interval24">Daily</option>
+                <option value="48" data-i18n="sub.interval48">Every 2 days</option>
+              </select>
+              <button
+                id="rename-sub-btn"
+                class="btn btn-ghost btn-small"
+                type="button"
+                data-i18n="sub.rename"
+              >
+                Rename
+              </button>
+              <button
+                id="refresh-sub-btn"
+                class="btn btn-ghost btn-small"
+                type="button"
+                data-i18n="sub.refresh"
+              >
+                Refresh
+              </button>
+            </div>
+            <div id="servers-empty" class="empty-note" data-i18n="servers.empty">
+              No servers yet. Use the import form to add one.
+            </div>
+            <ul id="server-list" class="server-list" hidden></ul>
+            <p class="card-footnote" data-i18n="servers.footnote">
+              Tap a server to make it active — a live connection switches over
+              automatically.
+            </p>
+          </section>
+
+          <!-- Options card -->
+          <section class="card" aria-labelledby="options-title">
+            <div class="card-head">
+              <h2 id="options-title" class="card-title" data-i18n="options.title">Options</h2>
+            </div>
+            <div class="option-row">
+              <div class="option-text">
+                <span class="option-name" data-i18n="options.tun">TUN mode</span>
+                <span class="option-desc" data-i18n="options.tunDesc"
+                  >Route all system traffic through the proxy</span
+                >
+              </div>
+              <label class="switch">
+                <input
+                  id="tun-toggle"
+                  type="checkbox"
+                  role="switch"
+                  data-i18n-aria="options.tun"
+                  aria-label="TUN mode"
+                />
+                <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+              </label>
+            </div>
+            <div class="option-row">
+              <div class="option-text">
+                <span class="option-name" data-i18n="options.ks">Kill switch</span>
+                <span class="option-desc" data-i18n="options.ksDesc"
+                  >Block all traffic if the proxy drops unexpectedly</span
+                >
+              </div>
+              <label class="switch">
+                <input
+                  id="killswitch-toggle"
+                  type="checkbox"
+                  role="switch"
+                  data-i18n-aria="options.ks"
+                  aria-label="Kill switch"
+                />
+                <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+              </label>
+            </div>
+            <p id="options-note" class="option-note" hidden></p>
+          </section>
+
+          <!-- Import card -->
+          <section class="card" aria-labelledby="import-title">
+            <div class="card-head">
+              <h2 id="import-title" class="card-title" data-i18n="import.title">
+                Import configuration
+              </h2>
+            </div>
+            <p class="card-sub" id="import-sub">
+              Paste a <span class="mono">vless://</span>, <span class="mono">vmess://</span>,
+              <span class="mono">trojan://</span>, <span class="mono">ss://</span>,
+              <span class="mono">hysteria2://</span> or <span class="mono">tuic://</span> link, a
+              subscription URL (<span class="mono">https://…</span>) or its base64 content.
+            </p>
+            <form id="import-form" class="import-form">
+              <input
+                id="import-input"
+                type="text"
+                placeholder="vless:// / vmess:// / trojan:// / ss:// / hysteria2:// / tuic://"
+                autocomplete="off"
+                data-i18n-ph="import.ph"
+                data-i18n-aria="import.aria"
+                aria-label="Share link"
+              />
+              <button type="submit" id="import-btn" class="btn btn-primary" data-i18n="import.save">
+                Save
+              </button>
+            </form>
+            <p id="import-msg" class="form-error" role="alert" hidden></p>
+          </section>
+
+          <!-- Updates card -->
+          <section class="card" aria-labelledby="updates-title">
+            <div class="card-head">
+              <h2 id="updates-title" class="card-title" data-i18n="updates.title">Updates</h2>
+              <button
+                id="check-updates-btn"
+                class="btn btn-ghost btn-small"
+                type="button"
+                data-i18n="updates.check"
+              >
+                Check
+              </button>
+            </div>
+            <ul id="updates-list" class="updates-list" hidden></ul>
+            <p id="updates-hint" class="empty-note" data-i18n="updates.hint">
+              Check whether newer core versions are available.
+            </p>
+          </section>
+
+          <!-- Export card -->
+          <section class="card" aria-labelledby="export-title">
+            <div class="card-head">
+              <h2 id="export-title" class="card-title" data-i18n="export.title">
+                Export servers
+              </h2>
+              <button
+                id="export-btn"
+                class="btn btn-ghost btn-small"
+                type="button"
+                data-i18n="export.reveal"
+              >
+                Reveal
+              </button>
+            </div>
+            <p id="export-hint" class="empty-note" data-i18n="export.hint">
+              Reveal share links for every saved server. They contain
+              credentials — handle with care.
+            </p>
+            <div id="export-result" hidden>
+              <p id="export-count" class="export-count"></p>
+              <textarea
+                id="export-text"
+                class="export-text"
+                readonly
+                rows="4"
+                aria-label="Exported servers"
+                data-i18n-aria="export.aria"
+              ></textarea>
+              <div class="export-actions">
+                <button
+                  id="export-copy-links"
+                  class="btn btn-ghost btn-small"
+                  type="button"
+                  data-i18n="export.copyLinks"
+                >
+                  Copy links
+                </button>
+                <button
+                  id="export-copy-sub"
+                  class="btn btn-ghost btn-small"
+                  type="button"
+                  data-i18n="export.copySub"
+                >
+                  Copy subscription
+                </button>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+
+    <div id="toast" class="toast" role="status" hidden></div>
+
+    <script src="/admin/static/admin.js"></script>
+  </body>
+</html>

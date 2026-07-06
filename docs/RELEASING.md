@@ -35,32 +35,50 @@ Before creating a release tag:
    - Ensure CI passes
    - Ensure the commit you're tagging is the one you want released
 
-4. **(Optional) Update `XRAY_VERSION`** in `.github/workflows/release.yml` if a new xray-core release is available
+4. **(Optional) Update the xray-core pin** in `backend/src/xray_version.json` if a new core release is available (the release workflow bundles whatever is pinned there)
 
 ## Creating a Release
 
-### Step 1: Create and push the tag
+### The automated way (default)
+
+Releases are fully automated by `.github/workflows/auto-release.yml`:
+
+1. Run `scripts/prepare-release.sh <version>` (e.g. `2.0.0-alpha.1`) — it bumps
+   `package.json` and rolls the `[Unreleased]` CHANGELOG entries into a new
+   dated version section in one step. Review the diff and open a PR.
+2. Merge it to `master`.
+
+CI refuses a `package.json` version that has no matching CHANGELOG section
+(unless that version is already tagged), so a release can't ship without its
+changelog slice. Pre-release versions (`-alpha`/`-beta`/`-rc`) additionally
+get a prominent work-in-progress warning on top of the GitHub release notes.
+
+On the push to `master`, the Auto Release workflow sees that `package.json`
+now carries a version with no matching `v<version>` tag, creates the tag on
+that commit, and dispatches the **Release** workflow, which builds the ZIP
+(with the pinned xray-core bundled) and publishes the GitHub Release.
+Versions containing a `-` (e.g. `2.0.0-alpha.1`) are automatically marked
+as **pre-releases**.
+
+Merging anything that doesn't change the `package.json` version never
+releases — the version bump is the single deliberate release act.
+
+### The manual way (still works)
 
 ```bash
-# Replace 1.0.0 with your version
+# Replace 1.0.0 with your version (must match package.json)
 git tag v1.0.0
 git push origin v1.0.0
 ```
 
-That's it. Pushing the tag will trigger the release workflow automatically.
+A manually pushed `v*` tag triggers the Release workflow directly.
 
-### Step 2: Monitor the workflow
+### Monitor the workflow
 
 1. Go to **Actions** tab on GitHub
 2. Find the **Release** workflow run for your tag
 3. Wait for it to complete
 4. The release will appear under **Releases** with the ZIP artifact attached
-
-### Step 3: Optional — Edit the release
-
-- Add release notes or description
-- Attach additional files
-- Mark as pre-release for beta/alpha versions
 
 ## If You Created the Wrong Tag
 

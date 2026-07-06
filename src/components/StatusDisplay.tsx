@@ -1,12 +1,33 @@
-import { FC } from 'react';
+import { FC, useEffect, useState } from 'react';
 import { Field } from '@decky/ui';
-import type { ConnectionStatus } from '../services/api';
+import { getTrafficStats, type ConnectionStatus } from '../services/api';
+import { t } from '../utils/i18n';
 
 interface StatusDisplayProps {
   status: ConnectionStatus;
   errorMessage?: string | null;
   uptime?: number | null;
   connectedAt?: number | null;
+}
+
+const STATS_POLL_MS = 2000;
+
+const formatBytes = (bytes: number, perSecond: boolean): string => {
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let value = Math.max(0, bytes || 0);
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value = value / 1024;
+    unit++;
+  }
+  const text = `${unit === 0 ? value : value.toFixed(1)} ${units[unit]}`;
+  return perSecond ? `${text}/s` : text;
+};
+
+interface Speeds {
+  down: number;
+  up: number;
+  total: number;
 }
 
 export const StatusDisplay: FC<StatusDisplayProps> = ({
@@ -16,6 +37,38 @@ export const StatusDisplay: FC<StatusDisplayProps> = ({
   connectedAt,
 }) => {
   const leftDescriptionStyle = { display: 'block', textAlign: 'left' } as const;
+  const [speeds, setSpeeds] = useState<Speeds | null>(null);
+
+  useEffect(() => {
+    if (status !== 'connected') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clear stale speeds when leaving the connected state
+      setSpeeds(null);
+      return;
+    }
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const result = await getTrafficStats();
+        if (cancelled) return;
+        if (result.success && result.available) {
+          setSpeeds({
+            down: result.downlinkSpeed,
+            up: result.uplinkSpeed,
+            total: result.uplink + result.downlink,
+          });
+        }
+      } catch {
+        /* transient */
+      }
+    };
+    void poll();
+    const interval = setInterval(() => void poll(), STATS_POLL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [status]);
+
   const getStatusColor = (): string => {
     switch (status) {
       case 'connected':
@@ -34,15 +87,15 @@ export const StatusDisplay: FC<StatusDisplayProps> = ({
   const getStatusText = (): string => {
     switch (status) {
       case 'connected':
-        return 'Connected';
+        return t('status.connected');
       case 'connecting':
-        return 'Connecting...';
+        return t('status.connecting');
       case 'error':
-        return 'Error';
+        return t('status.error');
       case 'blocked':
-        return 'Blocked (Kill Switch)';
+        return t('status.blocked');
       default:
-        return 'Disconnected';
+        return t('status.disconnected');
     }
   };
 
@@ -87,21 +140,21 @@ export const StatusDisplay: FC<StatusDisplayProps> = ({
   return (
     <div style={cardStyle}>
       <Field
-        label="Connection status"
+        label={t('status.title')}
         bottomSeparator="none"
         description={<span style={leftDescriptionStyle}>{statusIndicator}</span>}
       />
 
       {status === 'connected' && uptime != null && (
         <Field
-          label="Uptime"
+          label={t('status.uptime')}
           bottomSeparator="none"
           description={<span style={leftDescriptionStyle}>{formatUptime(uptime)}</span>}
         />
       )}
       {status === 'connected' && connectedAt && (
         <Field
-          label="Connected at"
+          label={t('status.connectedAt')}
           bottomSeparator="none"
           description={
             <span style={leftDescriptionStyle}>
@@ -110,10 +163,27 @@ export const StatusDisplay: FC<StatusDisplayProps> = ({
           }
         />
       )}
+      {status === 'connected' && speeds && (
+        <Field
+          label={t('status.speed')}
+          bottomSeparator="none"
+          description={
+            <span style={{ ...leftDescriptionStyle, fontVariant: 'tabular-nums' }}>
+              <span style={{ color: '#a1cd44' }}>▼ {formatBytes(speeds.down, true)}</span>
+              {'   '}
+              <span style={{ color: '#66c0f4' }}>▲ {formatBytes(speeds.up, true)}</span>
+              {'   '}
+              <span style={{ color: '#8f98a0' }}>
+                {formatBytes(speeds.total, false)} {t('status.total')}
+              </span>
+            </span>
+          }
+        />
+      )}
 
       {status === 'error' && errorMessage && (
         <Field
-          label="Error"
+          label={t('status.errorLabel')}
           bottomSeparator="none"
           description={
             <span style={{ ...leftDescriptionStyle, color: '#ff6b6b' }}>{errorMessage}</span>
@@ -123,11 +193,11 @@ export const StatusDisplay: FC<StatusDisplayProps> = ({
 
       {status === 'blocked' && (
         <Field
-          label="Kill Switch"
+          label={t('status.killSwitch')}
           bottomSeparator="none"
           description={
             <span style={{ ...leftDescriptionStyle, color: '#ff6b6b' }}>
-              All traffic is blocked. Reconnect to restore.
+              {t('status.blockedMsg')}
             </span>
           }
         />

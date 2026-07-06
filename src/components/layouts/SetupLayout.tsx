@@ -2,6 +2,7 @@ import { FC } from 'react';
 import { ConfigImport } from '../ConfigImport';
 import { QRImportBlock } from '../QRImportBlock';
 import { PanelSection, PanelSectionRow } from '../ui/primitives';
+import { t } from '../../utils/i18n';
 
 interface SetupLayoutProps {
   vlessUrl: string;
@@ -21,7 +22,7 @@ export const SetupLayout: FC<SetupLayoutProps> = ({
   successMessage,
 }) => {
   return (
-    <PanelSection title="Setup">
+    <PanelSection title={t('setup.title')}>
       <PanelSectionRow>
         <QRImportBlock helpTopicQr="setup.qr_import" helpTopicLan="setup.lan_address" />
       </PanelSectionRow>

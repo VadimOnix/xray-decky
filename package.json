@@ -1,6 +1,6 @@
 {
   "name": "xray-decky",
-  "version": "1.0.1",
+  "version": "2.0.0-alpha.1",
   "description": "Decky Loader plugin for VLESS proxy connections with Reality protocol support",
   "type": "module",
   "scripts": {
@@ -14,9 +14,8 @@
     "format": "prettier --write 'src/**/*.{ts,tsx,js,json}' '*.{json,mjs}'",
     "test": "echo 'No frontend tests configured'",
     "deploy": "./deploy.sh",
-    "deploy:simple": "pnpm run build && rsync -avz --delete --progress --timeout=30 --partial -e 'ssh -o ServerAliveInterval=10 -o ServerAliveCountMax=3' dist/ package.json plugin.json main.py LICENSE.md backend/src/ backend/static/ steamdeck:/home/deck/homebrew/plugins/xray-decky/",
     "package": "./package-and-deploy.sh",
-    "package:local": "pnpm run build && mkdir -p dist-package/xray-decky && cp -r dist package.json plugin.json main.py LICENSE.md dist-package/xray-decky/ && mkdir -p dist-package/xray-decky/backend && cp -r backend/src dist-package/xray-decky/backend/ && (test -d backend/static && cp -r backend/static dist-package/xray-decky/backend/ || true) && cd dist-package && zip -r ../xray-decky-v0.3.0-alpha.1.zip xray-decky && cd .. && rm -rf dist-package && echo '✅ ZIP created: xray-decky-v0.3.0-alpha.1.zip'"
+    "package:local": "./scripts/package-local.sh"
   },
   "repository": {
     "type": "git",
@@ -39,7 +38,7 @@
     "@decky/rollup": "^1.0.2",
     "@decky/ui": "^4.11.0",
     "@eslint/js": "^9.39.3",
-    "@rollup/rollup-linux-x64-musl": "^4.57.1",
+    "@rollup/rollup-linux-x64-musl": "^4.59.0",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "@types/webpack": "^5.28.5",
@@ -48,9 +47,9 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.0.1",
     "prettier": "^3.8.1",
-    "rollup": "^4.57.1",
+    "rollup": "^4.59.0",
     "typescript": "^5.6.2",
-    "typescript-eslint": "^8.55.0"
+    "typescript-eslint": "^8.56.1"
   },
   "dependencies": {
     "@decky/api": "^1.1.3",

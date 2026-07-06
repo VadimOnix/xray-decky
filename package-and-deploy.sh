@@ -1,5 +1,14 @@
 #!/bin/bash
-set -e
+# Build, zip and upload the plugin package to a Steam Deck over SSH.
+#
+# Nothing is hardcoded — configure via environment variables or an optional
+# .deckdeployrc file in the repo root (gitignored, plain shell assignments):
+#
+#   DECK_HOST        ssh destination                  (default: steamdeck)
+#   DECK_UPLOAD_DIR  where to place the zip on device (default: ~/Downloads)
+#
+# Name, version and zip filename come from package.json.
+set -euo pipefail
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -7,81 +16,49 @@ BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-# Get name and version from package.json
-PLUGIN_NAME=$(node -p "require('./package.json').name")
-PLUGIN_VERSION=$(node -p "require('./package.json').version")
+if [ -f .deckdeployrc ]; then
+  # shellcheck disable=SC1091
+  source .deckdeployrc
+fi
+
+DECK_HOST="${DECK_HOST:-steamdeck}"
+DECK_UPLOAD_DIR="${DECK_UPLOAD_DIR:-~/Downloads}"
+
+PLUGIN_NAME="$(node -p "require('./package.json').name")"
+PLUGIN_VERSION="$(node -p "require('./package.json').version")"
 ZIP_NAME="${PLUGIN_NAME}-v${PLUGIN_VERSION}.zip"
 
-echo -e "${BLUE}🔨 Building project...${NC}"
+echo -e "${BLUE}🔨 Building ${PLUGIN_NAME} v${PLUGIN_VERSION}...${NC}"
 pnpm run build
 
 echo -e "${BLUE}📦 Creating plugin package...${NC}"
-
-# Create temporary directory for packaging
-TEMP_DIR=$(mktemp -d)
+TEMP_DIR="$(mktemp -d)"
+trap 'rm -rf "$TEMP_DIR"' EXIT
 PLUGIN_DIR="$TEMP_DIR/$PLUGIN_NAME"
 
-mkdir -p "$PLUGIN_DIR"
+echo -e "${YELLOW}📋 Staging files...${NC}"
+scripts/stage-plugin.sh "$PLUGIN_DIR"
 
-# Copy required files per DeckBrew structure
-echo -e "${YELLOW}📋 Copying files...${NC}"
-
-# Required files
-cp -r dist "$PLUGIN_DIR/"
-cp package.json "$PLUGIN_DIR/"
-cp plugin.json "$PLUGIN_DIR/"
-cp main.py "$PLUGIN_DIR/"
-cp LICENSE.md "$PLUGIN_DIR/"
-
-# Optional files
-if [ -f README.md ]; then
-  cp README.md "$PLUGIN_DIR/"
-fi
-
-# Backend and import server: backend/src/*.py (cert_utils, import_server, …), backend/static (import.html, import.css)
-if [ ! -d backend/src ] || [ ! -d backend/static ]; then
-  echo -e "${YELLOW}❌ backend/src or backend/static missing. Import server will not start on device.${NC}"
-  exit 1
-fi
-mkdir -p "$PLUGIN_DIR/backend/src"
-cp backend/__init__.py "$PLUGIN_DIR/backend/" 2>/dev/null || echo "# Backend package" > "$PLUGIN_DIR/backend/__init__.py"
-cp backend/src/__init__.py "$PLUGIN_DIR/backend/src/" 2>/dev/null || echo "# Backend src package" > "$PLUGIN_DIR/backend/src/__init__.py"
-cp backend/src/*.py "$PLUGIN_DIR/backend/src/"
-mkdir -p "$PLUGIN_DIR/backend"
-cp -r backend/static "$PLUGIN_DIR/backend/"
-
-# Backend binaries (if present)
-if [ -d backend/out ] && [ "$(ls -A backend/out 2>/dev/null)" ]; then
-  mkdir -p "$PLUGIN_DIR/bin"
-  cp -r backend/out/* "$PLUGIN_DIR/bin/" 2>/dev/null || true
-fi
-
-# Create ZIP archive
 echo -e "${YELLOW}📦 Creating ZIP archive...${NC}"
-cd "$TEMP_DIR"
-zip -r "$ZIP_NAME" "$PLUGIN_NAME" > /dev/null
+(cd "$TEMP_DIR" && zip -r "$ZIP_NAME" "$PLUGIN_NAME" > /dev/null)
 ZIP_PATH="$TEMP_DIR/$ZIP_NAME"
 
-# Show archive size
-ZIP_SIZE=$(du -h "$ZIP_PATH" | cut -f1)
+ZIP_SIZE="$(du -h "$ZIP_PATH" | cut -f1)"
 echo -e "${GREEN}✅ Created: $ZIP_NAME (${ZIP_SIZE})${NC}"
 
-# Upload to Steam Deck
-echo -e "${BLUE}🚀 Uploading to Steam Deck...${NC}"
-scp "$ZIP_PATH" steamdeck:~/Downloads/
-
-if [ $? -eq 0 ]; then
-  echo -e "${GREEN}✅ Successfully uploaded to ~/Downloads/$ZIP_NAME on Steam Deck${NC}"
+echo -e "${BLUE}🚀 Uploading to ${DECK_HOST}:${DECK_UPLOAD_DIR}/ ...${NC}"
+if scp "$ZIP_PATH" "${DECK_HOST}:${DECK_UPLOAD_DIR}/"; then
+  echo -e "${GREEN}✅ Uploaded ${ZIP_NAME} to ${DECK_UPLOAD_DIR} on ${DECK_HOST}${NC}"
   echo -e "${YELLOW}💡 To install:${NC}"
-  echo -e "   1. Open Decky Loader on Steam Deck"
-  echo -e "   2. Go to Settings → Developer → Install Plugin from URL"
-  echo -e "   3. Or manually copy from ~/Downloads to ~/homebrew/plugins/$PLUGIN_NAME"
+  echo -e "   1. Open Decky Loader on the Steam Deck"
+  echo -e "   2. Settings → Developer → Install Plugin from URL / zip"
+  echo -e "   3. Or unzip into the Decky plugins directory and restart plugin_loader"
 else
-  echo -e "${YELLOW}⚠️  Upload failed. ZIP file saved at: $ZIP_PATH${NC}"
+  echo -e "${YELLOW}⚠️  Upload failed. ZIP kept at: ${ZIP_PATH}${NC}"
+  # Keep the artifact for manual use despite the trap cleanup.
+  cp "$ZIP_PATH" .
+  echo -e "${YELLOW}   Copied to ./${ZIP_NAME}${NC}"
   exit 1
 fi
-
-# Cleanup
-rm -rf "$TEMP_DIR"
 
 echo -e "${GREEN}✨ Done!${NC}"

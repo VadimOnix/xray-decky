@@ -1,4 +1,5 @@
 import { definePlugin } from '@decky/api';
+import { handleResume } from './services/api';
 import { ErrorBoundary } from '@decky/ui';
 import { FaNetworkWired } from 'react-icons/fa';
 import { useEffect, useState } from 'react';
@@ -29,6 +30,7 @@ function Content() {
 
   useEffect(() => {
     if (layout === 'setup') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional one-time form reset when entering the setup layout
       setSaveError(null);
       setSaveSuccess(null);
       setVlessUrl('');
@@ -89,6 +91,13 @@ function Content() {
 export default definePlugin(() => {
   console.log('Xray Decky plugin initializing');
 
+  // Suspend/resume is a top failure source for proxying on the Deck: the
+  // TUN default route can vanish while xray-core keeps running. Let the
+  // backend repair routing every time the device wakes up.
+  const resumeRegistration = SteamClient?.System?.RegisterForOnResumeFromSuspend?.(() => {
+    handleResume().catch((err) => console.error('Xray Decky: resume handling failed', err));
+  });
+
   return {
     name: 'Xray Decky',
     content: (
@@ -99,6 +108,7 @@ export default definePlugin(() => {
     icon: <FaNetworkWired />,
     onDismount() {
       console.log('Xray Decky plugin unloading');
+      resumeRegistration?.unregister();
     },
   };
 });

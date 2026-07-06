@@ -126,6 +126,27 @@ export interface ImportServerUrlResponse {
   path: string;
 }
 
+export interface AdminPanelUrlResponse {
+  baseUrl: string;
+  path: string;
+  token: string;
+  allowLan?: boolean;
+}
+
+export interface SetLanAccessResponse {
+  success: boolean;
+  allowLan?: boolean;
+  serverRunning?: boolean;
+  error?: string;
+}
+
+export interface HandleResumeResponse {
+  success: boolean;
+  checked?: boolean;
+  routeRestored?: boolean;
+  error?: string;
+}
+
 // Backend method handles using callable (new API)
 // callable<[arg types], returnType>("method_name")
 
@@ -170,3 +191,56 @@ export const getSystemProxyStatus = callable<[], SystemProxyStatusResponse>(
 );
 
 export const getImportServerUrl = callable<[], ImportServerUrlResponse>('get_import_server_url');
+export const getAdminPanelUrl = callable<[], AdminPanelUrlResponse>('get_admin_panel_url');
+
+export const setLanAccess = callable<[enabled: boolean], SetLanAccessResponse>('set_lan_access');
+export const handleResume = callable<[], HandleResumeResponse>('handle_resume');
+
+export interface ServerProfile {
+  id: string;
+  protocol?: string;
+  name?: string;
+  address?: string;
+  port?: number;
+  network?: string;
+  security?: string;
+  latencyMs?: number | null;
+  latencyTestedAt?: number;
+}
+
+export interface GetProfilesResponse {
+  success: boolean;
+  activeId?: string | null;
+  profiles: ServerProfile[];
+  error?: string;
+}
+
+export interface SetActiveProfileResponse {
+  success: boolean;
+  activeId?: string;
+  reconnected?: boolean;
+  error?: string;
+}
+
+export interface TestLatencyResponse {
+  success: boolean;
+  results?: Record<string, number | null>;
+  error?: string;
+}
+
+export interface TrafficStatsResponse {
+  success: boolean;
+  available: boolean;
+  uplink: number;
+  downlink: number;
+  uplinkSpeed: number;
+  downlinkSpeed: number;
+  error?: string;
+}
+
+export const getProfiles = callable<[], GetProfilesResponse>('get_profiles');
+export const setActiveProfile = callable<[profileId: string], SetActiveProfileResponse>(
+  'set_active_profile'
+);
+export const testProfilesLatency = callable<[], TestLatencyResponse>('test_profiles_latency');
+export const getTrafficStats = callable<[], TrafficStatsResponse>('get_traffic_stats');

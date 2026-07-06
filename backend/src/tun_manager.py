@@ -251,6 +251,40 @@ class TUNManager:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
+    async def ensure_system_route(self) -> Dict[str, Any]:
+        """
+        Re-add the default route via the TUN interface if it disappeared —
+        suspend/resume cycles and Wi-Fi roaming can drop it while xray-core
+        (and the interface it owns) keep running.
+
+        Returns:
+            {"success": bool, "restored": bool, "error": str | None}
+        """
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                "ip",
+                "route",
+                "show",
+                "default",
+                "dev",
+                self.TUN_INTERFACE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.DEVNULL,
+            )
+            out = await proc.stdout.read()
+            await proc.wait()
+            if proc.returncode == 0 and out.strip():
+                return {"success": True, "restored": False}
+
+            result = await self.setup_system_route()
+            return {
+                "success": result.get("success", False),
+                "restored": result.get("success", False),
+                "error": result.get("error"),
+            }
+        except Exception as e:
+            return {"success": False, "restored": False, "error": str(e)}
+
     async def remove_system_route(self) -> Dict[str, Any]:
         """Remove default route via xray0. Also cleanup legacy fwmark rule if present."""
         try:

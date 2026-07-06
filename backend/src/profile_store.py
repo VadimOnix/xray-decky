@@ -1,0 +1,310 @@
+"""
+Multi-server profile store (settings schema v2).
+
+Profiles live under the "profiles" settings key:
+
+    {
+      "version": 2,
+      "activeId": "ab12cd34" | None,
+      "items": [ { "id": "...", ...profile fields... }, ... ]
+    }
+
+The active profile is mirrored into the legacy "vlessConfig" key on every
+mutation, so the connection path and older frontends keep working unchanged.
+A legacy single "vlessConfig" is migrated into the list on first load.
+"""
+
+import time
+import uuid
+from typing import Any, Dict, List, Optional
+from urllib.parse import urlparse
+
+PROFILES_KEY = "profiles"
+LEGACY_KEY = "vlessConfig"
+SCHEMA_VERSION = 2
+
+
+def _derive_sub_name(url: Optional[str]) -> str:
+    """A default subscription label — its URL host, or a generic fallback."""
+    try:
+        host = urlparse(url or "").hostname
+    except ValueError:
+        host = None
+    return host or "Subscription"
+
+
+def _new_id() -> str:
+    return uuid.uuid4().hex[:8]
+
+
+class ProfileStore:
+    """CRUD + active-profile selection over SettingsManager."""
+
+    def __init__(self, settings) -> None:
+        self._settings = settings
+
+    # ----- persistence helpers -----
+
+    def _load(self) -> Dict[str, Any]:
+        data = self._settings.getSetting(PROFILES_KEY, None)
+        if isinstance(data, dict) and isinstance(data.get("items"), list):
+            return data
+        return self._migrate_legacy()
+
+    def _migrate_legacy(self) -> Dict[str, Any]:
+        """Build schema v2 from a legacy single vlessConfig (or empty)."""
+        data: Dict[str, Any] = {
+            "version": SCHEMA_VERSION,
+            "activeId": None,
+            "items": [],
+        }
+        legacy = self._settings.getSetting(LEGACY_KEY, None)
+        if isinstance(legacy, dict) and legacy.get("address"):
+            profile = dict(legacy)
+            profile["id"] = _new_id()
+            data["items"] = [profile]
+            data["activeId"] = profile["id"]
+        self._save(data)
+        return data
+
+    def _save(self, data: Dict[str, Any]) -> None:
+        data["version"] = SCHEMA_VERSION
+        self._settings.setSetting(PROFILES_KEY, data)
+        self._mirror_active(data)
+        self._settings.commit()
+
+    def _mirror_active(self, data: Dict[str, Any]) -> None:
+        """Keep the legacy vlessConfig key equal to the active profile."""
+        active = None
+        for item in data["items"]:
+            if item.get("id") == data.get("activeId"):
+                active = item
+                break
+        if active is not None:
+            mirror = dict(active)
+            mirror.pop("id", None)
+            self._settings.setSetting(LEGACY_KEY, mirror)
+        else:
+            self._settings.setSetting(LEGACY_KEY, None)
+
+    # ----- public API -----
+
+    def list_profiles(self) -> List[Dict[str, Any]]:
+        return list(self._load()["items"])
+
+    def get_active_id(self) -> Optional[str]:
+        return self._load().get("activeId")
+
+    def get_active(self) -> Optional[Dict[str, Any]]:
+        data = self._load()
+        for item in data["items"]:
+            if item.get("id") == data.get("activeId"):
+                return dict(item)
+        return None
+
+    def get(self, profile_id: str) -> Optional[Dict[str, Any]]:
+        for item in self._load()["items"]:
+            if item.get("id") == profile_id:
+                return dict(item)
+        return None
+
+    def add(self, profile: Dict[str, Any], *, make_active: bool = True) -> str:
+        """Append a profile; returns its id."""
+        data = self._load()
+        item = dict(profile)
+        item["id"] = _new_id()
+        data["items"].append(item)
+        if make_active or data.get("activeId") is None:
+            data["activeId"] = item["id"]
+        self._save(data)
+        return item["id"]
+
+    def replace_all(self, profiles: List[Dict[str, Any]]) -> List[str]:
+        """
+        Replace the whole list (subscription import). The first profile
+        becomes active; if a previously active server (same protocol,
+        address and port) is still present, it stays active. Returns the
+        new ids. Subscription metadata is cleared — the importer sets it
+        again for URL-based subscriptions.
+        """
+        previous_active = self.get_active()
+        data: Dict[str, Any] = {
+            "version": SCHEMA_VERSION,
+            "activeId": None,
+            "items": [],
+        }
+        for profile in profiles:
+            item = dict(profile)
+            item["id"] = _new_id()
+            data["items"].append(item)
+        if data["items"]:
+            data["activeId"] = data["items"][0]["id"]
+            if previous_active is not None:
+                key = (
+                    previous_active.get("protocol"),
+                    previous_active.get("address"),
+                    previous_active.get("port"),
+                )
+                for item in data["items"]:
+                    if (
+                        item.get("protocol"),
+                        item.get("address"),
+                        item.get("port"),
+                    ) == key:
+                        data["activeId"] = item["id"]
+                        break
+        self._save(data)
+        return [item["id"] for item in data["items"]]
+
+    def replace_subscription_profiles(
+        self, profiles: List[Dict[str, Any]]
+    ) -> List[str]:
+        """
+        Replace only the subscription-sourced profiles, preserving manually
+        added ones (``configType`` != "subscription").
+
+        Used by subscription import/refresh so it no longer wipes single-link
+        servers the user added by hand. The active selection is preserved when
+        possible: it stays on the active profile if that survived (a kept
+        manual profile, or a subscription server still present by
+        protocol/address/port); otherwise it falls back to the first new
+        subscription server, then the first kept profile. Returns the new
+        subscription profile ids.
+        """
+        data = self._load()
+        previous_active = self.get_active()
+        kept = [i for i in data["items"] if i.get("configType") != "subscription"]
+
+        new_items: List[Dict[str, Any]] = []
+        for profile in profiles:
+            item = dict(profile)
+            item["id"] = _new_id()
+            new_items.append(item)
+
+        data["items"] = kept + new_items
+
+        kept_ids = {i.get("id") for i in kept}
+        active_id: Optional[str] = None
+        if previous_active is not None:
+            if previous_active.get("id") in kept_ids:
+                active_id = previous_active.get("id")
+            else:
+                key = (
+                    previous_active.get("protocol"),
+                    previous_active.get("address"),
+                    previous_active.get("port"),
+                )
+                for item in new_items:
+                    if (
+                        item.get("protocol"),
+                        item.get("address"),
+                        item.get("port"),
+                    ) == key:
+                        active_id = item["id"]
+                        break
+        if active_id is None:
+            if new_items:
+                active_id = new_items[0]["id"]
+            elif kept:
+                active_id = kept[0]["id"]
+        data["activeId"] = active_id
+
+        self._save(data)
+        return [item["id"] for item in new_items]
+
+    def clear_subscription(self) -> None:
+        """Forget the stored subscription metadata (no URL to refresh)."""
+        data = self._load()
+        if "subscription" in data:
+            del data["subscription"]
+            self._save(data)
+
+    def set_subscription(
+        self, url: str, node_count: int, userinfo=None, name: Optional[str] = None
+    ) -> None:
+        """Record where the current profile list came from (for refresh).
+
+        ``userinfo`` is the optional quota/expiry dict from the subscription's
+        ``Subscription-Userinfo`` header (upload/download/total/expire).
+        ``name`` is a user-facing label; when omitted, an existing custom name
+        for the same URL is kept (so a refresh doesn't reset it), otherwise a
+        default is derived from the URL host.
+        """
+        data = self._load()
+        existing = data.get("subscription")
+        existing = existing if isinstance(existing, dict) else {}
+        same_url = existing.get("url") == url
+        kept_name = existing.get("name") if same_url else None
+        # A scheduled-refresh interval is a per-subscription preference; keep it
+        # across a refresh of the same URL (a refresh must not disable itself).
+        kept_interval = existing.get("refreshIntervalHours", 0) if same_url else 0
+        data["subscription"] = {
+            "url": url,
+            "name": name or kept_name or _derive_sub_name(url),
+            "updatedAt": int(time.time()),
+            "nodeCount": node_count,
+            "userinfo": userinfo,
+            "refreshIntervalHours": kept_interval,
+        }
+        self._save(data)
+
+    def rename_subscription(self, name: str) -> bool:
+        """Set the subscription's user-facing label; False if none is stored."""
+        data = self._load()
+        subscription = data.get("subscription")
+        if not isinstance(subscription, dict):
+            return False
+        subscription["name"] = name.strip() or _derive_sub_name(
+            subscription.get("url")
+        )
+        self._save(data)
+        return True
+
+    def set_refresh_interval(self, hours: int) -> bool:
+        """Set the subscription's auto-refresh interval in hours (0 disables).
+
+        Returns False when no subscription is stored (nothing to schedule).
+        """
+        data = self._load()
+        subscription = data.get("subscription")
+        if not isinstance(subscription, dict):
+            return False
+        subscription["refreshIntervalHours"] = max(0, int(hours))
+        self._save(data)
+        return True
+
+    def get_subscription(self) -> Optional[Dict[str, Any]]:
+        subscription = self._load().get("subscription")
+        return dict(subscription) if isinstance(subscription, dict) else None
+
+    def set_active(self, profile_id: str) -> bool:
+        data = self._load()
+        if not any(item.get("id") == profile_id for item in data["items"]):
+            return False
+        data["activeId"] = profile_id
+        self._save(data)
+        return True
+
+    def remove(self, profile_id: str) -> bool:
+        data = self._load()
+        before = len(data["items"])
+        data["items"] = [i for i in data["items"] if i.get("id") != profile_id]
+        if len(data["items"]) == before:
+            return False
+        if data.get("activeId") == profile_id:
+            data["activeId"] = data["items"][0]["id"] if data["items"] else None
+        self._save(data)
+        return True
+
+    def clear(self) -> None:
+        self._save({"version": SCHEMA_VERSION, "activeId": None, "items": []})
+
+    def set_latency(self, profile_id: str, latency_ms: Optional[int]) -> None:
+        """Record a latency measurement (None = unreachable)."""
+        data = self._load()
+        for item in data["items"]:
+            if item.get("id") == profile_id:
+                item["latencyMs"] = latency_ms
+                item["latencyTestedAt"] = int(time.time())
+                break
+        self._save(data)

@@ -5,6 +5,7 @@ This module provides the Plugin class that serves as the backend entry point
 for the Decky Loader plugin. All backend methods are defined here.
 """
 
+import asyncio
 import os
 import sys
 import ssl
@@ -12,7 +13,7 @@ import socket
 import subprocess
 import time
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 
 def _get_lan_ip() -> str:
@@ -80,11 +81,10 @@ if str(PLUGIN_DIR) not in sys.path:
     sys.path.insert(0, str(PLUGIN_DIR))
 
 from settings import SettingsManager
-from backend.src.config_parser import (
-    validate_vless_url,
-    parse_vless_url,
-    parse_subscription_url,
-    build_vless_config,
+from backend.src.config_parser import validate_share_link, core_for_protocol
+from backend.src.importer import (
+    import_link,
+    refresh_subscription as refresh_subscription_flow,
 )
 from backend.src.error_codes import (
     ErrorCode,
@@ -97,6 +97,17 @@ from backend.src.tun_manager import TUNManager
 from backend.src.kill_switch import KillSwitch
 from backend.src.system_proxy import SystemProxyManager
 from backend.src.import_server import create_import_app
+from backend.src.admin_api import (
+    admin_bind_host,
+    ensure_admin_token,
+    lan_access_enabled,
+    register_admin_routes,
+    save_lan_access,
+)
+from backend.src.supervisor import XraySupervisor
+from backend.src.profile_store import ProfileStore
+from backend.src.latency import test_profiles
+from backend.src.stats import TrafficStats
 from backend.src.cert_utils import ensure_cert_key
 from aiohttp import web
 
@@ -106,20 +117,38 @@ if not settings_dir:
     raise RuntimeError("DECKY_PLUGIN_SETTINGS_DIR environment variable not set")
 
 settings = SettingsManager(name="settings", settings_directory=settings_dir)
+profile_store = ProfileStore(settings)
 settings.read()
 
 
-# Resolve xray-core path: deployed uses bin/, dev uses backend/out/
+def _persistent_xray_dir(plugin_dir: Path) -> Path:
+    """
+    Writable directory that survives reboots / SteamOS system updates, used to
+    (re)download xray-core when the plugin's bundled bin/ is wiped. Prefers
+    DECKY_PLUGIN_RUNTIME_DIR (persistent data dir, where TLS certs also live);
+    falls back to the plugin's own bin/ when not running under Decky.
+    """
+    runtime_dir = os.environ.get("DECKY_PLUGIN_RUNTIME_DIR", "")
+    if runtime_dir:
+        return Path(runtime_dir) / "bin"
+    return plugin_dir / "bin"
+
+
+# Resolve xray-core path: deployed uses bin/, dev uses backend/out/, and a
+# persistent runtime dir is used as a self-healing download location because
+# SteamOS may wipe the plugin's bin/ on reboot (immutable FS / atomic updates).
 def _resolve_xray_path(plugin_dir: Path) -> str:
-    for candidate in (
+    candidates = [
         plugin_dir / "bin" / "xray-core",
         plugin_dir / "backend" / "out" / "xray-core",
-    ):
+        _persistent_xray_dir(plugin_dir) / "xray-core",
+    ]
+    for candidate in candidates:
         if candidate.exists():
             return str(candidate)
-    return str(
-        plugin_dir / "backend" / "out" / "xray-core"
-    )  # fallback for clearer error
+    # Nothing present yet: point at the persistent location where xray-core will
+    # be downloaded on startup (see Plugin._ensure_xray_binary).
+    return str(_persistent_xray_dir(plugin_dir) / "xray-core")
 
 
 # Initialize XrayManager, TUNManager, KillSwitch, and SystemProxyManager
@@ -127,6 +156,7 @@ xray_manager = XrayManager(xray_binary_path=_resolve_xray_path(PLUGIN_DIR))
 tun_manager = TUNManager()
 kill_switch = KillSwitch()
 system_proxy_manager = SystemProxyManager()
+traffic_stats = TrafficStats()
 
 
 class Plugin:
@@ -143,17 +173,40 @@ class Plugin:
         Called when the plugin is loaded.
         """
         print("Xray Decky Plugin: Backend initialized")
+        self._supervisor: Optional[XraySupervisor] = None
+
+        # Ensure the xray-core binary is present. On SteamOS the plugin's bin/
+        # can be wiped on reboot/system update, so re-download it if missing.
+        await self._ensure_xray_binary()
+
         # Load connection state from settings
         from backend.src.connection_manager import load_connection_state_from_settings
 
         load_connection_state_from_settings(settings)
 
         # Start import HTTPS server (TLS self-signed cert so Paste works from any device).
-        # ImportServerConfig: port from settings, default 8765, range 1024–65535.
-        # Bind to 0.0.0.0 so the import page is reachable from LAN (QR scan). If preferred port is in use, try next ports.
+        await self._start_import_server()
+
+        # Background subscription auto-refresh. Off unless the user set an
+        # interval, so this is a no-op for everyone else. It only re-fetches
+        # the stored subscription URL (preserving the active server) — it never
+        # touches or reconnects the live xray process.
+        self._refresh_task = asyncio.create_task(self._subscription_refresh_loop())
+
+    async def _start_import_server(self) -> None:
+        """
+        Start the embedded HTTPS server (import page + admin panel).
+
+        ImportServerConfig: port from settings, default 8765, range 1024–65535;
+        if the preferred port is in use the next ports are tried. The bind host
+        follows the "Allow LAN access" preference: 0.0.0.0 (QR pairing from a
+        phone, the historical default) or 127.0.0.1 (Deck-only). Called from
+        _main and again by set_lan_access to rebind.
+        """
         import_server_config = settings.getSetting("importServer", {"port": 8765})
         port = int(import_server_config.get("port", 8765))
         port = max(1024, min(65535, port))
+        bind_host = admin_bind_host(settings)
         static_dir = Path(__file__).resolve().parent / "backend" / "static"
         runtime_dir = os.environ.get("DECKY_PLUGIN_RUNTIME_DIR", "")
         ssl_context = None
@@ -193,10 +246,38 @@ class Plugin:
                     import_app = create_import_app(
                         settings, static_dir, on_vless_saved=_notify_vless_saved
                     )
+                    # Admin panel shares the same app (port + TLS cert).
+                    register_admin_routes(
+                        import_app,
+                        settings=settings,
+                        static_dir=static_dir,
+                        handlers={
+                            "get_connection_status": self.get_connection_status,
+                            "toggle_connection": self.toggle_connection,
+                            "get_vless_config": self.get_vless_config,
+                            "import_config": self.import_vless_config,
+                            "toggle_tun_mode": self.toggle_tun_mode,
+                            "toggle_kill_switch": self.toggle_kill_switch,
+                            "deactivate_kill_switch": self.deactivate_kill_switch,
+                            "get_profiles": self.get_profiles,
+                            "set_active_profile": self.set_active_profile,
+                            "remove_profile": self.remove_profile,
+                            "test_profiles_latency": self.test_profiles_latency,
+                            "refresh_subscription": self.refresh_subscription,
+                            "rename_subscription": self.rename_subscription,
+                            "set_subscription_refresh_interval": (
+                                self.set_subscription_refresh_interval
+                            ),
+                            "get_traffic_stats": self.get_traffic_stats,
+                            "check_updates": self.check_updates,
+                            "export_profiles": self.export_profiles,
+                        },
+                        token=ensure_admin_token(settings),
+                    )
                     runner = web.AppRunner(import_app)
                     await runner.setup()
                     site = web.TCPSite(
-                        runner, "0.0.0.0", try_port, ssl_context=ssl_context
+                        runner, bind_host, try_port, ssl_context=ssl_context
                     )
                     await site.start()
                     self._import_runner = runner
@@ -205,11 +286,11 @@ class Plugin:
                         settings.setSetting("importServer", import_server_config)
                         settings.commit()
                         print(
-                            f"Xray Decky Plugin: Port {port} in use, using {try_port}. Import server listening on 0.0.0.0:{try_port} (HTTPS)"
+                            f"Xray Decky Plugin: Port {port} in use, using {try_port}. Import server listening on {bind_host}:{try_port} (HTTPS)"
                         )
                     else:
                         print(
-                            f"Xray Decky Plugin: Import server listening on 0.0.0.0:{try_port} (HTTPS)"
+                            f"Xray Decky Plugin: Import server listening on {bind_host}:{try_port} (HTTPS)"
                         )
                     break
                 except OSError as e:
@@ -236,11 +317,127 @@ class Plugin:
                 "Xray Decky Plugin: backend/static not found, import server not started"
             )
 
+    # Slow tick — the interval is measured in hours, so checking every few
+    # minutes is plenty and keeps this effectively idle.
+    _REFRESH_TICK_SECONDS = 300
+
+    async def _subscription_refresh_loop(self) -> None:
+        from backend.src.refresh_scheduler import is_refresh_due
+
+        while True:
+            try:
+                await asyncio.sleep(self._REFRESH_TICK_SECONDS)
+                subscription = profile_store.get_subscription()
+                if is_refresh_due(subscription, time.time()):
+                    print(
+                        "Xray Decky Plugin: subscription auto-refresh due, "
+                        "re-fetching"
+                    )
+                    result = await refresh_subscription_flow(profile_store)
+                    if not result.get("success", False):
+                        # Deliberately no error detail — the failure string can
+                        # be derived from the subscription URL / share links,
+                        # which may carry credentials (CodeQL clear-text logging).
+                        print("Xray Decky Plugin: subscription auto-refresh failed")
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:
+                # Never let a transient error kill the loop. Log only the
+                # exception type — a message could echo the subscription URL
+                # (which may carry credentials).
+                print(
+                    "Xray Decky Plugin: subscription refresh loop error: "
+                    f"{type(e).__name__}"
+                )
+
+    async def _ensure_xray_binary(self) -> Dict[str, Any]:
+        """
+        Ensure the xray-core binary (and geo data files) exist, downloading them
+        if missing. Runs the blocking download in a thread so the event loop is
+        not stalled. Never raises: a failed download is logged and the existing
+        BINARY_NOT_FOUND error path handles a missing binary when the user
+        actually tries to connect.
+        """
+        try:
+            from backend.src.xray_downloader import ensure_xray_binary
+
+            binary_path = Path(xray_manager.xray_binary_path)
+            loop = asyncio.get_running_loop()
+            result = await loop.run_in_executor(
+                None, ensure_xray_binary, binary_path
+            )
+
+            if result.get("success"):
+                # Re-point the manager at the actual binary location, which may
+                # have moved to the persistent download dir.
+                new_path = result.get("path")
+                if new_path:
+                    xray_manager.xray_binary_path = new_path
+                if result.get("alreadyPresent"):
+                    print(
+                        f"Xray Decky Plugin: xray-core present at {xray_manager.xray_binary_path}"
+                    )
+                else:
+                    print(
+                        f"Xray Decky Plugin: Downloaded xray-core {result.get('version')} "
+                        f"to {xray_manager.xray_binary_path}"
+                    )
+            else:
+                print(
+                    f"Xray Decky Plugin: xray-core not available: {result.get('error')}"
+                )
+            return result
+        except Exception as e:
+            print(f"Xray Decky Plugin: Failed to ensure xray-core binary: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "errorCode": "ENSURE_BINARY_ERROR",
+            }
+
+    async def redownload_xray_binary(self) -> Dict[str, Any]:
+        """
+        Force a (re)download of the xray-core binary into the persistent runtime
+        directory, even if a copy already exists. Useful for manual recovery.
+        """
+        try:
+            from backend.src.xray_downloader import download_xray
+
+            target_dir = _persistent_xray_dir(PLUGIN_DIR)
+            loop = asyncio.get_running_loop()
+            result = await loop.run_in_executor(None, download_xray, target_dir)
+            if result.get("success") and result.get("path"):
+                xray_manager.xray_binary_path = result["path"]
+                print(
+                    f"Xray Decky Plugin: Re-downloaded xray-core {result.get('version')} "
+                    f"to {xray_manager.xray_binary_path}"
+                )
+            return result
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e),
+                "errorCode": "ENSURE_BINARY_ERROR",
+            }
+
     async def _unload(self):
         """
         Cleanup code called when the plugin is unloaded.
         """
         print("Xray Decky Plugin: Backend unloading")
+        # Stop crash supervision before tearing anything down
+        await self._stop_supervisor()
+
+        # Stop the subscription auto-refresh loop.
+        refresh_task = getattr(self, "_refresh_task", None)
+        if refresh_task is not None:
+            refresh_task.cancel()
+            try:
+                await refresh_task
+            except (asyncio.CancelledError, Exception):
+                pass
+            self._refresh_task = None
+
         # Stop import HTTP server
         if getattr(self, "_import_runner", None) is not None:
             await self._import_runner.cleanup()
@@ -264,9 +461,35 @@ class Plugin:
             await xray_manager.stop()
             connection_state.set_disconnected()
 
-        # Deactivate kill switch if active
-        if kill_switch.get_status().get("isActive", False):
-            await kill_switch.deactivate()
+        # Deactivate kill switch unconditionally. deactivate() is idempotent and
+        # safe to call even when the in-memory state says inactive: after a
+        # plugin reload a fresh KillSwitch reports isActive=False while the
+        # firewall chain may still be live, so gating on that flag would leave a
+        # DROP rule blocking the whole system after unload/uninstall.
+        await kill_switch.deactivate()
+
+    async def _uninstall(self):
+        """
+        Cleanup code called when the plugin is uninstalled. Restores the
+        network unconditionally: a plugin being removed must never leave
+        firewall rules, routes or a system proxy behind (lesson learned from
+        ToMoon's resolv.conf failure mode).
+        """
+        print("Xray Decky Plugin: Uninstalling, restoring network state")
+        await self._stop_supervisor()
+        try:
+            await system_proxy_manager.clear_system_proxy()
+        except Exception as e:
+            print(f"Xray Decky Plugin: system proxy cleanup failed: {e}")
+        try:
+            await tun_manager.remove_system_route()
+        except Exception as e:
+            print(f"Xray Decky Plugin: route cleanup failed: {e}")
+        try:
+            await xray_manager.stop()
+        except Exception as e:
+            print(f"Xray Decky Plugin: xray-core stop failed: {e}")
+        await kill_switch.deactivate()
 
     # SettingsManager wrapper methods
     async def settings_read(self) -> Dict[str, Any]:
@@ -304,10 +527,12 @@ class Plugin:
     # VLESS Configuration Management
     async def import_vless_config(self, url: str) -> Dict[str, Any]:
         """
-        Import and validate a VLESS configuration URL.
+        Import and validate a proxy share link.
 
         Args:
-            url: VLESS URL string (vless://... or base64 subscription)
+            url: Share link (vless://, vmess://, trojan://, ss://),
+                a subscription URL (http:// or https://), or pasted
+                base64 subscription content
 
         Returns:
             {
@@ -317,41 +542,17 @@ class Plugin:
             }
         """
         try:
-            # Validate URL format
-            is_valid, error_msg = validate_vless_url(url)
-            if not is_valid:
-                return create_error_response(ErrorCode.INVALID_URL, error_msg)
-
-            # Try parsing as single node first
-            parsed = parse_vless_url(url)
-            config_type = "single"
-
-            # If not single node, try subscription
-            if not parsed:
-                parsed_configs = parse_subscription_url(url)
-                if not parsed_configs:
-                    return create_error_response(
-                        ErrorCode.INVALID_URL, "Failed to parse VLESS URL"
-                    )
-
-                # For subscription, use first node (can be extended later)
-                if len(parsed_configs) > 0:
-                    parsed = parsed_configs[0]
-                    config_type = "subscription"
-                else:
-                    return create_error_response(
-                        ErrorCode.INVALID_URL, "Subscription contains no valid nodes"
-                    )
-
-            # Build complete config
-            config = build_vless_config(parsed, url, config_type)
-            config["lastValidatedAt"] = int(time.time())
-
-            # Store in SettingsManager
-            settings.setSetting("vlessConfig", config)
-            settings.commit()
-
-            return create_success_response({"config": config})
+            result = await import_link(profile_store, url)
+            if not result.get("success", False):
+                return create_error_response(
+                    ErrorCode.INVALID_URL, result.get("error") or "Import failed"
+                )
+            return create_success_response(
+                {
+                    "config": result.get("config"),
+                    "profileCount": result.get("profileCount", 0),
+                }
+            )
 
         except Exception as e:
             return create_error_response(
@@ -390,12 +591,265 @@ class Plugin:
             import_server_config = settings.getSetting("importServer", {"port": 8765})
             port = int(import_server_config.get("port", 8765))
             port = max(1024, min(65535, port))
-            local_ip = _get_lan_ip()
-            base_url = f"https://{local_ip}:{port}"
-            return {"baseUrl": base_url, "path": "/import"}
+            allow_lan = lan_access_enabled(settings)
+            # With LAN access off the server only listens on loopback, so a
+            # LAN URL would be dead — be honest and point at localhost.
+            host = _get_lan_ip() if allow_lan else "127.0.0.1"
+            base_url = f"https://{host}:{port}"
+            return {"baseUrl": base_url, "path": "/import", "allowLan": allow_lan}
         except Exception as e:
             return create_error_response(
                 ErrorCode.UNKNOWN_ERROR, f"Failed to get import URL: {str(e)}"
+            )
+
+    async def get_admin_panel_url(self) -> Dict[str, Any]:
+        """
+        Get URL for the LAN admin panel (for QR code), including the
+        per-install access token as a query parameter.
+
+        Returns:
+            { 'baseUrl': 'https://{lan_ip}:{port}', 'path': '/admin', 'token': str }
+        """
+        try:
+            import_server_config = settings.getSetting("importServer", {"port": 8765})
+            port = int(import_server_config.get("port", 8765))
+            port = max(1024, min(65535, port))
+            allow_lan = lan_access_enabled(settings)
+            host = _get_lan_ip() if allow_lan else "127.0.0.1"
+            return {
+                "baseUrl": f"https://{host}:{port}",
+                "path": "/admin",
+                "token": ensure_admin_token(settings),
+                "allowLan": allow_lan,
+            }
+        except Exception as e:
+            return create_error_response(
+                ErrorCode.UNKNOWN_ERROR, f"Failed to get admin panel URL: {str(e)}"
+            )
+
+    async def set_lan_access(self, enabled: bool) -> Dict[str, Any]:
+        """
+        Allow or restrict LAN access to the embedded server (panel + import).
+
+        Persists the preference and rebinds the running server immediately:
+        0.0.0.0 when allowed (QR pairing from a phone works — the historical
+        default), 127.0.0.1 when restricted (Deck-only). The xray connection
+        itself is unaffected.
+        """
+        try:
+            save_lan_access(settings, bool(enabled))
+            if getattr(self, "_import_runner", None) is not None:
+                await self._import_runner.cleanup()
+                self._import_runner = None
+            await self._start_import_server()
+            return create_success_response(
+                {
+                    "allowLan": lan_access_enabled(settings),
+                    "serverRunning": self._import_runner is not None,
+                }
+            )
+        except Exception as e:
+            return create_error_response(
+                ErrorCode.UNKNOWN_ERROR, f"Failed to change LAN access: {str(e)}"
+            )
+
+    async def check_updates(self) -> Dict[str, Any]:
+        """
+        Check the plugin and the bundled cores against their latest releases.
+
+        Telemetry-free: an anonymous GET to the public releases API, made only
+        when requested. Returns per-component current/latest/updateAvailable.
+        """
+        try:
+            from backend.src.update_checker import check_updates as _check
+
+            components = await _check()
+            return {"success": True, "components": components}
+        except Exception as e:
+            return create_error_response(
+                ErrorCode.UNKNOWN_ERROR, f"Failed to check for updates: {str(e)}"
+            )
+
+    # Server profiles (multi-server)
+    async def get_profiles(self) -> Dict[str, Any]:
+        """
+        List stored server profiles and the active profile id.
+
+        Returns:
+            { 'success': bool, 'activeId': str | None, 'profiles': [...] }
+        """
+        try:
+            return create_success_response(
+                {
+                    "activeId": profile_store.get_active_id(),
+                    "profiles": profile_store.list_profiles(),
+                    "subscription": profile_store.get_subscription(),
+                }
+            )
+        except Exception as e:
+            return create_error_response(
+                ErrorCode.UNKNOWN_ERROR, f"Failed to list profiles: {str(e)}"
+            )
+
+    async def export_profiles(self) -> Dict[str, Any]:
+        """
+        Export every stored profile as a share link plus a base64 subscription.
+
+        Unlike get_profiles (which redacts credentials for display), this
+        returns full share links — a link *is* the credential. It is only
+        served on an explicit, token-guarded request, never in passive display.
+
+        Returns:
+            { 'success': bool, 'links': [...], 'subscription': str, 'count': int }
+        """
+        try:
+            from backend.src.exporter import export_profiles as _export
+
+            result = _export(profile_store.list_profiles())
+            return create_success_response(result)
+        except Exception as e:
+            return create_error_response(
+                ErrorCode.UNKNOWN_ERROR, f"Failed to export profiles: {str(e)}"
+            )
+
+    async def set_active_profile(self, profile_id: str) -> Dict[str, Any]:
+        """
+        Switch the active profile. If currently connected, reconnects
+        through the newly selected server.
+
+        Returns:
+            { 'success': bool, 'activeId': str, 'reconnected': bool }
+        """
+        try:
+            was_connected = (
+                get_connection_state().status == ConnectionStatus.CONNECTED
+            )
+            if not profile_store.set_active(profile_id):
+                return create_error_response(
+                    ErrorCode.INVALID_CONFIG, "Profile not found"
+                )
+
+            reconnected = False
+            if was_connected:
+                await self.toggle_connection(False)
+                result = await self.toggle_connection(True)
+                reconnected = bool(result.get("success", False))
+
+            return create_success_response(
+                {"activeId": profile_id, "reconnected": reconnected}
+            )
+        except Exception as e:
+            return create_error_response(
+                ErrorCode.UNKNOWN_ERROR, f"Failed to switch profile: {str(e)}"
+            )
+
+    async def remove_profile(self, profile_id: str) -> Dict[str, Any]:
+        """
+        Remove a profile from the list. The active profile of a live
+        connection cannot be removed.
+
+        Returns:
+            { 'success': bool, 'activeId': str | None }
+        """
+        try:
+            connection_state = get_connection_state()
+            if (
+                connection_state.status
+                in (ConnectionStatus.CONNECTED, ConnectionStatus.CONNECTING)
+                and profile_store.get_active_id() == profile_id
+            ):
+                return create_error_response(
+                    ErrorCode.CONNECTION_ACTIVE,
+                    "Disconnect before removing the active profile.",
+                )
+            if not profile_store.remove(profile_id):
+                return create_error_response(
+                    ErrorCode.INVALID_CONFIG, "Profile not found"
+                )
+            return create_success_response(
+                {"activeId": profile_store.get_active_id()}
+            )
+        except Exception as e:
+            return create_error_response(
+                ErrorCode.UNKNOWN_ERROR, f"Failed to remove profile: {str(e)}"
+            )
+
+    async def refresh_subscription(self) -> Dict[str, Any]:
+        """
+        Re-fetch the stored subscription URL and replace the profile list.
+        The active server survives when it's still present in the refreshed
+        list (matched by protocol/address/port).
+
+        Returns:
+            { 'success': bool, 'profileCount': int, 'error': str | None }
+        """
+        try:
+            result = await refresh_subscription_flow(profile_store)
+            if not result.get("success", False):
+                return create_error_response(
+                    ErrorCode.NETWORK_ERROR,
+                    result.get("error") or "Subscription refresh failed",
+                )
+            return create_success_response(
+                {"profileCount": result.get("profileCount", 0)}
+            )
+        except Exception as e:
+            return create_error_response(
+                ErrorCode.UNKNOWN_ERROR, f"Subscription refresh failed: {str(e)}"
+            )
+
+    async def rename_subscription(self, name: str) -> Dict[str, Any]:
+        """Set the stored subscription's user-facing label."""
+        try:
+            if profile_store.rename_subscription(name):
+                return create_success_response({})
+            return create_error_response(
+                ErrorCode.INVALID_CONFIG, "No subscription to rename"
+            )
+        except Exception as e:
+            return create_error_response(
+                ErrorCode.UNKNOWN_ERROR, f"Rename failed: {str(e)}"
+            )
+
+    async def set_subscription_refresh_interval(self, hours: int) -> Dict[str, Any]:
+        """
+        Set the subscription's auto-refresh interval in hours (0 disables).
+
+        The background loop re-fetches the subscription URL once this much time
+        has passed since the last update. Off by default.
+        """
+        try:
+            hours = max(0, int(hours))
+            if profile_store.set_refresh_interval(hours):
+                return create_success_response({"refreshIntervalHours": hours})
+            return create_error_response(
+                ErrorCode.INVALID_CONFIG, "No subscription to schedule"
+            )
+        except (ValueError, TypeError):
+            return create_error_response(
+                ErrorCode.INVALID_CONFIG, "Interval must be a whole number of hours"
+            )
+        except Exception as e:
+            return create_error_response(
+                ErrorCode.UNKNOWN_ERROR, f"Failed to set interval: {str(e)}"
+            )
+
+    async def test_profiles_latency(self) -> Dict[str, Any]:
+        """
+        TCPing every stored profile concurrently and persist the results.
+
+        Returns:
+            { 'success': bool, 'results': { profileId: ms | None } }
+        """
+        try:
+            profiles = profile_store.list_profiles()
+            results = await test_profiles(profiles)
+            for profile_id, latency_ms in results.items():
+                profile_store.set_latency(profile_id, latency_ms)
+            return create_success_response({"results": results})
+        except Exception as e:
+            return create_error_response(
+                ErrorCode.UNKNOWN_ERROR, f"Latency test failed: {str(e)}"
             )
 
     async def validate_vless_config(self) -> Dict[str, Any]:
@@ -428,7 +882,12 @@ class Plugin:
                     "error": "Missing source URL",
                 }
 
-            is_valid, error_msg = validate_vless_url(source_url)
+            if source_url.lower().startswith(("http://", "https://")):
+                # Subscription-URL profiles can't be re-validated by parsing
+                # the source; validity was established at import time.
+                is_valid, error_msg = True, None
+            else:
+                is_valid, error_msg = validate_share_link(source_url)
             config["isValid"] = is_valid
             config["lastValidatedAt"] = int(time.time())
 
@@ -486,8 +945,8 @@ class Plugin:
                 system_proxy_pref["enabled"] = False
                 settings.setSetting("systemProxy", system_proxy_pref)
 
-            settings.setSetting("vlessConfig", None)
-            settings.commit()
+            # Clears the whole profile list and the legacy vlessConfig mirror.
+            profile_store.clear()
 
             try:
                 from decky import emit
@@ -636,6 +1095,137 @@ class Plugin:
                 ErrorCode.UNKNOWN_ERROR, f"Failed to toggle TUN mode: {str(e)}"
             )
 
+    # Process supervision
+    async def _stop_supervisor(self) -> None:
+        """Cancel crash supervision before an intentional stop."""
+        supervisor = getattr(self, "_supervisor", None)
+        if supervisor is not None:
+            await supervisor.stop()
+            self._supervisor = None
+
+    def _start_supervisor(self, config: Dict[str, Any], tun_mode: bool) -> None:
+        """Start watching the running xray-core process for crashes."""
+
+        async def wait_for_exit() -> Optional[int]:
+            process = xray_manager.process
+            if process is None:
+                # Nothing to watch; park until cancelled so a missing process
+                # is not treated as an endless crash loop.
+                await asyncio.Event().wait()
+                return None
+            return await process.wait()
+
+        async def on_crash(returncode: Optional[int]) -> None:
+            print(
+                "Xray Decky Plugin: xray-core exited unexpectedly "
+                f"(code {returncode}); engaging fail-safe"
+            )
+            connection_state = get_connection_state()
+            kill_switch_pref = settings.getSetting("killSwitch", {})
+            if kill_switch_pref.get("enabled", False):
+                kill_result = await kill_switch.activate(
+                    connection_state.xray_process_id or 0
+                )
+                if kill_result.get("success"):
+                    kill_switch_pref["isActive"] = True
+                    kill_switch_pref["activatedAt"] = int(time.time())
+                    connection_state.set_blocked()
+                    settings.setSetting("killSwitch", kill_switch_pref)
+                    settings.commit()
+                else:
+                    print(
+                        "Warning: kill switch failed to activate after crash: "
+                        f"{kill_result.get('error')}"
+                    )
+                    connection_state.set_error(
+                        "xray-core crashed and the kill switch failed to engage",
+                        ErrorCode.PROCESS_FAILED,
+                    )
+            else:
+                connection_state.set_error(
+                    "xray-core process terminated unexpectedly",
+                    ErrorCode.PROCESS_FAILED,
+                )
+
+        async def restart() -> bool:
+            config_file = xray_manager.config_file
+            if not config_file or not os.path.exists(config_file):
+                outbound_if = (
+                    await tun_manager.get_physical_interface() if tun_mode else None
+                )
+                if tun_mode and not outbound_if:
+                    return False
+                config_file = xray_manager.generate_config(
+                    config, tun_mode, outbound_if
+                )
+            result = await xray_manager.start(config_file)
+            if not result.get("success", False):
+                return False
+
+            if tun_mode:
+                route_result = await tun_manager.setup_system_route()
+                if not route_result.get("success"):
+                    print(
+                        "Xray Decky Plugin: TUN route re-setup failed after "
+                        f"restart: {route_result.get('error', 'Unknown')}"
+                    )
+
+            connection_state = get_connection_state()
+            connection_state.set_connected(
+                result.get("processId"), config_file, config
+            )
+
+            # Lift the kill switch we engaged on crash — traffic is safe again.
+            kill_switch_pref = settings.getSetting("killSwitch", {})
+            if kill_switch_pref.get("isActive", False):
+                deactivate_result = await kill_switch.deactivate()
+                if deactivate_result.get("success"):
+                    kill_switch_pref["isActive"] = False
+                    kill_switch_pref["deactivatedAt"] = int(time.time())
+                    settings.setSetting("killSwitch", kill_switch_pref)
+                    settings.commit()
+
+            settings.setSetting(
+                "connectionState",
+                {"status": "connected", "connectedAt": int(time.time())},
+            )
+            settings.commit()
+            return True
+
+        async def on_recovered(attempt: int) -> None:
+            print(
+                f"Xray Decky Plugin: xray-core auto-restarted (attempt {attempt})"
+            )
+
+        async def on_gave_up() -> None:
+            print(
+                "Xray Decky Plugin: xray-core keeps crashing; auto-restart gave up"
+            )
+            connection_state = get_connection_state()
+            kill_switch_pref = settings.getSetting("killSwitch", {})
+            if kill_switch_pref.get("isActive", False):
+                connection_state.set_blocked()
+                persisted_status = "blocked"
+            else:
+                connection_state.set_error(
+                    "xray-core keeps crashing; auto-restart gave up",
+                    ErrorCode.PROCESS_FAILED,
+                )
+                persisted_status = "error"
+            settings.setSetting("connectionState", {"status": persisted_status})
+            settings.commit()
+            # Release process/config-file references of the dead process.
+            await xray_manager.stop()
+
+        self._supervisor = XraySupervisor(
+            wait_for_exit=wait_for_exit,
+            on_crash=on_crash,
+            restart=restart,
+            on_recovered=on_recovered,
+            on_gave_up=on_gave_up,
+        )
+        self._supervisor.start()
+
     # Connection Management
     async def toggle_connection(self, enable: bool) -> Dict[str, Any]:
         """
@@ -666,6 +1256,10 @@ class Plugin:
                         }
                     )
 
+                # Cancel any pending crash-recovery so a supervisor mid-backoff
+                # can't start a second xray process underneath us.
+                await self._stop_supervisor()
+
                 # Load and validate config
                 config = settings.getSetting("vlessConfig", None)
                 if not config:
@@ -679,6 +1273,22 @@ class Plugin:
                         "VLESS config is invalid", ErrorCode.INVALID_CONFIG
                     )
                     return create_error_response(ErrorCode.INVALID_CONFIG)
+
+                # Dispatch by core: hysteria2/tuic need the sing-box second
+                # core, which isn't bundled yet. Fail with a clear message
+                # instead of feeding an unsupported profile to xray-core.
+                required_core = config.get("core") or core_for_protocol(
+                    config.get("protocol", "vless")
+                )
+                if required_core != "xray":
+                    protocol = config.get("protocol", "this protocol")
+                    msg = (
+                        f"{protocol} requires the sing-box core, which is not "
+                        "available yet. Pick an xray-based server "
+                        "(VLESS/VMess/Trojan/Shadowsocks) for now."
+                    )
+                    connection_state.set_error(msg, ErrorCode.INVALID_CONFIG)
+                    return create_error_response(ErrorCode.INVALID_CONFIG, msg)
 
                 # Set connecting status
                 connection_state.set_connecting()
@@ -705,6 +1315,8 @@ class Plugin:
                                 "TUN mode requires elevated privileges. Please complete installation steps.",
                             )
 
+                    # Track the interface name; xray-core itself creates
+                    # xray0 from its TUN inbound config (native since v26.1.23).
                     await tun_manager.create_tun_interface()
 
                 # TUN: get physical interface for sockopt.interface (avoids routing loop)
@@ -735,18 +1347,25 @@ class Plugin:
                     return create_error_response(error_code, error_msg)
 
                 # TUN: setup system routing + system proxy.
-                # NOTE: xray-core does not natively support TUN inbound, so
-                # the TUN interface won't be created by xray. Route setup may
-                # fail, but the SOCKS/HTTP proxy is still functional.
+                # The pinned xray-core (>= v26.1.23) creates the TUN interface
+                # natively from its config; only the system route is ours.
                 if tun_mode:
                     route_result = await tun_manager.setup_system_route()
                     if not route_result.get("success"):
-                        # TUN route failed — log but don't kill the connection.
-                        # SOCKS proxy on 10808 and HTTP proxy on 10809 are still
-                        # available and the connection is usable.
-                        print(
-                            f"Xray Decky Plugin: TUN route failed (SOCKS proxy still works): "
-                            f"{route_result.get('error', 'Unknown')}"
+                        # TUN was explicitly requested: fail loudly. Silently
+                        # degrading to SOCKS-only would leave Gaming Mode
+                        # traffic unproxied while the UI claims otherwise.
+                        await xray_manager.stop()
+                        error_msg = (
+                            "TUN route setup failed: "
+                            f"{route_result.get('error', 'Unknown')}. "
+                            "Disable TUN mode to use SOCKS/HTTP proxy only."
+                        )
+                        connection_state.set_error(
+                            error_msg, ErrorCode.IPTABLES_FAILED
+                        )
+                        return create_error_response(
+                            ErrorCode.IPTABLES_FAILED, error_msg
                         )
 
                     # Auto-enable System Proxy (gsettings for GTK/Qt apps)
@@ -781,6 +1400,12 @@ class Plugin:
                 )
                 settings.commit()
 
+                # Fresh connection -> fresh speed baseline
+                traffic_stats.reset()
+
+                # Watch the process: crash -> kill switch + bounded auto-restart
+                self._start_supervisor(config, tun_mode)
+
                 return create_success_response(
                     {"status": "connected", "processId": process_id}
                 )
@@ -789,6 +1414,11 @@ class Plugin:
                 # Disconnect
                 if connection_state.status == ConnectionStatus.DISCONNECTED:
                     return create_success_response({"status": "disconnected"})
+
+                # Intentional stop: cancel crash supervision first so the
+                # exit below is not treated as a crash.
+                await self._stop_supervisor()
+                traffic_stats.reset()
 
                 # Always clear system proxy on disconnect so SOCKS is never left on
                 await system_proxy_manager.clear_system_proxy()
@@ -829,6 +1459,14 @@ class Plugin:
                         kill_switch_pref["isActive"] = True
                         kill_switch_pref["activatedAt"] = int(time.time())
                         connection_state.set_blocked()
+                    else:
+                        # Fail loud: the switch could not engage, so traffic is
+                        # NOT blocked. Surface it instead of silently failing open.
+                        kill_switch_pref["isActive"] = False
+                        print(
+                            "Warning: kill switch failed to activate on "
+                            f"unexpected disconnect: {kill_result.get('error')}"
+                        )
                     settings.setSetting("killSwitch", kill_switch_pref)
                     settings.commit()
 
@@ -858,6 +1496,85 @@ class Plugin:
             )
             return create_error_response(
                 ErrorCode.UNKNOWN_ERROR, f"Connection error: {str(e)}"
+            )
+
+    async def get_traffic_stats(self) -> Dict[str, Any]:
+        """
+        Current traffic totals and speeds from the xray StatsService.
+
+        Returns:
+            {
+                'success': bool,
+                'available': bool,   # stats API reachable
+                'uplink': int, 'downlink': int,          # cumulative bytes
+                'uplinkSpeed': int, 'downlinkSpeed': int  # bytes/second
+            }
+        """
+        zeros = {
+            "available": False,
+            "uplink": 0,
+            "downlink": 0,
+            "uplinkSpeed": 0,
+            "downlinkSpeed": 0,
+        }
+        try:
+            connection_state = get_connection_state()
+            if (
+                connection_state.status != ConnectionStatus.CONNECTED
+                or not xray_manager.is_running()
+            ):
+                return create_success_response(zeros)
+            sample = await traffic_stats.sample(xray_manager.xray_binary_path)
+            if sample is None:
+                return create_success_response(zeros)
+            return create_success_response({"available": True, **sample})
+        except Exception as e:
+            return create_error_response(
+                ErrorCode.UNKNOWN_ERROR, f"Stats query failed: {str(e)}"
+            )
+
+    async def handle_resume(self) -> Dict[str, Any]:
+        """
+        Called by the frontend when the Deck resumes from suspend.
+
+        Suspend/resume (and Wi-Fi roaming) is a top real-world failure source:
+        the TUN default route can vanish while xray-core keeps running, and a
+        core that died during suspend needs to be brought back. The supervisor
+        already handles the dead-process case the moment it happens; this hook
+        repairs the routing side.
+
+        Returns:
+            {'success': bool, 'checked': bool, 'routeRestored': bool}
+        """
+        try:
+            connection_state = get_connection_state()
+            if connection_state.status not in (
+                ConnectionStatus.CONNECTED,
+                ConnectionStatus.CONNECTING,
+            ):
+                return create_success_response({"checked": False})
+
+            route_restored = False
+            tun_pref = settings.getSetting("tunMode", {})
+            if tun_pref.get("enabled", False) and xray_manager.is_running():
+                route_result = await tun_manager.ensure_system_route()
+                route_restored = bool(route_result.get("restored", False))
+                if not route_result.get("success", False):
+                    print(
+                        "Xray Decky Plugin: TUN route repair after resume "
+                        f"failed: {route_result.get('error', 'Unknown')}"
+                    )
+                elif route_restored:
+                    print(
+                        "Xray Decky Plugin: TUN default route restored after resume"
+                    )
+
+            return create_success_response(
+                {"checked": True, "routeRestored": route_restored}
+            )
+        except Exception as e:
+            return create_error_response(
+                ErrorCode.UNKNOWN_ERROR, f"Resume handling failed: {str(e)}"
             )
 
     async def get_connection_status(self) -> Dict[str, Any]:
@@ -896,6 +1613,12 @@ class Plugin:
                         connection_state.set_blocked()
                         settings.setSetting("killSwitch", kill_switch_pref)
                         settings.commit()
+                    else:
+                        # Fail loud: switch did not engage; traffic is not blocked.
+                        print(
+                            "Warning: kill switch failed to activate after "
+                            f"process death: {kill_result.get('error')}"
+                        )
 
                 # Cleanup TUN route if was active
                 tun_pref = settings.getSetting("tunMode", {})
