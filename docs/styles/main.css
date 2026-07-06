@@ -187,9 +187,9 @@ section { max-width: 1080px; margin: 0 auto; padding: 3.5rem 1.25rem; }
 /* Row 2: the trackpad, inboard toward the screen. */
 .deck-side-l .deck-trackpad { top: 46%; right: 5px; }
 .deck-side-r .deck-trackpad { top: 46%; left: 5px; }
-/* Row 3: system buttons below the trackpad. */
-.deck-side-l .deck-steam-btn { bottom: 2%; left: 12px; }
-.deck-side-r .deck-qam-btn { bottom: 2%; right: 12px; }
+/* Row 3: system buttons directly below the trackpad. */
+.deck-side-l .deck-steam-btn { bottom: 16%; left: 41px; }
+.deck-side-r .deck-qam-btn { bottom: 16%; right: 41px; }
 .deck-stick {
   width: 34px; height: 34px; border-radius: 50%; flex: none;
   background: radial-gradient(circle at 50% 42%, #363b45 0 58%, #23272f 60%);
@@ -216,7 +216,7 @@ section { max-width: 1080px; margin: 0 auto; padding: 3.5rem 1.25rem; }
   box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.55), inset 0 -1px 2px rgba(255, 255, 255, 0.03);
 }
 .deck-sys-btn {
-  width: 13px; height: 13px; border-radius: 50%; flex: none;
+  width: 36px; height: 15px; border-radius: 36%; flex: none;
   background: #23262e; border: 1px solid #454b58;
   display: inline-flex; align-items: center; justify-content: center;
   color: #8f98a0; font-size: 7px; line-height: 1; letter-spacing: 0.5px;
@@ -299,12 +299,16 @@ section { max-width: 1080px; margin: 0 auto; padding: 3.5rem 1.25rem; }
   border: 1px solid #3a3f4a; border-radius: 24px; padding: 7px;
   box-shadow: var(--shadow);
   transform: rotate(3deg);
+  min-height: 320px;
 }
 .phone-notch { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); width: 52px; height: 10px; border-radius: 999px; background: #06080b; z-index: 2; }
 .phone-screen {
   border-radius: 18px; overflow: hidden; background: #101822;
   border: 1px solid #06080b; padding: 22px 9px 10px;
   display: flex; flex-direction: column; gap: 7px; font-size: 8.5px;
+  /* Fixed floor so the mockup never resizes as demo states render
+     more or less text; taller than any state's actual content. */
+  min-height: 320px;
 }
 .ph-topbar { display: flex; align-items: center; justify-content: space-between; }
 .ph-brand { color: var(--muted); letter-spacing: 0.04em; font-weight: 600; white-space: nowrap; flex-shrink: 0; }
@@ -482,6 +486,9 @@ footer { border-top: 1px solid var(--line); background: rgba(23, 26, 33, 0.6); m
   .deck-btns { grid-template-columns: repeat(2, 8px); gap: 4px; }
   .deck-btns i { width: 8px; height: 8px; }
   .deck-trackpad { width: 32px; height: 32px; border-radius: 7px; }
+  .deck-sys-btn { width: 26px; height: 11px; }
+  .deck-side-l .deck-steam-btn { left: 29px; }
+  .deck-side-r .deck-qam-btn { right: 29px; }
   .deck-screen { border-width: 5px; }
   .phone { width: 138px; right: -4px; bottom: -20px; }
   .phone-screen { font-size: 8px; }
