@@ -305,6 +305,9 @@ section { max-width: 1080px; margin: 0 auto; padding: 3.5rem 1.25rem; }
   border-radius: 18px; overflow: hidden; background: #101822;
   border: 1px solid #06080b; padding: 22px 9px 10px;
   display: flex; flex-direction: column; gap: 7px; font-size: 8.5px;
+  /* Fixed to the tallest ("connected") state's content height so the
+     mockup never resizes as shorter states render less text. */
+  height: 253px;
 }
 .ph-topbar { display: flex; align-items: center; justify-content: space-between; }
 .ph-brand { color: var(--muted); letter-spacing: 0.04em; font-weight: 600; white-space: nowrap; flex-shrink: 0; }
@@ -484,7 +487,7 @@ footer { border-top: 1px solid var(--line); background: rgba(23, 26, 33, 0.6); m
   .deck-trackpad { width: 32px; height: 32px; border-radius: 7px; }
   .deck-screen { border-width: 5px; }
   .phone { width: 138px; right: -4px; bottom: -20px; }
-  .phone-screen { font-size: 8px; }
+  .phone-screen { font-size: 8px; height: 246px; }
   .chip { padding: 2px 5px; }
   .hero-stats { gap: 1.2rem; }
 }
