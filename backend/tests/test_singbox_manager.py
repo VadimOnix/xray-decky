@@ -1,10 +1,14 @@
-"""Tests for backend.src.singbox_manager (sing-box config generation)."""
+"""Tests for backend.src.singbox_manager (config generation + lifecycle)."""
+
+import asyncio
+import os
 
 import pytest
 
 from backend.src.singbox_manager import (
     HTTP_PORT,
     SOCKS_PORT,
+    SingBoxManager,
     build_singbox_config,
 )
 
@@ -97,9 +101,66 @@ def test_tun_mode_adds_inbound_and_binds_interface():
     tun = next(i for i in config["inbounds"] if i["type"] == "tun")
     assert tun["interface_name"] == "xray0"
     assert tun["auto_route"] is False
+    # An explicit address is required for the interface to come up so the
+    # external default-route setup can succeed.
+    assert tun["address"] == ["172.19.0.1/30"]
     assert _proxy(config)["bind_interface"] == "wlan0"
 
 
 def test_unsupported_protocol_raises():
     with pytest.raises(ValueError):
         build_singbox_config({"protocol": "vless", "address": "h.io", "port": 443})
+
+
+# --- process lifecycle ---
+
+
+def _fake_binary(tmp_path, script: str) -> str:
+    path = tmp_path / "sing-box"
+    path.write_text(f"#!/bin/sh\n{script}\n")
+    os.chmod(path, 0o755)
+    return str(path)
+
+
+def test_start_missing_binary(tmp_path):
+    manager = SingBoxManager(binary_path=str(tmp_path / "absent"))
+    result = asyncio.run(manager.start("/tmp/whatever.json"))
+    assert result["success"] is False
+    assert result["errorCode"] == "BINARY_NOT_FOUND"
+
+
+def test_start_stop_roundtrip(tmp_path):
+    manager = SingBoxManager(binary_path=_fake_binary(tmp_path, "sleep 30"))
+    config_file = tmp_path / "config.json"
+    config_file.write_text("{}")
+
+    async def run():
+        result = await manager.start(str(config_file))
+        assert result["success"] is True
+        assert result["processId"] == manager.get_process_id()
+        assert manager.is_running() is True
+
+        stop = await manager.stop()
+        assert stop["success"] is True
+        assert manager.is_running() is False
+        assert manager.get_process_id() is None
+
+    asyncio.run(run())
+    # stop() removes the temp config file it was started with.
+    assert not config_file.exists()
+
+
+def test_start_captures_immediate_failure(tmp_path):
+    manager = SingBoxManager(
+        binary_path=_fake_binary(tmp_path, 'echo "bad config" >&2; exit 1')
+    )
+    result = asyncio.run(manager.start("/tmp/whatever.json"))
+    assert result["success"] is False
+    assert result["errorCode"] == "PROCESS_START_FAILED"
+    assert "bad config" in result["error"]
+
+
+def test_stop_without_process():
+    manager = SingBoxManager(binary_path="/nonexistent/sing-box")
+    result = asyncio.run(manager.stop())
+    assert result["success"] is True

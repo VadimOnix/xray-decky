@@ -7,10 +7,11 @@ SOCKS/HTTP inbound ports (10808/10809) and TUN interface (xray0) so the
 existing system-proxy, kill-switch and routing paths are reused whichever
 core is active.
 
-This module is the config substrate for the sing-box core. Process
-lifecycle wiring into the connect path is a separate step.
+Process lifecycle mirrors XrayManager so main.py can drive either core
+through the same start/stop/is_running surface.
 """
 
+import asyncio
 import json
 import os
 import tempfile
@@ -117,6 +118,10 @@ def build_singbox_config(
                 "type": "tun",
                 "tag": "tun-in",
                 "interface_name": TUN_INTERFACE,
+                # Unlike xray, sing-box has no implicit TUN address; without
+                # one the interface can't come up and tun_manager's
+                # `ip route add default dev xray0` fails.
+                "address": ["172.19.0.1/30"],
                 "stack": "system",
                 # System routing is set up externally (tun_manager), matching
                 # the xray path — don't let sing-box manage routes itself.
@@ -144,14 +149,16 @@ class SingBoxManager:
     """
     Generates sing-box configs and manages the sing-box subprocess.
 
-    Parallel to XrayManager. Process start/stop is provided so the core is
-    ready to wire into the connect path; that wiring is a separate step.
+    Parallel to XrayManager: the same generate_config/start/stop/is_running
+    surface, so the connect path in main.py can drive whichever core the
+    active profile needs. The process is spawned with an argv vector via
+    create_subprocess_exec — no shell is ever involved.
     """
 
     def __init__(self, binary_path: str = "backend/out/sing-box") -> None:
         self.binary_path = binary_path
         self.config_file: Optional[str] = None
-        self.process = None
+        self.process: Optional[asyncio.subprocess.Process] = None
         self.process_id: Optional[int] = None
 
     def generate_config(
@@ -168,3 +175,112 @@ class SingBoxManager:
             json.dump(config, f, indent=2)
         self.config_file = config_file
         return config_file
+
+    async def start(self, config_file: str) -> Dict[str, Any]:
+        """
+        Start the sing-box process with the given config file.
+
+        Returns:
+            {"success": bool, "processId": int} or {"success": False,
+            "error": str, "errorCode": str} — same shape as XrayManager.start.
+        """
+        try:
+            if not os.path.exists(self.binary_path):
+                return {
+                    "success": False,
+                    "error": f"sing-box binary not found at {self.binary_path}",
+                    "errorCode": "BINARY_NOT_FOUND",
+                }
+            if not os.access(self.binary_path, os.X_OK):
+                return {
+                    "success": False,
+                    "error": f"sing-box binary is not executable: {self.binary_path}",
+                    "errorCode": "BINARY_NOT_EXECUTABLE",
+                }
+
+            self.process = await asyncio.create_subprocess_exec(
+                self.binary_path,
+                "run",
+                "-c",
+                config_file,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            self.process_id = self.process.pid
+            self.config_file = config_file
+
+            # Give it a moment to fail fast on a bad config/port conflict.
+            await asyncio.sleep(0.5)
+
+            if self.process.returncode is not None:
+                stderr = await self.process.stderr.read()
+                stdout = await self.process.stdout.read()
+                stderr_text = (
+                    stderr.decode("utf-8", errors="ignore").strip() if stderr else ""
+                )
+                stdout_text = (
+                    stdout.decode("utf-8", errors="ignore").strip() if stdout else ""
+                )
+                error_msg = stderr_text or stdout_text or "Unknown error"
+                return {
+                    "success": False,
+                    "error": f"sing-box process failed to start: {error_msg}",
+                    "errorCode": "PROCESS_START_FAILED",
+                }
+
+            return {"success": True, "processId": self.process_id}
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Failed to start sing-box: {str(e)}",
+                "errorCode": "PROCESS_START_ERROR",
+            }
+
+    async def stop(self) -> Dict[str, Any]:
+        """Stop the sing-box process and remove its temp config file."""
+        try:
+            if self.process is None:
+                return {"success": True, "message": "No process running"}
+
+            # It may already have exited (e.g. crash handled by the
+            # supervisor) — that's not an error.
+            try:
+                self.process.terminate()
+            except ProcessLookupError:
+                pass
+
+            try:
+                await asyncio.wait_for(self.process.wait(), timeout=5.0)
+            except asyncio.TimeoutError:
+                try:
+                    self.process.kill()
+                except ProcessLookupError:
+                    pass
+                await self.process.wait()
+
+            if self.config_file and os.path.exists(self.config_file):
+                try:
+                    os.remove(self.config_file)
+                except Exception:
+                    pass  # Ignore cleanup errors
+
+            self.process = None
+            self.process_id = None
+            self.config_file = None
+            return {"success": True}
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Failed to stop sing-box: {str(e)}",
+                "errorCode": "PROCESS_STOP_ERROR",
+            }
+
+    def is_running(self) -> bool:
+        """True while the sing-box process is alive."""
+        if self.process is None:
+            return False
+        return self.process.returncode is None
+
+    def get_process_id(self) -> Optional[int]:
+        """PID of the running sing-box process, or None."""
+        return self.process_id
