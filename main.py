@@ -92,6 +92,7 @@ from backend.src.error_codes import (
     create_success_response,
 )
 from backend.src.xray_manager import XrayManager
+from backend.src.singbox_manager import SingBoxManager
 from backend.src.connection_manager import get_connection_state, ConnectionStatus
 from backend.src.tun_manager import TUNManager
 from backend.src.kill_switch import KillSwitch
@@ -151,12 +152,38 @@ def _resolve_xray_path(plugin_dir: Path) -> str:
     return str(_persistent_xray_dir(plugin_dir) / "xray-core")
 
 
+def _resolve_singbox_path(plugin_dir: Path) -> str:
+    """
+    Like _resolve_xray_path, for the sing-box core (hysteria2/tuic). Not
+    bundled: downloaded into the persistent runtime dir on first use.
+    """
+    candidates = [
+        plugin_dir / "bin" / "sing-box",
+        plugin_dir / "backend" / "out" / "sing-box",
+        _persistent_xray_dir(plugin_dir) / "sing-box",
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return str(candidate)
+    return str(_persistent_xray_dir(plugin_dir) / "sing-box")
+
+
 # Initialize XrayManager, TUNManager, KillSwitch, and SystemProxyManager
 xray_manager = XrayManager(xray_binary_path=_resolve_xray_path(PLUGIN_DIR))
+singbox_manager = SingBoxManager(binary_path=_resolve_singbox_path(PLUGIN_DIR))
+# The core manager owning the current/last connection. Connect rebinds it to
+# whichever core the active profile needs; every stop/status/resume path must
+# drive this manager, never xray_manager directly.
+active_core_manager = xray_manager
 tun_manager = TUNManager()
 kill_switch = KillSwitch()
 system_proxy_manager = SystemProxyManager()
 traffic_stats = TrafficStats()
+
+
+def _core_name(manager) -> str:
+    """Human-readable name of a core manager, for logs and error messages."""
+    return "sing-box" if isinstance(manager, SingBoxManager) else "xray-core"
 
 
 class Plugin:
@@ -420,6 +447,44 @@ class Plugin:
                 "errorCode": "ENSURE_BINARY_ERROR",
             }
 
+    async def _ensure_singbox_binary(self) -> Dict[str, Any]:
+        """
+        Ensure the sing-box binary exists, downloading it on first use.
+
+        Unlike xray-core (ensured at startup), sing-box is fetched only when
+        a hysteria2/tuic profile actually connects, so xray-only users never
+        download a second core. Runs the blocking download in a thread.
+        """
+        try:
+            from backend.src.singbox_downloader import ensure_singbox_binary
+
+            binary_path = Path(singbox_manager.binary_path)
+            loop = asyncio.get_running_loop()
+            result = await loop.run_in_executor(
+                None, ensure_singbox_binary, binary_path
+            )
+            if result.get("success"):
+                new_path = result.get("path")
+                if new_path:
+                    singbox_manager.binary_path = new_path
+                if not result.get("alreadyPresent"):
+                    print(
+                        f"Xray Decky Plugin: Downloaded sing-box {result.get('version')} "
+                        f"to {singbox_manager.binary_path}"
+                    )
+            else:
+                print(
+                    f"Xray Decky Plugin: sing-box not available: {result.get('error')}"
+                )
+            return result
+        except Exception as e:
+            print(f"Xray Decky Plugin: Failed to ensure sing-box binary: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "errorCode": "ENSURE_BINARY_ERROR",
+            }
+
     async def _unload(self):
         """
         Cleanup code called when the plugin is unloaded.
@@ -451,14 +516,14 @@ class Plugin:
             settings.setSetting("systemProxy", system_proxy_pref)
             settings.commit()
 
-        # Stop xray-core process if running
+        # Stop the proxy core if running
         connection_state = get_connection_state()
         if connection_state.status == ConnectionStatus.CONNECTED:
             tun_pref = settings.getSetting("tunMode", {})
             if tun_pref.get("enabled", False):
                 await tun_manager.remove_system_route()
                 await tun_manager.cleanup_tun_interface()
-            await xray_manager.stop()
+            await active_core_manager.stop()
             connection_state.set_disconnected()
 
         # Deactivate kill switch unconditionally. deactivate() is idempotent and
@@ -485,10 +550,13 @@ class Plugin:
             await tun_manager.remove_system_route()
         except Exception as e:
             print(f"Xray Decky Plugin: route cleanup failed: {e}")
-        try:
-            await xray_manager.stop()
-        except Exception as e:
-            print(f"Xray Decky Plugin: xray-core stop failed: {e}")
+        # Uninstall must leave nothing running: stop both cores; each stop is
+        # a no-op when that core has no process.
+        for core in (xray_manager, singbox_manager):
+            try:
+                await core.stop()
+            except Exception as e:
+                print(f"Xray Decky Plugin: {_core_name(core)} stop failed: {e}")
         await kill_switch.deactivate()
 
     # SettingsManager wrapper methods
@@ -1103,11 +1171,16 @@ class Plugin:
             await supervisor.stop()
             self._supervisor = None
 
-    def _start_supervisor(self, config: Dict[str, Any], tun_mode: bool) -> None:
-        """Start watching the running xray-core process for crashes."""
+    def _start_supervisor(
+        self, config: Dict[str, Any], tun_mode: bool, manager=None
+    ) -> None:
+        """Start watching the running proxy-core process for crashes."""
+        if manager is None:
+            manager = active_core_manager
+        core_name = _core_name(manager)
 
         async def wait_for_exit() -> Optional[int]:
-            process = xray_manager.process
+            process = manager.process
             if process is None:
                 # Nothing to watch; park until cancelled so a missing process
                 # is not treated as an endless crash loop.
@@ -1117,7 +1190,7 @@ class Plugin:
 
         async def on_crash(returncode: Optional[int]) -> None:
             print(
-                "Xray Decky Plugin: xray-core exited unexpectedly "
+                f"Xray Decky Plugin: {core_name} exited unexpectedly "
                 f"(code {returncode}); engaging fail-safe"
             )
             connection_state = get_connection_state()
@@ -1138,27 +1211,27 @@ class Plugin:
                         f"{kill_result.get('error')}"
                     )
                     connection_state.set_error(
-                        "xray-core crashed and the kill switch failed to engage",
+                        f"{core_name} crashed and the kill switch failed to engage",
                         ErrorCode.PROCESS_FAILED,
                     )
             else:
                 connection_state.set_error(
-                    "xray-core process terminated unexpectedly",
+                    f"{core_name} process terminated unexpectedly",
                     ErrorCode.PROCESS_FAILED,
                 )
 
         async def restart() -> bool:
-            config_file = xray_manager.config_file
+            config_file = manager.config_file
             if not config_file or not os.path.exists(config_file):
                 outbound_if = (
                     await tun_manager.get_physical_interface() if tun_mode else None
                 )
                 if tun_mode and not outbound_if:
                     return False
-                config_file = xray_manager.generate_config(
+                config_file = manager.generate_config(
                     config, tun_mode, outbound_if
                 )
-            result = await xray_manager.start(config_file)
+            result = await manager.start(config_file)
             if not result.get("success", False):
                 return False
 
@@ -1194,12 +1267,12 @@ class Plugin:
 
         async def on_recovered(attempt: int) -> None:
             print(
-                f"Xray Decky Plugin: xray-core auto-restarted (attempt {attempt})"
+                f"Xray Decky Plugin: {core_name} auto-restarted (attempt {attempt})"
             )
 
         async def on_gave_up() -> None:
             print(
-                "Xray Decky Plugin: xray-core keeps crashing; auto-restart gave up"
+                f"Xray Decky Plugin: {core_name} keeps crashing; auto-restart gave up"
             )
             connection_state = get_connection_state()
             kill_switch_pref = settings.getSetting("killSwitch", {})
@@ -1208,14 +1281,14 @@ class Plugin:
                 persisted_status = "blocked"
             else:
                 connection_state.set_error(
-                    "xray-core keeps crashing; auto-restart gave up",
+                    f"{core_name} keeps crashing; auto-restart gave up",
                     ErrorCode.PROCESS_FAILED,
                 )
                 persisted_status = "error"
             settings.setSetting("connectionState", {"status": persisted_status})
             settings.commit()
             # Release process/config-file references of the dead process.
-            await xray_manager.stop()
+            await manager.stop()
 
         self._supervisor = XraySupervisor(
             wait_for_exit=wait_for_exit,
@@ -1242,6 +1315,7 @@ class Plugin:
                 'processId': int | None
             }
         """
+        global active_core_manager
         connection_state = get_connection_state()
 
         try:
@@ -1274,21 +1348,27 @@ class Plugin:
                     )
                     return create_error_response(ErrorCode.INVALID_CONFIG)
 
-                # Dispatch by core: hysteria2/tuic need the sing-box second
-                # core, which isn't bundled yet. Fail with a clear message
-                # instead of feeding an unsupported profile to xray-core.
+                # Dispatch by core: hysteria2/tuic run on the sing-box second
+                # core (downloaded on first use), everything else on xray-core.
                 required_core = config.get("core") or core_for_protocol(
                     config.get("protocol", "vless")
                 )
-                if required_core != "xray":
-                    protocol = config.get("protocol", "this protocol")
-                    msg = (
-                        f"{protocol} requires the sing-box core, which is not "
-                        "available yet. Pick an xray-based server "
-                        "(VLESS/VMess/Trojan/Shadowsocks) for now."
-                    )
-                    connection_state.set_error(msg, ErrorCode.INVALID_CONFIG)
-                    return create_error_response(ErrorCode.INVALID_CONFIG, msg)
+                if required_core == "sing-box":
+                    ensure_result = await self._ensure_singbox_binary()
+                    if not ensure_result.get("success"):
+                        protocol = config.get("protocol", "this protocol")
+                        msg = (
+                            f"{protocol} needs the sing-box core, which could "
+                            "not be downloaded: "
+                            f"{ensure_result.get('error', 'unknown error')}. "
+                            "Check the network connection and try again."
+                        )
+                        connection_state.set_error(msg, ErrorCode.PROCESS_FAILED)
+                        return create_error_response(ErrorCode.PROCESS_FAILED, msg)
+                    manager = singbox_manager
+                else:
+                    manager = xray_manager
+                active_core_manager = manager
 
                 # Set connecting status
                 connection_state.set_connecting()
@@ -1333,15 +1413,17 @@ class Plugin:
                         "TUN mode: could not get default route interface. Check network.",
                     )
 
-                config_file = xray_manager.generate_config(
+                config_file = manager.generate_config(
                     config, tun_mode, outbound_if
                 )
 
-                # Start xray-core
-                result = await xray_manager.start(config_file)
+                # Start the proxy core the profile needs
+                result = await manager.start(config_file)
 
                 if not result.get("success", False):
-                    error_msg = result.get("error", "Failed to start xray-core")
+                    error_msg = result.get(
+                        "error", f"Failed to start {_core_name(manager)}"
+                    )
                     error_code = result.get("errorCode", ErrorCode.PROCESS_FAILED)
                     connection_state.set_error(error_msg, error_code)
                     return create_error_response(error_code, error_msg)
@@ -1355,7 +1437,7 @@ class Plugin:
                         # TUN was explicitly requested: fail loudly. Silently
                         # degrading to SOCKS-only would leave Gaming Mode
                         # traffic unproxied while the UI claims otherwise.
-                        await xray_manager.stop()
+                        await manager.stop()
                         error_msg = (
                             "TUN route setup failed: "
                             f"{route_result.get('error', 'Unknown')}. "
@@ -1404,7 +1486,7 @@ class Plugin:
                 traffic_stats.reset()
 
                 # Watch the process: crash -> kill switch + bounded auto-restart
-                self._start_supervisor(config, tun_mode)
+                self._start_supervisor(config, tun_mode, manager)
 
                 return create_success_response(
                     {"status": "connected", "processId": process_id}
@@ -1433,13 +1515,14 @@ class Plugin:
                     await tun_manager.remove_system_route()
                     await tun_manager.cleanup_tun_interface()
 
-                # Stop xray-core
-                result = await xray_manager.stop()
+                # Stop whichever core is running
+                result = await active_core_manager.stop()
 
                 if not result.get("success", False):
                     # Log error but still mark as disconnected
                     print(
-                        f"Warning: Failed to stop xray-core cleanly: {result.get('error')}"
+                        f"Warning: Failed to stop {_core_name(active_core_manager)} "
+                        f"cleanly: {result.get('error')}"
                     )
 
                 # Update connection state
@@ -1519,6 +1602,8 @@ class Plugin:
         }
         try:
             connection_state = get_connection_state()
+            # Stats come from xray's StatsService only; a sing-box connection
+            # (hysteria2/tuic) reports stats as unavailable for now.
             if (
                 connection_state.status != ConnectionStatus.CONNECTED
                 or not xray_manager.is_running()
@@ -1556,7 +1641,7 @@ class Plugin:
 
             route_restored = False
             tun_pref = settings.getSetting("tunMode", {})
-            if tun_pref.get("enabled", False) and xray_manager.is_running():
+            if tun_pref.get("enabled", False) and active_core_manager.is_running():
                 route_result = await tun_manager.ensure_system_route()
                 route_restored = bool(route_result.get("restored", False))
                 if not route_result.get("success", False):
@@ -1594,11 +1679,12 @@ class Plugin:
 
         # Check if process is still running
         if connection_state.status == ConnectionStatus.CONNECTED:
-            if not xray_manager.is_running():
+            if not active_core_manager.is_running():
                 # Process died unexpectedly
                 process_id = connection_state.xray_process_id
                 connection_state.set_error(
-                    "xray-core process terminated unexpectedly",
+                    f"{_core_name(active_core_manager)} process terminated "
+                    "unexpectedly",
                     ErrorCode.PROCESS_FAILED,
                 )
 
@@ -1626,7 +1712,7 @@ class Plugin:
                     await tun_manager.remove_system_route()
 
                 # Cleanup
-                await xray_manager.stop()
+                await active_core_manager.stop()
 
         # Return current status
         return connection_state.to_dict()

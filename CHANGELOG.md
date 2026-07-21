@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-07-22
+
+### Added
+
+- **Hysteria2 / TUIC servers now connect** via the sing-box core. Previously
+  such profiles imported fine but connecting failed with "requires the
+  sing-box core, which is not available yet". The connect path now dispatches
+  by the profile's core: xray-based protocols (VLESS/VMess/Trojan/
+  Shadowsocks) keep running on xray-core, while hysteria2/tuic profiles
+  start sing-box with the same localhost SOCKS/HTTP ports (10808/10809) and
+  TUN interface, so system proxy, TUN routing, the kill switch and crash
+  auto-restart all work identically whichever core is active.
+- The sing-box binary is downloaded automatically into the persistent
+  runtime directory the first time a hysteria2/tuic profile connects —
+  xray-only users never download a second core.
+
+### Known limitations
+
+- Traffic statistics (speed/total in the QAM) come from xray's StatsService
+  and show as unavailable while a sing-box connection is active.
+
 ## [2.0.1] - 2026-07-21
 
 ### Fixed
