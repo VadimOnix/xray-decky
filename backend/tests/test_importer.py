@@ -113,6 +113,90 @@ def test_import_subscription_stores_userinfo():
     assert store.get_subscription()["userinfo"] == userinfo
 
 
+# --- fetch_subscription fallback chain ---
+
+
+def _failing_aiohttp(calls):
+    async def fake(_url, _timeout, proxy=None):
+        calls.append(proxy)
+        raise OSError("stalled")
+
+    return fake
+
+
+def test_fetch_falls_back_to_proxy_then_curl():
+    aiohttp_calls, curl_calls = [], []
+
+    async def fake_curl(_url, _timeout):
+        curl_calls.append(True)
+        return importer.SubscriptionResponse(LINK_A, None)
+
+    with patch.object(importer, "_fetch_via_aiohttp", _failing_aiohttp(aiohttp_calls)):
+        with patch.object(importer, "_fetch_via_curl", fake_curl):
+            response = _run(importer.fetch_subscription("https://sub.example.com/s"))
+
+    assert response.body == LINK_A
+    # Direct first, then through the local proxy, then curl.
+    assert aiohttp_calls == [None, importer._LOCAL_HTTP_PROXY]
+    assert curl_calls == [True]
+
+
+def test_fetch_proxy_success_skips_curl():
+    async def fake_aiohttp(_url, _timeout, proxy=None):
+        if proxy is None:
+            raise OSError("stalled")
+        return importer.SubscriptionResponse(LINK_A, None)
+
+    async def fake_curl(_url, _timeout):
+        raise AssertionError("curl must not run when the proxy path succeeds")
+
+    with patch.object(importer, "_fetch_via_aiohttp", fake_aiohttp):
+        with patch.object(importer, "_fetch_via_curl", fake_curl):
+            response = _run(importer.fetch_subscription("https://sub.example.com/s"))
+
+    assert response.body == LINK_A
+
+
+def test_fetch_all_attempts_failing_returns_none():
+    async def fake_curl(_url, _timeout):
+        return importer.SubscriptionResponse(None, None)
+
+    with patch.object(importer, "_fetch_via_aiohttp", _failing_aiohttp([])):
+        with patch.object(importer, "_fetch_via_curl", fake_curl):
+            response = _run(importer.fetch_subscription("https://sub.example.com/s"))
+
+    assert response.body is None
+
+
+def test_fetch_rejects_non_http_schemes():
+    response = _run(importer.fetch_subscription("ftp://sub.example.com/s"))
+    assert response == importer.SubscriptionResponse(None, None)
+
+
+def test_split_curl_output_redirect_chain():
+    raw = (
+        b"HTTP/1.1 301 Moved Permanently\r\n"
+        b"Location: https://sub.example.com/final\r\n"
+        b"\r\n"
+        b"HTTP/2 200\r\n"
+        b"Content-Type: text/plain; charset=utf-8\r\n"
+        b"Subscription-Userinfo: upload=1; download=2; total=3; expire=4\r\n"
+        b"\r\n"
+        b"body-bytes"
+    )
+    status, headers, body = importer._split_curl_output(raw)
+    assert status == 200
+    assert headers["subscription-userinfo"] == "upload=1; download=2; total=3; expire=4"
+    assert body == b"body-bytes"
+
+
+def test_split_curl_output_plain_body_without_headers():
+    status, headers, body = importer._split_curl_output(b"just-a-body")
+    assert status is None
+    assert headers == {}
+    assert body == b"just-a-body"
+
+
 def test_import_subscription_preserves_manual_profile():
     store = _store()
     # A manually added single server.

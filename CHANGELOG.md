@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.1] - 2026-07-21
+
+### Fixed
+
+- **Subscription fetch now survives DPI filtering and an active tunnel**:
+  importing or refreshing a subscription URL tries three paths in order —
+  a plain aiohttp GET, the same GET through xray's local HTTP proxy
+  (encrypted past DPI when the tunnel is up), and finally the system curl
+  binary, whose TLS fingerprint passes DPI middleboxes that silently
+  stall Python's ClientHello (observed on a real Deck: `curl` got the
+  subscription in 0.4s while Python's TLS handshake timed out). Each
+  failed attempt is logged by name (never the URL), and the import error
+  now says what was tried and hints that a subscription server may be
+  unreachable *through its own tunnel* while the VPN is connected.
+
+### Added
+
+- **The web import page opens the admin panel after the first import**:
+  when `/import` saves the very first configuration on a fresh install,
+  the browser is redirected to `/admin` with the pairing token — the same
+  trust as the QR code shown in the QAM. Later imports never expose the
+  token through the open `/import` endpoint.
+
+### Changed
+
+- The `/import` page hint and placeholder now mention subscription URLs
+  (`https://…`) explicitly.
+
 ## [2.0.0] - 2026-07-21
 
 First stable release of the v2 line — everything shipped in
