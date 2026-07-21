@@ -11,6 +11,7 @@ from typing import Awaitable, Callable, Optional
 
 from aiohttp import web
 
+from .admin_api import ensure_admin_token
 from .importer import import_link
 from .profile_store import ProfileStore
 
@@ -73,7 +74,9 @@ def create_import_app(
             )
 
         try:
-            result = await import_link(ProfileStore(settings), link)
+            store = ProfileStore(settings)
+            first_import = not store.list_profiles()
+            result = await import_link(store, link)
             if not result.get("success", False):
                 return web.json_response(
                     {
@@ -86,10 +89,15 @@ def create_import_app(
             if on_vless_saved is not None:
                 await on_vless_saved()
 
-            return web.json_response(
-                {"success": True, "message": "Saved"},
-                status=200,
-            )
+            payload = {"success": True, "message": "Saved"}
+            if first_import:
+                # Bootstrap pairing: the very first import happens on a fresh
+                # install (typically the QR flow from a phone), so hand the
+                # browser the admin panel URL to land in right away — the
+                # same trust as the QR code shown in the QAM. Once configured,
+                # the open /import endpoint never exposes the token again.
+                payload["adminUrl"] = f"/admin?token={ensure_admin_token(settings)}"
+            return web.json_response(payload, status=200)
         except Exception as e:
             return web.json_response(
                 {"success": False, "error": str(e)},

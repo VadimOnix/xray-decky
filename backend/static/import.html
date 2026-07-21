@@ -17,8 +17,8 @@
     <div class="container">
       <h1>Import Proxy Configuration</h1>
       <p class="hint">
-        Paste your vless://, vmess://, trojan:// or ss:// link (or a subscription) below and tap Save. It will appear
-        in the plugin on your Steam Deck.
+        Paste your vless://, vmess://, trojan:// or ss:// link — or a subscription URL (https://…) — below and tap
+        Save. It will appear in the plugin on your Steam Deck.
       </p>
 
       <div id="error" class="message error" role="alert" hidden></div>
@@ -55,7 +55,7 @@
             id="link"
             name="link"
             type="text"
-            placeholder="vless:// / vmess:// / trojan:// / ss://"
+            placeholder="vless:// / vmess:// / trojan:// / ss:// / https://"
             autocomplete="off"
             required
           />
@@ -138,6 +138,15 @@
               var data = _ref.data
               if (status === 200 && data.success) {
                 showSuccess()
+                if (data.adminUrl) {
+                  // First import on a fresh install: take the browser
+                  // straight to the admin panel (URL carries the pairing
+                  // token, same trust as the QAM's QR code).
+                  successEl.textContent = 'Saved. Opening the admin panel…'
+                  setTimeout(function () {
+                    window.location.assign(data.adminUrl)
+                  }, 800)
+                }
               } else {
                 showError(data.error || 'Request failed')
               }
