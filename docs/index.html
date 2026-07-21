@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Xray Decky — a full proxy client for Steam Deck. VLESS, VMess, Trojan and Shadowsocks, multi-server subscriptions, TUN mode, kill switch and a LAN web admin panel.">
+  <meta name="description" content="Xray Decky — a full proxy client for Steam Deck. VLESS, VMess, Trojan, Shadowsocks, Hysteria2 and TUIC, multi-server subscriptions, TUN mode, kill switch and a LAN web admin panel.">
   <title>Xray Decky — Proxy Client for Steam Deck</title>
   <meta property="og:title" content="Xray Decky — Proxy Client for Steam Deck">
-  <meta property="og:description" content="VLESS, VMess, Trojan and Shadowsocks on Steam Deck: subscriptions, TUN mode, kill switch and a web admin panel on your phone.">
+  <meta property="og:description" content="VLESS, VMess, Trojan, Shadowsocks, Hysteria2 and TUIC on Steam Deck: subscriptions, TUN mode, kill switch and a web admin panel on your phone.">
   <meta property="og:type" content="website">
   <meta property="og:image" content="https://vadimonix.github.io/xray-decky/assets/hero-banner-800w.png">
   <link rel="stylesheet" href="styles/main.css">
@@ -20,6 +20,7 @@
         <li><a href="#features">Features</a></li>
         <li><a href="#panel">Admin panel</a></li>
         <li><a href="#install">Install</a></li>
+        <li><a href="changelog.html">Changelog</a></li>
         <li><a href="#faq">Help</a></li>
         <li><a href="https://github.com/VadimOnix/xray-decky" class="nav-github" target="_blank" rel="noopener">GitHub&nbsp;↗</a></li>
       </ul>
@@ -31,20 +32,21 @@
     <div class="hero-glow" aria-hidden="true"></div>
     <div class="hero-inner">
       <div class="hero-copy">
-        <p class="hero-badge"><span class="badge-alpha">ALPHA</span> Steam Deck · Decky Loader · Open source</p>
+        <p class="hero-badge"><span class="badge-stable">STABLE&nbsp;V2</span> Steam Deck · Decky Loader · Open source</p>
         <h1 id="hero-title">A real proxy client.<br>On your <span class="grad">Steam&nbsp;Deck</span>.</h1>
         <p class="hero-purpose">
-          VLESS · VMess · Trojan · Shadowsocks with REALITY and modern transports.
-          Subscriptions with a managed server list, TUN mode, kill switch, live
-          traffic stats — and a full web admin panel you open from your phone.
+          VLESS · VMess · Trojan · Shadowsocks · Hysteria2 · TUIC — with REALITY
+          and modern transports. Subscriptions with a managed server list, TUN
+          mode, kill switch, live traffic stats — and a full web admin panel you
+          open from your phone.
         </p>
         <div class="hero-actions">
           <a href="#install" class="btn btn-primary">Install plugin</a>
           <a href="https://github.com/VadimOnix/xray-decky" class="btn btn-secondary" target="_blank" rel="noopener">View on GitHub</a>
         </div>
         <ul class="hero-stats" aria-label="Project facts">
-          <li><b data-countup="7">0</b><span>protocols parsed</span></li>
-          <li><b data-countup="185">0</b><span>backend tests</span></li>
+          <li><b data-countup="6">0</b><span>protocols supported</span></li>
+          <li><b data-countup="199">0</b><span>backend tests</span></li>
           <li><b>EN·RU</b><span>two languages</span></li>
           <li><b>MIT</b><span>license</span></li>
         </ul>
@@ -156,9 +158,9 @@
         <span class="proto-chip">VMess</span>
         <span class="proto-chip">Trojan</span>
         <span class="proto-chip">Shadowsocks</span>
-        <span class="proto-chip proto-chip-soon">Hysteria2*</span>
-        <span class="proto-chip proto-chip-soon">TUIC*</span>
-        <span class="proto-note">* import today, connectivity via the sing-box core is on the roadmap</span>
+        <span class="proto-chip">Hysteria2</span>
+        <span class="proto-chip">TUIC</span>
+        <span class="proto-note">Hysteria2 / TUIC run on the sing-box core, downloaded on demand</span>
       </div>
     </section>
 
@@ -169,7 +171,7 @@
         <li class="feature-card reveal">
           <span class="f-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v10m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg></span>
           <h3>One-paste import</h3>
-          <p>Paste any <code>vless://</code>, <code>vmess://</code>, <code>trojan://</code> or <code>ss://</code> link, a subscription URL, its base64 body — or a whole sing-box JSON config.</p>
+          <p>Paste any <code>vless://</code>, <code>vmess://</code>, <code>trojan://</code>, <code>ss://</code>, <code>hysteria2://</code> or <code>tuic://</code> link, a subscription URL, its base64 body — or a whole sing-box JSON config.</p>
         </li>
         <li class="feature-card reveal">
           <span class="f-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/><circle cx="19" cy="18" r="2"/></svg></span>
@@ -204,7 +206,7 @@
         <li class="feature-card reveal">
           <span class="f-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 21a9 9 0 1 0-9-9"/><path d="M3 12h9m0 0V3"/></svg></span>
           <h3>Resilient by design</h3>
-          <p>Process supervisor restarts a crashed core in seconds, routes are repaired after suspend, versions are pinned — and everything is covered by 185 backend tests.</p>
+          <p>Process supervisor restarts a crashed core in seconds, routes are repaired after suspend, versions are pinned — and everything is covered by 199 backend tests.</p>
         </li>
       </ul>
     </section>
@@ -236,7 +238,7 @@
         <h3>Prerequisites</h3>
         <ul>
           <li>Steam Deck with <a href="https://wiki.deckbrew.xyz/" target="_blank" rel="noopener">Decky Loader</a> installed</li>
-          <li><span class="badge-alpha">ALPHA</span> not yet validated on real hardware — expect rough edges and please <a href="https://github.com/VadimOnix/xray-decky/issues" target="_blank" rel="noopener">report issues</a></li>
+          <li><span class="badge-stable">STABLE</span> the v2 line is tested on real hardware and used daily — if something still bites, please <a href="https://github.com/VadimOnix/xray-decky/issues" target="_blank" rel="noopener">report it</a></li>
         </ul>
       </div>
 
@@ -356,6 +358,7 @@
     <div class="footer-inner">
       <div class="footer-links">
         <a href="https://github.com/VadimOnix/xray-decky" target="_blank" rel="noopener">GitHub</a>
+        <a href="changelog.html">Changelog</a>
         <a href="https://github.com/VadimOnix/xray-decky/releases" target="_blank" rel="noopener">Releases</a>
         <a href="https://github.com/VadimOnix/xray-decky/issues" target="_blank" rel="noopener">Report an issue</a>
         <a href="https://github.com/VadimOnix/xray-decky/blob/master/docs/ROADMAP.md" target="_blank" rel="noopener">Roadmap</a>

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Xray Decky changelog — every release of the Steam Deck proxy client, rendered live from the repository.">
+  <title>Changelog — Xray Decky</title>
+  <meta property="og:title" content="Changelog — Xray Decky">
+  <meta property="og:description" content="Every release of the Steam Deck proxy client, rendered live from the repository.">
+  <meta property="og:type" content="website">
+  <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="site-nav" id="site-nav" aria-label="Main navigation">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand"><span class="nav-logo" aria-hidden="true"></span>Xray&nbsp;<b>Decky</b></a>
+      <ul class="nav-links">
+        <li><a href="index.html#features">Features</a></li>
+        <li><a href="index.html#panel">Admin panel</a></li>
+        <li><a href="index.html#install">Install</a></li>
+        <li><a href="changelog.html" aria-current="page">Changelog</a></li>
+        <li><a href="index.html#faq">Help</a></li>
+        <li><a href="https://github.com/VadimOnix/xray-decky" class="nav-github" target="_blank" rel="noopener">GitHub&nbsp;↗</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <header class="cl-hero">
+    <h1>What's <span class="grad">new</span></h1>
+    <p>
+      Every release, straight from the repository's
+      <a href="https://github.com/VadimOnix/xray-decky/blob/master/CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG.md</a>
+      — this page always shows the current history.
+    </p>
+  </header>
+
+  <main class="cl-wrap">
+    <p class="cl-loading" id="cl-loading">Loading the changelog</p>
+    <div class="cl-error" id="cl-error" hidden>
+      Couldn't load the changelog right now. Read it on
+      <a href="https://github.com/VadimOnix/xray-decky/blob/master/CHANGELOG.md" target="_blank" rel="noopener">GitHub</a> instead.
+    </div>
+    <div class="cl-timeline" id="cl-timeline" hidden></div>
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-links">
+        <a href="https://github.com/VadimOnix/xray-decky" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/VadimOnix/xray-decky/releases" target="_blank" rel="noopener">Releases</a>
+        <a href="https://github.com/VadimOnix/xray-decky/issues" target="_blank" rel="noopener">Report an issue</a>
+        <a href="https://github.com/VadimOnix/xray-decky/blob/master/docs/ROADMAP.md" target="_blank" rel="noopener">Roadmap</a>
+        <a href="https://wiki.deckbrew.xyz/" target="_blank" rel="noopener">Decky Loader</a>
+        <a href="https://xtls.github.io/" target="_blank" rel="noopener">Xray-core</a>
+      </div>
+      <p class="footer-copy">Xray Decky · MIT License · Made for Steam Deck</p>
+    </div>
+  </footer>
+
+  <script src="scripts/changelog.js" defer></script>
+</body>
+</html>
