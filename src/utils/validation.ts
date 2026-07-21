@@ -55,7 +55,7 @@ export function getValidationErrorMessage(error?: string): string {
   // Map common error messages to user-friendly versions
   const errorMap: Record<string, string> = {
     'Invalid VLESS URL format':
-      'Invalid share link. Expected: vless://, vmess://, trojan://, ss:// or base64 subscription',
+      'Invalid share link. Expected: vless://, vmess://, trojan://, ss://, a subscription URL (https://) or base64 subscription',
     'Invalid UUID format': 'Invalid UUID format in VLESS URL',
     'Port must be between 1 and 65535': 'Port number must be between 1 and 65535',
     'Failed to fetch subscription':

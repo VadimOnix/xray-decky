@@ -49,9 +49,10 @@ node -e "
 "
 
 # Roll [Unreleased] into the new dated section: everything that was under
-# [Unreleased] now sits under the new version header.
+# [Unreleased] now sits under the new version header. perl, not sed -i:
+# BSD sed (macOS) rejects GNU's zero-arg -i and \n in replacements.
 DATE="$(date +%Y-%m-%d)"
-sed -i "s/^## \[Unreleased\]$/## [Unreleased]\n\n## [${VERSION}] - ${DATE}/" CHANGELOG.md
+perl -0pi -e "s/^## \[Unreleased\]\n/## [Unreleased]\n\n## [${VERSION}] - ${DATE}\n/m" CHANGELOG.md
 
 echo "✅ ${CURRENT} → ${VERSION}"
 echo "   - package.json bumped"
