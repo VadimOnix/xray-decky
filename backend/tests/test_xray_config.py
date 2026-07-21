@@ -247,6 +247,28 @@ def test_tun_mode_adds_inbound_rule_and_sockopt():
     assert stream["sockopt"] == {"interface": "wlan0"}
 
 
+def test_tun_rule_comes_after_private_bypass():
+    """
+    Rules are first-match. The TUN catch-all must sit BEHIND the
+    private-IP bypass, or LAN traffic and DNS queries to the home router
+    get sent into the tunnel and die — no internet while connected
+    (the v1 TUN bug that came back with the stats API rule).
+    """
+    config = _build(
+        {"protocol": "vless", "uuid": UUID, "address": "h.io", "port": 443},
+        tun_mode=True,
+        outbound_interface="wlan0",
+    )
+    rules = config["routing"]["rules"]
+    private_idx = next(
+        i for i, r in enumerate(rules) if r.get("ip") == ["geoip:private"]
+    )
+    tun_idx = next(
+        i for i, r in enumerate(rules) if r.get("inboundTag") == ["tun"]
+    )
+    assert private_idx < tun_idx
+
+
 def test_no_tun_inbound_without_tun_mode():
     config = _build(
         {"protocol": "vless", "uuid": UUID, "address": "h.io", "port": 443}
