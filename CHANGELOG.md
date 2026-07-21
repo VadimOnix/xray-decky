@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.1] - 2026-07-22
+
+### Fixed
+
+- **TUN mode no longer kills all connectivity** (v2 regression). xray
+  routing rules are first-match, and since the traffic-stats release the
+  TUN catch-all rule was inserted *before* the private-IP bypass, so LAN
+  traffic — including DNS queries to the home router — was sent into the
+  tunnel and died, which looked like "internet stops working the moment
+  the connection is enabled" (the tunnel itself was healthy). The TUN
+  rule now sits behind the `geoip:private` bypass again, restoring the
+  original v1 rule order, and a test pins the ordering so it can't
+  silently regress a second time.
+
 ## [2.1.0] - 2026-07-22
 
 ### Added

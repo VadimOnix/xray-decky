@@ -302,9 +302,14 @@ class XrayManager:
 
         # Add TUN mode configuration if enabled
         if tun_mode:
-            # All TUN traffic goes through the proxy
+            # TUN traffic goes through the proxy — but only AFTER the
+            # private-IP bypass above. Rules are first-match: with the TUN
+            # rule in front of it, LAN traffic and DNS queries to the home
+            # router would be sent into the tunnel and die, killing all
+            # connectivity while connected (the original v1 TUN bug,
+            # reintroduced when the stats API rule bumped this insert index).
             routing_rules.insert(
-                1,
+                2,
                 {"type": "field", "inboundTag": ["tun"], "outboundTag": "proxy"},
             )
 
