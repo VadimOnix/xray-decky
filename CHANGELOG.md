@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-07-21
+
+First stable release of the v2 line — everything shipped in
+[2.0.0-alpha.1] below (multi-protocol imports, subscriptions with
+refresh, the LAN admin panel, multi-server profiles, TUN/kill-switch
+hardening, sing-box substrate, localization) is now considered ready
+for daily use, plus:
+
+### Changed
+
+- **Import texts now advertise subscription URLs**: the QAM share-link
+  field description and the invalid-link error messages (QAM + backend)
+  now say a subscription URL (`https://…`) can be pasted directly,
+  matching what the importer has accepted since 2.0.0-alpha.1 — an
+  `http(s)://` link is fetched and all its servers are stored. Verified
+  end-to-end against a live subscription (base64 body with mixed
+  vless/hysteria2 nodes).
+
 ## [2.0.0-alpha.1] - 2026-07-05
 
 > **⚠️ Work in progress.** This alpha is being tested by the author on real

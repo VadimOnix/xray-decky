@@ -98,10 +98,10 @@ const en: Dict = {
   'import.save': 'Save configuration',
   'import.shareLink': 'Share link',
   'import.shareDesc':
-    'Paste a vless://, vmess://, trojan:// or ss:// link. We validate it before saving.',
+    'Paste a vless://, vmess://, trojan:// or ss:// link, or a subscription URL (https://). We validate it before saving.',
   'import.helpShare': 'Help: share link',
   'import.successLabel': 'Success:',
-  'import.saveDesc': 'Save the VLESS link and switch to the configured layout.',
+  'import.saveDesc': 'Save the link and switch to the configured layout.',
 
   'qr.title': 'Import via QR',
   'qr.help': 'Help: QR import',
@@ -248,7 +248,7 @@ const ru: Dict = {
   'import.save': 'Сохранить конфигурацию',
   'import.shareLink': 'Ссылка',
   'import.shareDesc':
-    'Вставьте ссылку vless://, vmess://, trojan:// или ss://. Мы проверим её перед сохранением.',
+    'Вставьте ссылку vless://, vmess://, trojan:// или ss:// либо URL подписки (https://). Мы проверим её перед сохранением.',
   'import.helpShare': 'Справка: ссылка',
   'import.successLabel': 'Успех:',
   'import.saveDesc': 'Сохранить ссылку и перейти к настроенному виду.',

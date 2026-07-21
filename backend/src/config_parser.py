@@ -642,8 +642,8 @@ def validate_share_link(url: str) -> Tuple[bool, Optional[str]]:
 
     return (
         False,
-        "Invalid share link. Expected vless://, vmess://, trojan://, ss:// "
-        "or a base64 subscription",
+        "Invalid share link. Expected vless://, vmess://, trojan://, ss://, "
+        "a subscription URL (http(s)://) or base64 subscription content",
     )
 
 
