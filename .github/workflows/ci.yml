@@ -212,12 +212,44 @@ jobs:
           # A root backend/ dir makes the Decky CLI assume a custom-backend
           # Docker build; py_modules/backend/ (the Python package) is fine.
           test ! -d backend || (echo "::error::repo has a root backend/ dir again" && exit 1)
-          ! unzip -l "$ZIP" | grep -q "${NAME}/backend/" \
+          # Capture the listing once: chaining `unzip -l | grep -q` repeatedly
+          # is fine under sh, but under `bash -o pipefail` grep's early exit
+          # on match sends unzip a SIGPIPE (exit 141), which would flip the
+          # negative guard below and could false-fail the positive checks.
+          LISTING=$(unzip -l "$ZIP")
+          ! echo "$LISTING" | grep -q "${NAME}/backend/" \
             || (echo "::error::${ZIP} has a top-level backend/ entry" && exit 1)
           for f in dist/index.js main.py package.json plugin.json LICENSE \
                    recover.sh py_modules/backend/__init__.py py_modules/backend/src/__init__.py \
                    py_modules/backend/src/xray_version.json static/admin.html; do
-            unzip -l "$ZIP" | grep -q "${NAME}/${f}" \
+            echo "$LISTING" | grep -q "${NAME}/${f}" \
               || (echo "Missing ${f} in ${ZIP}" && exit 1)
           done
           echo "Package contains all required files"
+
+  store-build:
+    name: Store Build (Decky CLI)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Download Decky CLI
+        run: |
+          mkdir /tmp/decky-cli
+          # Pin matches the CLI version the plugin store's build workflow (decky-plugin-database) uses
+          curl -f --retry 3 -L -o /tmp/decky-cli/decky \
+            "https://github.com/SteamDeckHomebrew/cli/releases/download/0.0.7/decky-linux-x86_64"
+          chmod +x /tmp/decky-cli/decky
+      - name: Build with Decky CLI (same as the plugin store)
+        run: sudo /tmp/decky-cli/decky plugin build -b -o /tmp/output -s directory .
+      - name: Verify store zip contents
+        run: |
+          ZIP=$(ls /tmp/output/*.zip)
+          echo "Built: $ZIP"
+          LISTING=$(unzip -l "$ZIP")
+          for f in py_modules/backend/src/importer.py static/admin.html \
+                   dist/index.js main.py plugin.json LICENSE; do
+            echo "$LISTING" | grep -q "$f" || (echo "::error::store zip missing $f" && exit 1)
+          done
+          echo "Store zip contains all required files"
