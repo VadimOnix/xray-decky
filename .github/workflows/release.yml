@@ -48,9 +48,9 @@ jobs:
       - name: Download xray-core (pinned release)
         run: |
           # Read the pinned version from the single source of truth shared with
-          # the runtime downloader (backend/src/xray_downloader.py), so the
-          # bundled binary and any re-downloaded one can never drift.
-          VERSION_FILE="backend/src/xray_version.json"
+          # the runtime downloader (py_modules/backend/src/xray_downloader.py),
+          # so the bundled binary and any re-downloaded one can never drift.
+          VERSION_FILE="py_modules/backend/src/xray_version.json"
           XRAY_REPO=$(jq -r '.repo' "$VERSION_FILE")
           XRAY_ASSET=$(jq -r '.asset' "$VERSION_FILE")
           XRAY_VERSION=$(jq -r '.version' "$VERSION_FILE")
@@ -68,17 +68,20 @@ jobs:
 
           unzip -o /tmp/xray.zip -d /tmp/xray-extract
 
-          mkdir -p xray-bin
-          mv /tmp/xray-extract/xray xray-bin/xray-core
-          chmod +x xray-bin/xray-core
+          # Land the binaries in ./bin — scripts/stage-plugin.sh picks up a
+          # repo-root bin/ directory automatically when staging the plugin.
+          mkdir -p bin
+          mv /tmp/xray-extract/xray bin/xray-core
+          chmod +x bin/xray-core
 
           # geoip.dat & geosite.dat are included in the xray-core release zip
           # and are required for routing rules that use geoip:private / geosite:*
-          cp /tmp/xray-extract/geoip.dat  xray-bin/
-          cp /tmp/xray-extract/geosite.dat xray-bin/
+          cp /tmp/xray-extract/geoip.dat  bin/
+          cp /tmp/xray-extract/geosite.dat bin/
 
-          echo "xray-core version: $(./xray-bin/xray-core version | head -1)"
-          echo "Geo files: $(ls -lh xray-bin/geoip.dat xray-bin/geosite.dat)"
+          echo "xray-core version:"
+          ./bin/xray-core version
+          echo "Geo files: $(ls -lh bin/geoip.dat bin/geosite.dat)"
 
           rm -rf /tmp/xray.zip /tmp/xray-extract
 
@@ -86,29 +89,19 @@ jobs:
         run: |
           VERSION="${GITHUB_REF#refs/tags/v}"
           PLUGIN_DIR="release/${PLUGIN_NAME}"
-          mkdir -p "$PLUGIN_DIR"
 
-          # Copy plugin files per DeckBrew structure
-          cp -r dist "$PLUGIN_DIR/"
-          cp package.json plugin.json main.py LICENSE "$PLUGIN_DIR/"
-          [ -f README.md ] && cp README.md "$PLUGIN_DIR/"
-          # Network recovery script (run manually if the Deck loses connectivity)
-          cp scripts/recover.sh "$PLUGIN_DIR/"
+          # Single source of truth for the on-device layout (dist/, py_modules/,
+          # defaults/static -> static/, metadata files, and the bin/ binaries
+          # staged above) — kept in lockstep with local packaging/deploy via
+          # scripts/stage-plugin.sh.
+          scripts/stage-plugin.sh "$PLUGIN_DIR"
 
-          # Backend
-          mkdir -p "$PLUGIN_DIR/backend/src"
-          cp backend/__init__.py "$PLUGIN_DIR/backend/" 2>/dev/null || echo "# Backend package" > "$PLUGIN_DIR/backend/__init__.py"
-          cp backend/src/__init__.py "$PLUGIN_DIR/backend/src/" 2>/dev/null || echo "# Backend src package" > "$PLUGIN_DIR/backend/src/__init__.py"
-          cp backend/src/*.py "$PLUGIN_DIR/backend/src/"
-          # Pinned-version metadata, read at runtime by the self-heal downloader.
-          cp backend/src/*.json "$PLUGIN_DIR/backend/src/"
-          cp -r backend/static "$PLUGIN_DIR/backend/"
-
-          # xray-core binary + geo data files
-          mkdir -p "$PLUGIN_DIR/bin"
-          cp xray-bin/xray-core   "$PLUGIN_DIR/bin/"
-          cp xray-bin/geoip.dat   "$PLUGIN_DIR/bin/"
-          cp xray-bin/geosite.dat "$PLUGIN_DIR/bin/"
+          # stage-plugin.sh treats bin/ as optional (local dev may not have
+          # it), but a published release must never ship without the core
+          # binary — assert it landed so a future step reorder can't publish
+          # a core-less zip.
+          test -x "$PLUGIN_DIR/bin/xray-core" || (echo "::error::$PLUGIN_DIR/bin/xray-core missing or not executable after staging" && exit 1)
+          test -f "$PLUGIN_DIR/bin/geoip.dat" || (echo "::error::$PLUGIN_DIR/bin/geoip.dat missing after staging" && exit 1)
 
           # Create ZIP with xray-decky/ as root
           cd release

@@ -2,9 +2,9 @@
 # Stage the plugin's runtime tree into a destination directory.
 #
 # Single source of truth for "which files ship to the Deck" — used by
-# deploy.sh, package-and-deploy.sh and scripts/package-local.sh so the
-# file set can't drift between them. (The release workflow mirrors this
-# list in .github/workflows/release.yml.)
+# deploy.sh, package-and-deploy.sh, scripts/package-local.sh, AND the
+# release workflow (.github/workflows/release.yml), so the file set
+# can't drift between any of them.
 #
 # Usage: scripts/stage-plugin.sh <dest-dir>
 #   <dest-dir> is created if missing; files are staged directly into it
