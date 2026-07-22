@@ -2,9 +2,9 @@
 # Stage the plugin's runtime tree into a destination directory.
 #
 # Single source of truth for "which files ship to the Deck" — used by
-# deploy.sh, package-and-deploy.sh and scripts/package-local.sh so the
-# file set can't drift between them. (The release workflow mirrors this
-# list in .github/workflows/release.yml.)
+# deploy.sh, package-and-deploy.sh, scripts/package-local.sh, AND the
+# release workflow (.github/workflows/release.yml), so the file set
+# can't drift between any of them.
 #
 # Usage: scripts/stage-plugin.sh <dest-dir>
 #   <dest-dir> is created if missing; files are staged directly into it
@@ -23,8 +23,12 @@ if [ ! -d dist ]; then
   echo "❌ dist/ missing — run 'pnpm run build' first." >&2
   exit 1
 fi
-if [ ! -d backend/src ] || [ ! -d backend/static ]; then
-  echo "❌ backend/src or backend/static missing — the embedded web server would not start on device." >&2
+if [ ! -d py_modules/backend/src ]; then
+  echo "❌ py_modules/backend/src missing — backend code not found." >&2
+  exit 1
+fi
+if [ ! -d defaults/static ]; then
+  echo "❌ defaults/static missing — the embedded web server would not start on device." >&2
   exit 1
 fi
 
@@ -32,32 +36,30 @@ mkdir -p "$DEST"
 
 # Frontend bundle + plugin metadata.
 cp -r dist "$DEST/"
-cp package.json plugin.json main.py LICENSE.md "$DEST/"
+cp package.json plugin.json main.py LICENSE "$DEST/"
 [ -f README.md ] && cp README.md "$DEST/"
 
 # Network recovery script (run manually if the Deck loses connectivity).
-cp scripts/recover.sh "$DEST/"
+cp defaults/recover.sh "$DEST/"
 
-# Backend package: python sources, pinned-version metadata (read at runtime
-# by the self-heal downloader) and the static web panel.
-mkdir -p "$DEST/backend/src"
-if [ -f backend/__init__.py ]; then
-  cp backend/__init__.py "$DEST/backend/"
-else
-  echo "# Backend package" > "$DEST/backend/__init__.py"
-fi
-if [ -f backend/src/__init__.py ]; then
-  cp backend/src/__init__.py "$DEST/backend/src/"
-else
-  echo "# Backend src package" > "$DEST/backend/src/__init__.py"
-fi
-cp backend/src/*.py "$DEST/backend/src/"
-cp backend/src/*.json "$DEST/backend/src/"
-cp -r backend/static "$DEST/backend/"
+# Backend package: python sources (Decky CLI py_modules/ layout) and
+# pinned-version metadata (read at runtime by the self-heal downloader).
+cp -r py_modules "$DEST/"
+# Strip dev-machine cruft that cp -r would otherwise ship to the Deck.
+find "$DEST/py_modules" -name '__pycache__' -type d -prune -exec rm -rf {} +
 
-# Core binaries, when present locally (backend/out -> bin/). Optional: the
-# plugin self-heals by downloading its pinned core on first start.
-if [ -d backend/out ] && [ -n "$(ls -A backend/out 2>/dev/null)" ]; then
+# Static web panel (Decky CLI layout: defaults/ contents land at plugin
+# root, so this ships as <plugin>/static/). mkdir + trailing-slash cp keeps
+# this safe to re-run into an existing $DEST without nesting static/static.
+mkdir -p "$DEST/static"
+cp -r defaults/static/. "$DEST/static/"
+
+# Core binaries, when present locally (bin/ -> bin/). Optional: the plugin
+# self-heals by downloading its pinned core on first start.
+if [ -d bin ] && [ -n "$(ls -A bin 2>/dev/null)" ]; then
   mkdir -p "$DEST/bin"
-  cp -r backend/out/. "$DEST/bin/"
+  cp -r bin/. "$DEST/bin/"
 fi
+
+# Strip dev-machine cruft (covers dist/, py_modules/, static/ in one pass).
+find "$DEST" -name '.DS_Store' -delete

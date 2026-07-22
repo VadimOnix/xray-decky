@@ -1,0 +1,8 @@
+# Dev/test dependencies for the Xray Decky Plugin backend.
+# Install via: pip install -r requirements-dev.txt
+# Nothing installs this file on device: at runtime Decky Loader's own Python
+# env provides aiohttp. This file only sets up a local/CI environment for
+# running the test suite (pytest tests/) and ruff.
+# Cert generation uses OpenSSL subprocess (no cryptography dependency).
+
+aiohttp>=3.9.0

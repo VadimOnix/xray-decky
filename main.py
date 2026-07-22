@@ -75,10 +75,18 @@ def _get_lan_ip() -> str:
     return "127.0.0.1"
 
 
-# Add plugin directory to Python path for backend module imports
+# Backend modules live in py_modules/ (the only extra-code directory the
+# official Decky CLI ships in store builds). Decky Loader adds py_modules
+# to sys.path at runtime; insert it explicitly too so dev runs and tests
+# resolve `backend.src.*` the same way. The loop below deliberately leaves
+# py_modules ahead of the plugin root in sys.path (each insert(0, ...) pushes
+# the previous entry back), so a stale old-layout backend/ package left over
+# from a manual upgrade-over-old-install can never shadow the shipped code —
+# do not reorder this.
 PLUGIN_DIR = Path(__file__).resolve().parent
-if str(PLUGIN_DIR) not in sys.path:
-    sys.path.insert(0, str(PLUGIN_DIR))
+for _path in (PLUGIN_DIR, PLUGIN_DIR / "py_modules"):
+    if str(_path) not in sys.path:
+        sys.path.insert(0, str(_path))
 
 from settings import SettingsManager
 from backend.src.config_parser import validate_share_link, core_for_protocol
@@ -135,13 +143,12 @@ def _persistent_xray_dir(plugin_dir: Path) -> Path:
     return plugin_dir / "bin"
 
 
-# Resolve xray-core path: deployed uses bin/, dev uses backend/out/, and a
-# persistent runtime dir is used as a self-healing download location because
-# SteamOS may wipe the plugin's bin/ on reboot (immutable FS / atomic updates).
+# Resolve xray-core path: deployed uses bin/, and a persistent runtime dir is
+# used as a self-healing download location because SteamOS may wipe the
+# plugin's bin/ on reboot (immutable FS / atomic updates).
 def _resolve_xray_path(plugin_dir: Path) -> str:
     candidates = [
         plugin_dir / "bin" / "xray-core",
-        plugin_dir / "backend" / "out" / "xray-core",
         _persistent_xray_dir(plugin_dir) / "xray-core",
     ]
     for candidate in candidates:
@@ -159,7 +166,6 @@ def _resolve_singbox_path(plugin_dir: Path) -> str:
     """
     candidates = [
         plugin_dir / "bin" / "sing-box",
-        plugin_dir / "backend" / "out" / "sing-box",
         _persistent_xray_dir(plugin_dir) / "sing-box",
     ]
     for candidate in candidates:
@@ -234,7 +240,12 @@ class Plugin:
         port = int(import_server_config.get("port", 8765))
         port = max(1024, min(65535, port))
         bind_host = admin_bind_host(settings)
-        static_dir = Path(__file__).resolve().parent / "backend" / "static"
+        # Installed builds (store CLI and our own zips) ship defaults/static
+        # as <plugin>/static; the repo working tree keeps it in defaults/.
+        plugin_root = Path(__file__).resolve().parent
+        static_dir = plugin_root / "static"
+        if not static_dir.is_dir():
+            static_dir = plugin_root / "defaults" / "static"
         runtime_dir = os.environ.get("DECKY_PLUGIN_RUNTIME_DIR", "")
         ssl_context = None
         if static_dir.is_dir() and runtime_dir:
@@ -341,7 +352,7 @@ class Plugin:
         elif not static_dir.is_dir():
             self._import_runner = None
             print(
-                "Xray Decky Plugin: backend/static not found, import server not started"
+                "Xray Decky Plugin: static/ (or defaults/static/) not found, import server not started"
             )
 
     # Slow tick — the interval is measured in hours, so checking every few

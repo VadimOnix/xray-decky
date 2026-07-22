@@ -15,8 +15,8 @@ When you push a tag like `v1.0.0`, the workflow:
 
 1. Checks out the code
 2. Installs dependencies and builds the plugin (`pnpm install && pnpm run build`)
-3. Downloads xray-core binary (version in `XRAY_VERSION` env in workflow)
-4. Packages the plugin into a ZIP: `dist/`, `package.json`, `plugin.json`, `main.py`, `LICENSE.md`, `README.md`, `backend/`, and the xray-core binary
+3. Downloads the xray-core binary pinned in `py_modules/backend/src/xray_version.json`
+4. Packages the plugin into a ZIP (staged by `scripts/stage-plugin.sh`, the same layout used locally): `dist/`, `package.json`, `plugin.json`, `main.py`, `LICENSE`, `README.md`, `py_modules/` (backend Python), `static/` (web panel), and the xray-core binary + geo data under `bin/`
 5. Creates a GitHub Release with the ZIP attached and auto-generated release notes
 
 ## Pre-Release Checklist
@@ -35,7 +35,7 @@ Before creating a release tag:
    - Ensure CI passes
    - Ensure the commit you're tagging is the one you want released
 
-4. **(Optional) Update the xray-core pin** in `backend/src/xray_version.json` if a new core release is available (the release workflow bundles whatever is pinned there)
+4. **(Optional) Update the xray-core pin** in `py_modules/backend/src/xray_version.json` if a new core release is available (the release workflow bundles whatever is pinned there)
 
 ## Creating a Release
 

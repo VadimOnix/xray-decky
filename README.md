@@ -35,7 +35,7 @@ web admin panel, and Gaming-Mode TUN routing.
 
 **Network recovery:** if the Deck ever loses connectivity because the plugin
 died uncleanly, run `sudo bash recover.sh` (shipped in the plugin folder,
-also at [scripts/recover.sh](scripts/recover.sh)) from a Desktop Mode
+also at [defaults/recover.sh](defaults/recover.sh)) from a Desktop Mode
 terminal — it removes the kill-switch firewall chain, stale TUN routes and
 the system proxy.
 
@@ -67,17 +67,21 @@ Without TUN, the plugin falls back to SOCKS proxy mode, which works in Desktop M
 ```bash
 pnpm install
 pnpm run build
-# Backend: pip install -r backend/requirements.txt
-# xray-core: place in backend/out/xray-core
+# Backend: pip install -r requirements-dev.txt
+# xray-core: place in bin/xray-core
 ```
 
 ### Project Structure
 
 ```
-├── src/           # Frontend TypeScript/React
-├── backend/       # Backend Python, xray-core
-├── docs/          # GitHub Pages (index.html, styles, assets)
-├── main.py        # Backend entry point
+├── src/                      # Frontend TypeScript/React
+├── py_modules/backend/src/   # Backend Python, xray-core/sing-box managers
+├── defaults/static/          # Embedded web admin panel (ships to plugin root)
+├── defaults/recover.sh       # Network recovery script (ships to plugin root)
+├── tests/                    # Python test suite (pytest)
+├── bin/                      # Local dev core binaries (xray-core, sing-box)
+├── docs/                     # GitHub Pages (index.html, styles, assets)
+├── main.py                   # Backend entry point
 ├── plugin.json
 └── package.json
 ```
@@ -86,7 +90,7 @@ See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) and [docs/RELEASING.md](docs/RELE
 
 ## License
 
-MIT — see LICENSE.md.
+MIT — see LICENSE.
 
 ## Resources
 

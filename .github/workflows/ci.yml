@@ -120,7 +120,7 @@ jobs:
       - name: Install ruff
         run: pip install ruff
       - name: Lint backend
-        run: ruff check backend/ main.py
+        run: ruff check py_modules/ tests/ main.py conftest.py
 
   test-backend:
     name: Test Backend
@@ -133,7 +133,7 @@ jobs:
       - name: Install dependencies
         run: pip install pytest pytest-asyncio aiohttp
       - name: Run tests
-        run: pytest backend/tests/
+        run: pytest tests/
 
   validate-plugin-structure:
     name: Validate Plugin Structure
@@ -148,7 +148,7 @@ jobs:
         run: |
           test -f plugin.json || (echo "plugin.json missing" && exit 1)
           test -f package.json || (echo "package.json missing" && exit 1)
-          test -f LICENSE.md || (echo "LICENSE.md missing" && exit 1)
+          test -f LICENSE || (echo "LICENSE missing" && exit 1)
           test -f main.py || (echo "main.py missing" && exit 1)
           echo "All mandatory files present"
       - name: Validate metadata and pinned-version files
@@ -162,7 +162,7 @@ jobs:
             || (echo "package.json version '$VERSION' is not semver" && exit 1)
           # Core pin files are read at runtime by the self-heal downloader and
           # at release time by the workflow — a broken pin breaks both.
-          for pin in backend/src/xray_version.json backend/src/singbox_version.json; do
+          for pin in py_modules/backend/src/xray_version.json py_modules/backend/src/singbox_version.json; do
             jq -e . "$pin" > /dev/null || (echo "$pin is not valid JSON" && exit 1)
             for field in repo asset version; do
               jq -er ".${field} // empty" "$pin" | grep -q . \
@@ -209,10 +209,47 @@ jobs:
           VERSION=$(node -p "require('./package.json').version")
           ZIP="${NAME}-v${VERSION}.zip"
           test -f "$ZIP" || (echo "$ZIP was not produced" && exit 1)
-          for f in dist/index.js main.py package.json plugin.json LICENSE.md \
-                   recover.sh backend/__init__.py backend/src/__init__.py \
-                   backend/src/xray_version.json backend/static/admin.html; do
-            unzip -l "$ZIP" | grep -q "${NAME}/${f}" \
+          # A root backend/ dir makes the Decky CLI assume a custom-backend
+          # Docker build; py_modules/backend/ (the Python package) is fine.
+          test ! -d backend || (echo "::error::repo has a root backend/ dir again" && exit 1)
+          # Capture the listing once: chaining `unzip -l | grep -q` repeatedly
+          # is fine under sh, but under `bash -o pipefail` grep's early exit
+          # on match sends unzip a SIGPIPE (exit 141), which would flip the
+          # negative guard below and could false-fail the positive checks.
+          LISTING=$(unzip -l "$ZIP")
+          ! echo "$LISTING" | grep -q "${NAME}/backend/" \
+            || (echo "::error::${ZIP} has a top-level backend/ entry" && exit 1)
+          for f in dist/index.js main.py package.json plugin.json LICENSE \
+                   recover.sh py_modules/backend/__init__.py py_modules/backend/src/__init__.py \
+                   py_modules/backend/src/xray_version.json static/admin.html; do
+            echo "$LISTING" | grep -q "${NAME}/${f}" \
               || (echo "Missing ${f} in ${ZIP}" && exit 1)
           done
           echo "Package contains all required files"
+
+  store-build:
+    name: Store Build (Decky CLI)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Download Decky CLI
+        run: |
+          mkdir /tmp/decky-cli
+          # Pin matches the CLI version the plugin store's build workflow (decky-plugin-database) uses
+          curl -f --retry 3 -L -o /tmp/decky-cli/decky \
+            "https://github.com/SteamDeckHomebrew/cli/releases/download/0.0.7/decky-linux-x86_64"
+          chmod +x /tmp/decky-cli/decky
+      - name: Build with Decky CLI (same as the plugin store)
+        run: sudo /tmp/decky-cli/decky plugin build -b -o /tmp/output -s directory .
+      - name: Verify store zip contents
+        run: |
+          ZIP=$(ls /tmp/output/*.zip)
+          echo "Built: $ZIP"
+          LISTING=$(unzip -l "$ZIP")
+          for f in py_modules/backend/src/importer.py static/admin.html \
+                   dist/index.js main.py plugin.json LICENSE recover.sh; do
+            echo "$LISTING" | grep -q "$f" || (echo "::error::store zip missing $f" && exit 1)
+          done
+          echo "Store zip contains all required files"
