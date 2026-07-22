@@ -2,6 +2,6 @@
   "repo": "XTLS/Xray-core",
   "asset": "Xray-linux-64.zip",
   "version": "v26.3.27",
-  "sha256": null,
+  "sha256": "23cd9af937744d97776ee35ecad4972cf4b2109d1e0fe6be9930467608f7c8ae",
   "_comment": "Single source of truth for the bundled/downloaded xray-core version. Consumed by both .github/workflows/release.yml (release packaging) and backend/src/xray_downloader.py (runtime self-heal) so the two can never drift. Bump 'version' deliberately in its own PR. 'sha256' is the expected hash of the release asset; when set to a non-null hex string the runtime downloader verifies it, when null verification is skipped."
 }
