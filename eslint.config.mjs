@@ -10,7 +10,7 @@ export default [
   eslint.configs.recommended,
   {
     // No-build browser scripts served by the embedded web server.
-    files: ['backend/static/**/*.js'],
+    files: ['defaults/static/**/*.js'],
     languageOptions: {
       sourceType: 'script',
       globals: {
