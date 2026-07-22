@@ -120,7 +120,7 @@ jobs:
       - name: Install ruff
         run: pip install ruff
       - name: Lint backend
-        run: ruff check backend/ main.py
+        run: ruff check py_modules/ tests/ main.py conftest.py
 
   test-backend:
     name: Test Backend
@@ -133,7 +133,7 @@ jobs:
       - name: Install dependencies
         run: pip install pytest pytest-asyncio aiohttp
       - name: Run tests
-        run: pytest backend/tests/
+        run: pytest tests/
 
   validate-plugin-structure:
     name: Validate Plugin Structure
@@ -162,7 +162,7 @@ jobs:
             || (echo "package.json version '$VERSION' is not semver" && exit 1)
           # Core pin files are read at runtime by the self-heal downloader and
           # at release time by the workflow — a broken pin breaks both.
-          for pin in backend/src/xray_version.json backend/src/singbox_version.json; do
+          for pin in py_modules/backend/src/xray_version.json py_modules/backend/src/singbox_version.json; do
             jq -e . "$pin" > /dev/null || (echo "$pin is not valid JSON" && exit 1)
             for field in repo asset version; do
               jq -er ".${field} // empty" "$pin" | grep -q . \
@@ -210,8 +210,8 @@ jobs:
           ZIP="${NAME}-v${VERSION}.zip"
           test -f "$ZIP" || (echo "$ZIP was not produced" && exit 1)
           for f in dist/index.js main.py package.json plugin.json LICENSE.md \
-                   recover.sh backend/__init__.py backend/src/__init__.py \
-                   backend/src/xray_version.json backend/static/admin.html; do
+                   recover.sh py_modules/backend/__init__.py py_modules/backend/src/__init__.py \
+                   py_modules/backend/src/xray_version.json backend/static/admin.html; do
             unzip -l "$ZIP" | grep -q "${NAME}/${f}" \
               || (echo "Missing ${f} in ${ZIP}" && exit 1)
           done

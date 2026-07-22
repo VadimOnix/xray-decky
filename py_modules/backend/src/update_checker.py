@@ -2,7 +2,7 @@
 Telemetry-free update checker for the plugin and the bundled cores.
 
 Compares the plugin's own version (package.json) and the pinned xray-core /
-sing-box versions (backend/src/*_version.json) against the latest GitHub
+sing-box versions (py_modules/backend/src/*_version.json) against the latest GitHub
 release tag for each repo. Nothing about the install or the user is sent — it
 is an anonymous GET to the public GitHub releases API, made only when
 explicitly requested from the admin panel.
@@ -24,7 +24,8 @@ _MAX_BODY_BYTES = 1 * 1024 * 1024
 
 # The plugin's own GitHub repository (releases are published here).
 PLUGIN_REPO = "VadimOnix/xray-decky"
-_PACKAGE_JSON = Path(__file__).resolve().parents[2] / "package.json"
+# py_modules/backend/src -> plugin root
+_PACKAGE_JSON = Path(__file__).resolve().parents[3] / "package.json"
 
 
 def plugin_version() -> Optional[str]:

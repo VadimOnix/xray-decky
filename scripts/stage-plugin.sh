@@ -23,8 +23,12 @@ if [ ! -d dist ]; then
   echo "❌ dist/ missing — run 'pnpm run build' first." >&2
   exit 1
 fi
-if [ ! -d backend/src ] || [ ! -d backend/static ]; then
-  echo "❌ backend/src or backend/static missing — the embedded web server would not start on device." >&2
+if [ ! -d py_modules/backend/src ]; then
+  echo "❌ py_modules/backend/src missing — backend code not found." >&2
+  exit 1
+fi
+if [ ! -d backend/static ]; then
+  echo "❌ backend/static missing — the embedded web server would not start on device." >&2
   exit 1
 fi
 
@@ -38,21 +42,15 @@ cp package.json plugin.json main.py LICENSE.md "$DEST/"
 # Network recovery script (run manually if the Deck loses connectivity).
 cp scripts/recover.sh "$DEST/"
 
-# Backend package: python sources, pinned-version metadata (read at runtime
-# by the self-heal downloader) and the static web panel.
-mkdir -p "$DEST/backend/src"
-if [ -f backend/__init__.py ]; then
-  cp backend/__init__.py "$DEST/backend/"
-else
-  echo "# Backend package" > "$DEST/backend/__init__.py"
-fi
-if [ -f backend/src/__init__.py ]; then
-  cp backend/src/__init__.py "$DEST/backend/src/"
-else
-  echo "# Backend src package" > "$DEST/backend/src/__init__.py"
-fi
-cp backend/src/*.py "$DEST/backend/src/"
-cp backend/src/*.json "$DEST/backend/src/"
+# Backend package: python sources (Decky CLI py_modules/ layout) and
+# pinned-version metadata (read at runtime by the self-heal downloader).
+cp -r py_modules "$DEST/"
+# Strip dev-machine cruft that cp -r would otherwise ship to the Deck.
+find "$DEST/py_modules" -name '__pycache__' -type d -prune -exec rm -rf {} +
+find "$DEST/py_modules" -name '.DS_Store' -delete
+
+# Static web panel.
+mkdir -p "$DEST/backend"
 cp -r backend/static "$DEST/backend/"
 
 # Core binaries, when present locally (backend/out -> bin/). Optional: the

@@ -10,7 +10,7 @@ from backend.src.import_server import create_import_app
 
 UUID = "a5a075d3-b3d5-4a03-b2e0-8a1f04b1cf75"
 LINK = f"vless://{UUID}@a.example.com:443?security=tls"
-STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
+STATIC_DIR = Path(__file__).resolve().parent.parent / "backend" / "static"
 
 
 class _FakeSettings:
