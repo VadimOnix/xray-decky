@@ -148,7 +148,7 @@ jobs:
         run: |
           test -f plugin.json || (echo "plugin.json missing" && exit 1)
           test -f package.json || (echo "package.json missing" && exit 1)
-          test -f LICENSE.md || (echo "LICENSE.md missing" && exit 1)
+          test -f LICENSE || (echo "LICENSE missing" && exit 1)
           test -f main.py || (echo "main.py missing" && exit 1)
           echo "All mandatory files present"
       - name: Validate metadata and pinned-version files
@@ -214,7 +214,7 @@ jobs:
           test ! -d backend || (echo "::error::repo has a root backend/ dir again" && exit 1)
           ! unzip -l "$ZIP" | grep -q "${NAME}/backend/" \
             || (echo "::error::${ZIP} has a top-level backend/ entry" && exit 1)
-          for f in dist/index.js main.py package.json plugin.json LICENSE.md \
+          for f in dist/index.js main.py package.json plugin.json LICENSE \
                    recover.sh py_modules/backend/__init__.py py_modules/backend/src/__init__.py \
                    py_modules/backend/src/xray_version.json static/admin.html; do
             unzip -l "$ZIP" | grep -q "${NAME}/${f}" \

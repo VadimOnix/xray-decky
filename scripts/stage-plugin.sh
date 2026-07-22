@@ -36,7 +36,7 @@ mkdir -p "$DEST"
 
 # Frontend bundle + plugin metadata.
 cp -r dist "$DEST/"
-cp package.json plugin.json main.py LICENSE.md "$DEST/"
+cp package.json plugin.json main.py LICENSE "$DEST/"
 [ -f README.md ] && cp README.md "$DEST/"
 
 # Network recovery script (run manually if the Deck loses connectivity).

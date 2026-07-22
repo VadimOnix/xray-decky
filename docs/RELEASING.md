@@ -16,7 +16,7 @@ When you push a tag like `v1.0.0`, the workflow:
 1. Checks out the code
 2. Installs dependencies and builds the plugin (`pnpm install && pnpm run build`)
 3. Downloads xray-core binary (version in `XRAY_VERSION` env in workflow)
-4. Packages the plugin into a ZIP: `dist/`, `package.json`, `plugin.json`, `main.py`, `LICENSE.md`, `README.md`, `backend/`, and the xray-core binary
+4. Packages the plugin into a ZIP: `dist/`, `package.json`, `plugin.json`, `main.py`, `LICENSE`, `README.md`, `backend/`, and the xray-core binary
 5. Creates a GitHub Release with the ZIP attached and auto-generated release notes
 
 ## Pre-Release Checklist

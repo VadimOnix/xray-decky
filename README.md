@@ -86,7 +86,7 @@ See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) and [docs/RELEASING.md](docs/RELE
 
 ## License
 
-MIT — see LICENSE.md.
+MIT — see LICENSE.
 
 ## Resources
 
