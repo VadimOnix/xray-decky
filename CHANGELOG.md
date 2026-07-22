@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-07-22
+
+### Changed
+
+- **Repository layout is now buildable by the official Decky CLI** —
+  groundwork for Plugin Store distribution. Backend Python moved to
+  `py_modules/`, web assets ship as `static/` (from `defaults/static/`),
+  `LICENSE.md` became `LICENSE`. No user-facing behavior changes; the
+  self-made release zips ship the same on-device layout as the store build.
+- Store metadata: real author, updated multi-protocol description and a
+  store card image in `plugin.json`; `debug` flag removed.
+- Runtime binary downloads are now sha256-verified: both the pinned
+  xray-core and sing-box assets carry verified checksums.
+- The release workflow stages through `scripts/stage-plugin.sh` (single
+  source of truth) and a new CI job reproduces the exact plugin-store
+  build (Decky CLI) on every PR.
+
 ## [2.1.1] - 2026-07-22
 
 ### Fixed
