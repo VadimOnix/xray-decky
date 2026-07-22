@@ -27,8 +27,8 @@ if [ ! -d py_modules/backend/src ]; then
   echo "❌ py_modules/backend/src missing — backend code not found." >&2
   exit 1
 fi
-if [ ! -d backend/static ]; then
-  echo "❌ backend/static missing — the embedded web server would not start on device." >&2
+if [ ! -d defaults/static ]; then
+  echo "❌ defaults/static missing — the embedded web server would not start on device." >&2
   exit 1
 fi
 
@@ -47,15 +47,19 @@ cp scripts/recover.sh "$DEST/"
 cp -r py_modules "$DEST/"
 # Strip dev-machine cruft that cp -r would otherwise ship to the Deck.
 find "$DEST/py_modules" -name '__pycache__' -type d -prune -exec rm -rf {} +
-find "$DEST/py_modules" -name '.DS_Store' -delete
 
-# Static web panel.
-mkdir -p "$DEST/backend"
-cp -r backend/static "$DEST/backend/"
+# Static web panel (Decky CLI layout: defaults/ contents land at plugin
+# root, so this ships as <plugin>/static/). mkdir + trailing-slash cp keeps
+# this safe to re-run into an existing $DEST without nesting static/static.
+mkdir -p "$DEST/static"
+cp -r defaults/static/. "$DEST/static/"
 
-# Core binaries, when present locally (backend/out -> bin/). Optional: the
-# plugin self-heals by downloading its pinned core on first start.
-if [ -d backend/out ] && [ -n "$(ls -A backend/out 2>/dev/null)" ]; then
+# Core binaries, when present locally (bin/ -> bin/). Optional: the plugin
+# self-heals by downloading its pinned core on first start.
+if [ -d bin ] && [ -n "$(ls -A bin 2>/dev/null)" ]; then
   mkdir -p "$DEST/bin"
-  cp -r backend/out/. "$DEST/bin/"
+  cp -r bin/. "$DEST/bin/"
 fi
+
+# Strip dev-machine cruft (covers dist/, py_modules/, static/ in one pass).
+find "$DEST" -name '.DS_Store' -delete

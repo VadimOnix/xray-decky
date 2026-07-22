@@ -240,7 +240,12 @@ class Plugin:
         port = int(import_server_config.get("port", 8765))
         port = max(1024, min(65535, port))
         bind_host = admin_bind_host(settings)
-        static_dir = Path(__file__).resolve().parent / "backend" / "static"
+        # Installed builds (store CLI and our own zips) ship defaults/static
+        # as <plugin>/static; the repo working tree keeps it in defaults/.
+        plugin_root = Path(__file__).resolve().parent
+        static_dir = plugin_root / "static"
+        if not static_dir.is_dir():
+            static_dir = plugin_root / "defaults" / "static"
         runtime_dir = os.environ.get("DECKY_PLUGIN_RUNTIME_DIR", "")
         ssl_context = None
         if static_dir.is_dir() and runtime_dir:
@@ -347,7 +352,7 @@ class Plugin:
         elif not static_dir.is_dir():
             self._import_runner = None
             print(
-                "Xray Decky Plugin: backend/static not found, import server not started"
+                "Xray Decky Plugin: static/ (or defaults/static/) not found, import server not started"
             )
 
     # Slow tick — the interval is measured in hours, so checking every few

@@ -49,8 +49,9 @@ yalc.lock
 
 .vscode/settings.json
 
-# Ignore output folder
-backend/out
+# Ignore output folder (local dev core binaries; matches the plugin's own
+# bin/ resolution — see main.py _resolve_xray_path/_resolve_singbox_path)
+/bin/
 
 # Make sure to ignore any instance of the loader's decky_plugin.py
 decky_plugin.py
@@ -61,12 +62,6 @@ out/*
 cli/
 cli/*
 cli/decky
-
-# xray-core binary and data files (large files, download separately)
-backend/out/xray-core
-backend/out/geoip.dat
-backend/out/geosite.dat
-backend/out/*.zip
 
 # Local deploy configuration (per-developer Deck host/paths)
 .deckdeployrc

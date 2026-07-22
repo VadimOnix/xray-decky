@@ -209,9 +209,14 @@ jobs:
           VERSION=$(node -p "require('./package.json').version")
           ZIP="${NAME}-v${VERSION}.zip"
           test -f "$ZIP" || (echo "$ZIP was not produced" && exit 1)
+          # A root backend/ dir makes the Decky CLI assume a custom-backend
+          # Docker build; py_modules/backend/ (the Python package) is fine.
+          test ! -d backend || (echo "::error::repo has a root backend/ dir again" && exit 1)
+          ! unzip -l "$ZIP" | grep -q "${NAME}/backend/" \
+            || (echo "::error::${ZIP} has a top-level backend/ entry" && exit 1)
           for f in dist/index.js main.py package.json plugin.json LICENSE.md \
                    recover.sh py_modules/backend/__init__.py py_modules/backend/src/__init__.py \
-                   py_modules/backend/src/xray_version.json backend/static/admin.html; do
+                   py_modules/backend/src/xray_version.json static/admin.html; do
             unzip -l "$ZIP" | grep -q "${NAME}/${f}" \
               || (echo "Missing ${f} in ${ZIP}" && exit 1)
           done
