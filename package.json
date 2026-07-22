@@ -19,7 +19,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/SteamDeckHomebrew/xray-decky.git"
+    "url": "git+https://github.com/VadimOnix/xray-decky.git"
   },
   "keywords": [
     "decky",
@@ -31,9 +31,9 @@
   "author": "",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/SteamDeckHomebrew/xray-decky/issues"
+    "url": "https://github.com/VadimOnix/xray-decky/issues"
   },
-  "homepage": "https://github.com/SteamDeckHomebrew/xray-decky#readme",
+  "homepage": "https://github.com/VadimOnix/xray-decky#readme",
   "devDependencies": {
     "@decky/rollup": "^1.0.2",
     "@decky/ui": "^4.11.0",

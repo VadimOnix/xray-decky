@@ -249,7 +249,7 @@ jobs:
           echo "Built: $ZIP"
           LISTING=$(unzip -l "$ZIP")
           for f in py_modules/backend/src/importer.py static/admin.html \
-                   dist/index.js main.py plugin.json LICENSE; do
+                   dist/index.js main.py plugin.json LICENSE recover.sh; do
             echo "$LISTING" | grep -q "$f" || (echo "::error::store zip missing $f" && exit 1)
           done
           echo "Store zip contains all required files"

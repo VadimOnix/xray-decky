@@ -61,7 +61,7 @@ Thank you for your interest in contributing. This guide helps you set up a devel
 ## 3. PC: Clone repo and install dependencies
 
 ```bash
-git clone https://github.com/SteamDeckHomebrew/xray-decky.git
+git clone https://github.com/VadimOnix/xray-decky.git
 cd xray-decky
 pnpm install
 pnpm run build
@@ -70,7 +70,7 @@ pnpm run build
 Optional: place the xray-core binary for local/testing (see [README](README.md#xray-core-binary-missing)):
 
 - Download from [Xray-core releases](https://github.com/XTLS/Xray-core/releases)
-- Put it in `backend/out/xray-core` and `chmod +x backend/out/xray-core`
+- Put it in `bin/xray-core` and `chmod +x bin/xray-core`
 
 ---
 
@@ -169,7 +169,7 @@ If you work on TUN mode, the Deck user needs NOPASSWD for `ip tuntap add/del`. S
 ## Code and PR guidelines
 
 - The project uses **trunk-based development**; the only long-lived branch is `master`. Open pull requests against `master`.
-- Follow the existing code style (TypeScript/React in `src/`, Python in `backend/`).
+- Follow the existing code style (TypeScript/React in `src/`, Python in `py_modules/backend/`).
 - For UI: use components and patterns from `@decky/ui` and `@decky/api` (see [Decky plugin template](https://github.com/SteamDeckHomebrew/decky-plugin-template)).
 - Run `pnpm run build` before submitting; ensure the plugin loads and works on the Deck.
 - Open an issue first for larger changes; for small fixes feel free to open a pull request with a short description.

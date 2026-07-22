@@ -40,7 +40,7 @@ cp package.json plugin.json main.py LICENSE "$DEST/"
 [ -f README.md ] && cp README.md "$DEST/"
 
 # Network recovery script (run manually if the Deck loses connectivity).
-cp scripts/recover.sh "$DEST/"
+cp defaults/recover.sh "$DEST/"
 
 # Backend package: python sources (Decky CLI py_modules/ layout) and
 # pinned-version metadata (read at runtime by the self-heal downloader).
