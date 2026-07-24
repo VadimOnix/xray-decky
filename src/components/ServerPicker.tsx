@@ -60,7 +60,7 @@ export const ServerPicker: FC<ServerPickerProps> = ({ refreshKey }) => {
   }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- load() fetches profiles; setState runs in its async callback
+    // load() fetches profiles; setState runs in its async callback
     void load();
   }, [load, refreshKey]);
 

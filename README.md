@@ -71,6 +71,10 @@ pnpm run build
 # xray-core: place in bin/xray-core
 ```
 
+Tests and linters (no device needed): `pnpm test`, `pnpm run lint`,
+`pytest tests/`, `ruff check py_modules/ tests/ main.py conftest.py`.
+See [Tests and linters](CONTRIBUTING.md#tests-and-linters).
+
 ### Project Structure
 
 ```
@@ -79,6 +83,7 @@ pnpm run build
 ├── defaults/static/          # Embedded web admin panel (ships to plugin root)
 ├── defaults/recover.sh       # Network recovery script (ships to plugin root)
 ├── tests/                    # Python test suite (pytest)
+├── tests/frontend/           # Frontend test suite (vitest: src/ + admin panel)
 ├── bin/                      # Local dev core binaries (xray-core, sing-box)
 ├── docs/                     # GitHub Pages (index.html, styles, assets)
 ├── main.py                   # Backend entry point

@@ -297,7 +297,11 @@
     if (str === undefined) str = I18N.en[key] !== undefined ? I18N.en[key] : key
     if (params) {
       Object.keys(params).forEach(function (k) {
-        str = str.replace('{' + k + '}', params[k])
+        // split/join rather than String.replace: replace() substitutes only
+        // the first occurrence, and it interprets `$&`/`$'`/`` $` `` in the
+        // replacement as capture references. Values here include server names
+        // from a remote subscription, so they must go in verbatim.
+        str = str.split('{' + k + '}').join(String(params[k]))
       })
     }
     return str

@@ -117,8 +117,10 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
-      - name: Install ruff
-        run: pip install ruff
+      - name: Install dependencies
+        # From requirements-dev.txt (pinned) so CI and local runs agree — an
+        # unpinned `pip install ruff` silently adopts new default rules.
+        run: pip install -r requirements-dev.txt
       - name: Lint backend
         run: ruff check py_modules/ tests/ main.py conftest.py
 
@@ -131,7 +133,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install dependencies
-        run: pip install pytest pytest-asyncio aiohttp
+        run: pip install -r requirements-dev.txt
       - name: Run tests
         run: pytest tests/
 
