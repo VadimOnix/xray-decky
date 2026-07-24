@@ -4,5 +4,13 @@
 # env provides aiohttp. This file only sets up a local/CI environment for
 # running the test suite (pytest tests/) and ruff.
 # Cert generation uses OpenSSL subprocess (no cryptography dependency).
+#
+# CI installs from this file, so local and CI runs use identical versions.
+# Upper bounds are deliberate: an unpinned linter turns an unrelated upstream
+# release into a red build on an unchanged tree (ruff 0.16.0 did exactly that).
+# Bump these on purpose, in a commit that also fixes any new findings.
 
-aiohttp>=3.9.0
+aiohttp>=3.9.0,<4
+pytest>=8.0,<9
+pytest-asyncio>=0.23,<2
+ruff>=0.15,<0.16

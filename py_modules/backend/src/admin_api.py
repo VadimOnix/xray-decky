@@ -28,6 +28,12 @@ Handler = Callable[..., Awaitable[Dict[str, Any]]]
 _MAX_AUTH_FAILURES = 15
 _AUTH_WINDOW_SECONDS = 60.0
 _AUTH_BLOCK_SECONDS = 60.0
+# Cap on tracked client keys. Every distinct source address that fails auth
+# adds an entry, and a client that never comes back never triggers the
+# success/expiry paths that drop it — so without a cap, a LAN peer cycling
+# source addresses grows these dicts without bound. Well above the number of
+# devices on any real home network.
+_MAX_TRACKED_CLIENTS = 1024
 
 
 class RateLimiter:
@@ -43,11 +49,13 @@ class RateLimiter:
         window: float = _AUTH_WINDOW_SECONDS,
         block: float = _AUTH_BLOCK_SECONDS,
         clock: Callable[[], float] = time.monotonic,
+        max_clients: int = _MAX_TRACKED_CLIENTS,
     ) -> None:
         self._max = max_failures
         self._window = window
         self._block = block
         self._clock = clock
+        self._max_clients = max_clients
         self._failures: Dict[str, List[float]] = {}
         self._blocked_until: Dict[str, float] = {}
 
@@ -70,11 +78,48 @@ class RateLimiter:
         self._failures[key] = recent
         if len(recent) >= self._max:
             self._blocked_until[key] = now + self._block
+        self._evict_stale(now)
+
+    def tracked_clients(self) -> int:
+        """Number of client keys currently held (for tests and diagnostics)."""
+        return len(self._failures)
+
+    def _drop(self, key: str) -> None:
+        self._failures.pop(key, None)
+        self._blocked_until.pop(key, None)
+
+    def _evict_stale(self, now: float) -> None:
+        """Enforce the tracked-client cap. Only runs on overflow.
+
+        Two passes, in order of how little the entry is worth keeping:
+
+        1. Entries whose window *and* lockout have both elapsed. These carry no
+           information at all — dropping one cannot un-block a client or forgive
+           a failure that still counts.
+        2. If that was not enough (a genuine flood from many addresses inside a
+           single window), the shortest live streaks, oldest first. A key one
+           failure from lockout is the most valuable thing in the table, so it
+           is the last to go; blocked keys are never evicted, because forgetting
+           one would hand the attacker a free reset.
+        """
+        if len(self._failures) <= self._max_clients:
+            return
+        for key, times in list(self._failures.items()):
+            if self._blocked_until.get(key, 0.0) > now:
+                continue
+            if not times or now - times[-1] >= self._window:
+                self._drop(key)
+        overflow = len(self._failures) - self._max_clients
+        if overflow <= 0:
+            return
+        evictable = [k for k in self._failures if self._blocked_until.get(k, 0.0) <= now]
+        evictable.sort(key=lambda k: (len(self._failures[k]), self._failures[k][-1]))
+        for key in evictable[:overflow]:
+            self._drop(key)
 
     def record_success(self, key: str) -> None:
         """A valid token clears the client's failure history."""
-        self._failures.pop(key, None)
-        self._blocked_until.pop(key, None)
+        self._drop(key)
 
     def retry_after(self, key: str) -> int:
         """Whole seconds until the lockout lifts (for the Retry-After header)."""

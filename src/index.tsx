@@ -30,7 +30,7 @@ function Content() {
 
   useEffect(() => {
     if (layout === 'setup') {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional one-time form reset when entering the setup layout
+      // Intentional one-time form reset when entering the setup layout.
       setSaveError(null);
       setSaveSuccess(null);
       setVlessUrl('');

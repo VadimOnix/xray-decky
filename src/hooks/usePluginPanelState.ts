@@ -145,7 +145,7 @@ export function usePluginPanelState(): PluginPanelState & PluginPanelActions {
 
   useEffect(() => {
     if (!isVisible) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- refresh() fetches panel state; setState runs in its async callbacks
+    // refresh() fetches panel state; setState runs in its async callbacks
     void refresh();
 
     const interval = setInterval(() => {

@@ -28,6 +28,10 @@ const TAB_MAIN = 'main';
 const TAB_CONFIG_INFO = 'config-info';
 const TAB_OPTIONS = 'options';
 
+// Module scope, not a per-render array: goPrev/goNext close over it, so a fresh
+// array each render would make them a lying `useCallback(..., [])`.
+const TAB_IDS = [TAB_MAIN, TAB_CONFIG_INFO, TAB_OPTIONS] as const;
+
 const TAB_TITLES: Record<string, string> = {
   [TAB_MAIN]: t('tabs.connection'),
   [TAB_CONFIG_INFO]: t('tabs.config'),
@@ -118,17 +122,16 @@ export const ConfiguredLayout: FC<ConfiguredLayoutProps> = ({
   const [focusedTabIndex, setFocusedTabIndex] = useState<number | null>(null);
   const isResetDisabled = ['connecting', 'connected', 'blocked'].includes(connection.status);
 
-  const tabIds = [TAB_MAIN, TAB_CONFIG_INFO, TAB_OPTIONS] as const;
   const goPrev = useCallback(() => {
     setActiveTab((prev) => {
-      const i = tabIds.indexOf(prev as (typeof tabIds)[number]);
-      return tabIds[Math.max(0, i - 1)];
+      const i = TAB_IDS.indexOf(prev as (typeof TAB_IDS)[number]);
+      return TAB_IDS[Math.max(0, i - 1)];
     });
   }, []);
   const goNext = useCallback(() => {
     setActiveTab((prev) => {
-      const i = tabIds.indexOf(prev as (typeof tabIds)[number]);
-      return tabIds[Math.min(tabIds.length - 1, i + 1)];
+      const i = TAB_IDS.indexOf(prev as (typeof TAB_IDS)[number]);
+      return TAB_IDS[Math.min(TAB_IDS.length - 1, i + 1)];
     });
   }, []);
 

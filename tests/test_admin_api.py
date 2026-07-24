@@ -628,6 +628,48 @@ def test_rate_limiter_success_resets():
     assert not rl.is_blocked(key)
 
 
+def test_rate_limiter_evicts_stale_clients_past_the_cap():
+    clock = _Clock()
+    rl = RateLimiter(max_failures=3, window=10, block=30, clock=clock, max_clients=4)
+    # Each distinct source address that fails once is tracked forever otherwise:
+    # nothing brings it back to hit the success or lockout-expiry paths.
+    for i in range(4):
+        rl.record_failure(f"10.0.0.{i}")
+    clock.advance(11)  # every window above has now elapsed
+    rl.record_failure("10.0.1.1")
+    assert rl.tracked_clients() <= 4
+
+
+def test_rate_limiter_eviction_never_forgives_a_blocked_client():
+    clock = _Clock()
+    rl = RateLimiter(max_failures=2, window=10, block=600, clock=clock, max_clients=2)
+    rl.record_failure("attacker")
+    rl.record_failure("attacker")
+    assert rl.is_blocked("attacker")
+    # Flooding with fresh keys must not evict the lockout — that would hand the
+    # attacker a free reset.
+    for i in range(50):
+        rl.record_failure(f"noise-{i}")
+    assert rl.is_blocked("attacker")
+    assert rl.tracked_clients() <= 3
+
+
+def test_rate_limiter_eviction_keeps_live_failure_streaks():
+    clock = _Clock()
+    rl = RateLimiter(max_failures=5, window=600, block=600, clock=clock, max_clients=2)
+    rl.record_failure("victim")
+    rl.record_failure("victim")
+    for i in range(20):
+        rl.record_failure(f"noise-{i}")
+    # "victim" is inside its window, so its two failures still count: three more
+    # must trip the lockout.
+    rl.record_failure("victim")
+    rl.record_failure("victim")
+    assert not rl.is_blocked("victim")
+    rl.record_failure("victim")
+    assert rl.is_blocked("victim")
+
+
 def test_auth_rate_limited_after_repeated_failures():
     rl = RateLimiter(max_failures=3, window=60, block=60)
 

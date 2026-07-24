@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **CI's backend lint job was broken by an upstream release.** The workflow
+  installed ruff unpinned, so it picked up ruff 0.16.0 (released
+  2026-07-23) — which widened its implicit default rule set and turned a
+  green `ruff check` into ~550 findings on an unchanged tree. The rule set
+  is now declared explicitly in `pyproject.toml` and the tool versions are
+  pinned in `requirements-dev.txt`, which CI installs from. Widening the
+  rule set is now a deliberate edit rather than something an upstream
+  release can do on its own.
+- **Placeholder substitution in both translation layers.** `t()` used
+  `String.replace` with a string pattern, which rewrites only the first
+  occurrence of a placeholder and expands `$&` / `$'` / `` $` `` in the
+  substituted value. Interpolated values include server names, which come
+  from whatever a subscription URL returns, so a name containing those
+  sequences rendered corrupted text. Both the QAM (`src/utils/i18n.ts`) and
+  the web panel (`defaults/static/admin.js`) now substitute verbatim.
+- The admin panel's failed-auth rate limiter tracked one entry per source
+  address with no upper bound, and only ever dropped an entry when that
+  same client came back. It now caps the table and evicts the least
+  informative entries first, never a live lockout.
+
+### Changed
+
+- **`pnpm test` runs a real test suite** instead of printing "No frontend
+  tests configured" — CI had a green "Test Frontend" check that asserted
+  nothing. 51 vitest tests now cover the QAM's pure logic and, more
+  importantly, the web admin panel: `defaults/static/` ships unbundled, so
+  nothing in the toolchain previously parsed or executed those 1300 lines.
+  The suite boots the real `admin.html` + `admin.js` in jsdom to exercise
+  the QR pairing flow, and pins the source-level contracts a compiler would
+  otherwise enforce — element-id resolution, `data-i18n` key coverage,
+  EN/RU dictionary parity, and the panel's no-`innerHTML` rule.
+- `tsc` now typechecks the test suite too (`tsconfig.test.json`), kept
+  separate from the build's tsconfig so tests can never reach the bundle.
+- Documented the test and lint workflow in CONTRIBUTING.md — it was not
+  written down anywhere before.
+- Cleared the remaining ESLint warnings: hoisted `ConfiguredLayout`'s tab-id
+  list out of the render body (its `useCallback`s closed over a fresh array
+  each render) and removed four stale `eslint-disable` directives.
+
 ## [2.2.0] - 2026-07-22
 
 ### Changed

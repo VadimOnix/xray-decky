@@ -1,0 +1,11 @@
+{
+  // Typechecks the frontend test suite. Kept out of the main tsconfig on
+  // purpose: that one describes the rollup build input, and test files must
+  // never reach the plugin bundle.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": ["tests/frontend", "vitest.config.ts", "src"]
+}

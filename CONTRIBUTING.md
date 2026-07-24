@@ -13,6 +13,7 @@ Thank you for your interest in contributing. This guide helps you set up a devel
 - [6. Deploy the plugin and run watch](#6-deploy-the-plugin-and-run-watch)
 - [Optional: CEF remote debugging](#optional-cef-remote-debugging)
 - [Optional: TUN mode development](#optional-tun-mode-development)
+- [Tests and linters](#tests-and-linters)
 - [Code and PR guidelines](#code-and-pr-guidelines)
 
 ---
@@ -166,12 +167,49 @@ If you work on TUN mode, the Deck user needs NOPASSWD for `ip tuntap add/del`. S
 
 ---
 
+## Tests and linters
+
+Everything CI runs, you can run locally — and with the same tool versions, since
+CI installs the Python side from `requirements-dev.txt` and the ruff rule set is
+pinned in `pyproject.toml`. No device is needed for any of it.
+
+```bash
+# Backend (Python)
+pip install -r requirements-dev.txt
+pytest tests/
+ruff check py_modules/ tests/ main.py conftest.py
+
+# Frontend (TypeScript + the web admin panel)
+pnpm install
+pnpm test          # vitest, from tests/frontend/
+pnpm run lint      # eslint + prettier
+pnpm run lint:ts   # tsc, for src/ and for the test suite
+```
+
+`pnpm test` covers two things the Python suite cannot reach:
+
+- **`src/`** — the QAM plugin's pure logic (share-link validation, i18n).
+- **`defaults/static/`** — the web admin panel. It ships to the device
+  unbundled, so nothing else in the toolchain ever parses or executes it. The
+  suite boots the real `admin.html` + `admin.js` in jsdom to exercise the
+  pairing flow, and asserts source-level contracts that a compiler would
+  otherwise catch: every `getElementById` has a matching element, every
+  `data-i18n` key exists, EN and RU define the same keys, and nothing writes
+  markup through `innerHTML` (the panel renders server names that come from a
+  remote subscription).
+
+Use `pnpm run test:watch` while iterating, and `pnpm run lint:fix` to apply the
+mechanical eslint/prettier fixes.
+
+---
+
 ## Code and PR guidelines
 
 - The project uses **trunk-based development**; the only long-lived branch is `master`. Open pull requests against `master`.
 - Follow the existing code style (TypeScript/React in `src/`, Python in `py_modules/backend/`).
 - For UI: use components and patterns from `@decky/ui` and `@decky/api` (see [Decky plugin template](https://github.com/SteamDeckHomebrew/decky-plugin-template)).
 - Run `pnpm run build` before submitting; ensure the plugin loads and works on the Deck.
+- Run the checks in [Tests and linters](#tests-and-linters) too — they are the same jobs CI will run on the pull request.
 - Open an issue first for larger changes; for small fixes feel free to open a pull request with a short description.
 
 ---
@@ -181,6 +219,8 @@ If you work on TUN mode, the Deck user needs NOPASSWD for `ip tuntap add/del`. S
 | Task              | Command |
 |-------------------|--------|
 | Build             | `pnpm run build` |
+| Test (frontend / backend) | `pnpm test` / `pytest tests/` |
+| Lint (frontend / backend) | `pnpm run lint && pnpm run lint:ts` / `ruff check py_modules/ tests/ main.py conftest.py` |
 | Deploy (build + sync) | `pnpm run deploy` |
 | Watch (build + sync on save, optional auto-restart) | `pnpm run watch` |
 | Sync only (no build) | `./deploy-sync.sh` |

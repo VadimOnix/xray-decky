@@ -329,7 +329,11 @@ export function t(key: string, params?: Record<string, string | number>): string
   let value = dicts[LANG][key] ?? en[key] ?? key;
   if (params) {
     for (const name of Object.keys(params)) {
-      value = value.replace(`{${name}}`, String(params[name]));
+      // split/join rather than String.replace: replace() substitutes only the
+      // first occurrence, and it interprets `$&`/`$'`/`` $` `` in the
+      // replacement as capture references. Values here include server names,
+      // which come from a remote subscription, so they must go in verbatim.
+      value = value.split(`{${name}}`).join(String(params[name]));
     }
   }
   return value;
