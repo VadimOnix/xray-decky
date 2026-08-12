@@ -12,7 +12,11 @@ interface Props {
 const { t, locale, path } = Astro.props;
 
 const isHome = path === '';
-const homeHref = withBase('index.html');
+// Every non-EN locale lives under its own /<locale>/ prefix (routing.prefixDefaultLocale
+// is false in astro.config.mjs, so EN alone stays unprefixed at the site root).
+const localePrefix = locale === 'en' ? '' : `${locale}/`;
+/** This locale's home page: '/xray-decky/' for en, '/xray-decky/ru/' for ru, etc. */
+const homeHref = withBase(localePrefix);
 /** Section anchors must point at the home page when we're not already on it. */
 const navHome = (hash: string) => (isHome ? hash : `${homeHref}${hash}`);
 
@@ -34,7 +38,7 @@ const navHome = (hash: string) => (isHome ? hash : `${homeHref}${hash}`);
     <!-- Navigation -->
     <nav class="site-nav" id="site-nav" aria-label={t.nav.ariaLabel}>
       <div class="nav-inner">
-        <a href={isHome ? '#' : homeHref} class="nav-brand"
+        <a href={homeHref} class="nav-brand"
           ><span class="nav-logo" aria-hidden="true"></span>Xray&nbsp;<b>Decky</b></a
         >
         <ul class="nav-links">

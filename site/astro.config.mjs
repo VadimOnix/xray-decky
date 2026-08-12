@@ -4,7 +4,10 @@ import sitemap from '@astrojs/sitemap';
 export default defineConfig({
   site: 'https://vadimonix.github.io',
   base: '/xray-decky',
-  build: { format: 'file' },
+  // 'preserve' keeps each page's own extension/nesting: index.astro -> index.html,
+  // changelog.astro -> changelog.html, and (once added) ru/index.astro -> ru/index.html.
+  // 'file' would flatten a future locale index to ru.html, 404ing the planned /ru/ URLs.
+  build: { format: 'preserve' },
   integrations: [
     sitemap({
       i18n: {
