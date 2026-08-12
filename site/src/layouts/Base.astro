@@ -96,6 +96,13 @@ const ogImage = absoluteUrl('assets/hero-banner-800w.png');
           <li><a href={navHome('#panel')}>{t.nav.panel}</a></li>
           <li><a href={navHome('#install')}>{t.nav.install}</a></li>
           <li>
+            <a
+              href={withBase(`${localePrefix}vpn-on-steam-deck.html`)}
+              aria-current={path === 'vpn-on-steam-deck.html' ? 'page' : undefined}
+              >{t.nav.guide}</a
+            >
+          </li>
+          <li>
             <a href={withBase('changelog.html')} aria-current={path === 'changelog.html' ? 'page' : undefined}
               >{t.nav.changelog}</a
             >

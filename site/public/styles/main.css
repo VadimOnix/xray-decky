@@ -435,6 +435,10 @@ section { max-width: 1080px; margin: 0 auto; padding: 3.5rem 1.25rem; }
 
 /* ===== Usage ===== */
 .usage-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.2rem; }
+/* The guide page (Task 6) reuses this grid on a semantic <ol>/<li> pair for
+   its numbered steps — strip the browser's default list markers/indent so
+   only the .step-number circle shows a number. */
+ol.usage-steps { list-style: none; margin: 0; padding: 0; }
 .usage-step { display: flex; gap: 0.9rem; align-items: flex-start; }
 .step-number {
   flex: none; width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center;
@@ -464,6 +468,10 @@ section { max-width: 1080px; margin: 0 auto; padding: 3.5rem 1.25rem; }
 .faq-item summary:hover { background: rgba(102, 192, 244, 0.06); }
 .faq-item ul { margin: 0; padding: 0 1.3rem 1rem 2.2rem; }
 .faq-item li { margin-bottom: 0.3rem; font-size: 0.92rem; }
+/* Plain-prose FAQ answers (the 3 search-phrased entries from Task 6) use a
+   <p> instead of a <ul> — match the same right/bottom spacing, indented to
+   the summary's own left edge since there's no list marker to clear. */
+.faq-item p { margin: 0; padding: 0 1.3rem 1rem 1.1rem; font-size: 0.92rem; }
 
 /* ===== Footer ===== */
 footer { border-top: 1px solid var(--line); background: rgba(23, 26, 33, 0.6); margin-top: 2rem; }

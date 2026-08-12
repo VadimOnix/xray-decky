@@ -1,4 +1,16 @@
 import type { Dict } from './types';
+import { withBase } from '../lib/urls';
+
+/**
+ * Cross-links baked into this locale's copy at module-eval time (build
+ * time), rather than computed inside a component from a `locale` prop —
+ * keeps every internal href alongside the prose that carries it, in the
+ * dict, and self-contained per locale. EN has an empty locale prefix, so
+ * these resolve to `${base}/vpn-on-steam-deck.html` and `${base}/#faq`;
+ * a future ru/zh/fa/es dict computes its own with its own prefix.
+ */
+const guideHref = withBase('vpn-on-steam-deck.html');
+const landingFaqHref = withBase('#faq');
 
 export const en = {
   seo: {
@@ -12,6 +24,7 @@ export const en = {
     features: 'Features',
     panel: 'Admin panel',
     install: 'Install',
+    guide: 'Guide',
     changelog: 'Changelog',
     help: 'Help',
     github: 'GitHub ↗',
@@ -183,10 +196,53 @@ export const en = {
       q: 'xray-core binary missing',
       html: '<ul><li>The plugin re-downloads its pinned core automatically on next start</li><li>Offline? Download from <a href="https://github.com/XTLS/Xray-core/releases" target="_blank" rel="noopener">Xray-core releases</a> into <code>backend/out/</code></li></ul>',
     },
+    {
+      q: 'Does the Steam Deck support a VPN?',
+      html: '<p>Not out of the box — SteamOS ships no VPN client and Gaming Mode ignores system proxy settings. Xray Decky adds one as a Decky Loader plugin: its TUN mode tunnels all system traffic, so it works in Gaming Mode too.</p>',
+    },
+    {
+      q: 'How do I use a VPN in Gaming Mode?',
+      html: `<p>Install the plugin, import a server link, enable TUN mode and connect — all from the Quick Access menu, no desktop switching. See the step-by-step guide: <a href="${guideHref}">How to Set Up a VPN on Steam Deck</a>.</p>`,
+    },
+    {
+      q: 'Is Xray Decky a real VPN or a proxy?',
+      html: '<p>Technically a proxy client (xray-core / sing-box) — but with TUN mode it does what a VPN does: a virtual interface routes every packet from the system through the encrypted tunnel. Without TUN it behaves as a SOCKS proxy for Desktop Mode.</p>',
+    },
   ],
 
   footer: {
     links: ['GitHub', 'Changelog', 'Releases', 'Report an issue', 'Roadmap', 'Decky Loader', 'Xray-core'],
     copy: 'Xray Decky · MIT License · Made for Steam Deck',
+  },
+
+  guide: {
+    seo: {
+      title: 'How to Set Up a VPN on Steam Deck — Gaming Mode Guide | Xray Decky',
+      description:
+        'Step-by-step guide: install a VPN on your Steam Deck with Decky Loader and Xray Decky — working in Gaming Mode via TUN, no desktop switching. VLESS, VMess, Trojan, Shadowsocks, Hysteria2, TUIC.',
+    },
+    h1: 'How to Set Up a VPN on Steam Deck (Gaming Mode Included)',
+    intro:
+      'SteamOS has no built-in VPN client, and in Gaming Mode games ignore system proxy settings entirely. This guide sets up Xray Decky — a free, open-source VPN & proxy plugin for Decky Loader — so all your traffic is tunneled system-wide, without ever leaving Gaming Mode.',
+    whyTun: {
+      title: 'Why you need TUN, not just a proxy',
+      body: 'Steam ignores SOCKS proxy settings in Gaming Mode. TUN mode creates a virtual network interface that captures all system traffic — games, updates, voice chat — and routes it through your encrypted server connection. That is what makes it behave like a VPN rather than a browser-only proxy.',
+    },
+    prereqTitle: 'What you need',
+    prereqHtml: [
+      'A Steam Deck (any model)',
+      '<a href="https://wiki.deckbrew.xyz/" target="_blank" rel="noopener">Decky Loader</a> installed',
+      'A server share link or subscription — <code>vless://</code>, <code>vmess://</code>, <code>trojan://</code>, <code>ss://</code>, <code>hysteria2://</code>, <code>tuic://</code> or a subscription URL',
+    ],
+    stepsTitle: 'Five steps to a working VPN',
+    stepsHtml: [
+      '<b>Install Decky Loader</b> — follow the <a href="https://wiki.deckbrew.xyz/" target="_blank" rel="noopener">deckbrew.xyz wiki</a>; skip if you already have it.',
+      '<b>Install Xray Decky</b> — Quick Access (…) → Plugin Store → search “Xray Decky” → Install.',
+      '<b>Import your server</b> — open the plugin card in Quick Access and paste a share link or subscription URL; or scan the QR code and paste it from your phone.',
+      '<b>Enable TUN mode</b> — one toggle in the plugin options; routes and cleanup are automatic. Optionally arm the kill switch for strict leak protection.',
+      '<b>Connect and verify</b> — flip the connection toggle and watch the live speed in the card; open any geo-restricted store page or a what-is-my-ip site in the Deck browser to confirm the new exit IP.',
+    ],
+    troubleshootingTitle: 'Something not working?',
+    troubleshootingHtml: `Check the <a href="${landingFaqHref}">troubleshooting FAQ</a> on the landing page — it covers connection failures, TUN mode, the kill switch, and reaching the admin panel. Worst case, <code>defaults/recover.sh</code> ships with the plugin and restores networking unconditionally.`,
   },
 } satisfies Dict;

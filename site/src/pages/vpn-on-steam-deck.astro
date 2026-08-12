@@ -1,0 +1,14 @@
+---
+import Base from '../layouts/Base.astro';
+import Guide from '../components/Guide.astro';
+import { en } from '../i18n/en';
+
+// The guide has its own <title>/description (t.guide.seo) — everything else
+// (nav, footer, stylesheet) reuses the shared EN dictionary via Base.astro,
+// same pattern as changelog.astro. `hasVariants` stays at its default
+// (true): the guide gets locale variants under ru/zh/fa/es in Task 7.
+const t = { ...en, seo: en.guide.seo };
+---
+<Base t={t} locale="en" path="vpn-on-steam-deck.html">
+  <Guide t={en} locale="en" />
+</Base>

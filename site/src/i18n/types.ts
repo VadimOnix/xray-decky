@@ -53,6 +53,7 @@ export interface Dict {
     features: string;
     panel: string;
     install: string;
+    guide: string;
     changelog: string;
     help: string;
     github: string;
@@ -123,7 +124,30 @@ export interface Dict {
     copy: string;
   };
 
-  // guide: a later task adds a `guide` group here for the step-by-step
-  // usage guide pages (ru/zh/fa/es share Landing.astro but link out to a
-  // localized guide) — left out for now, EN parity port has no guide pages.
+  /**
+   * Step-by-step "How to Set Up a VPN on Steam Deck" guide
+   * (site/src/pages/vpn-on-steam-deck.astro + Guide.astro). It has its own
+   * SEO title/description (`guide.seo`, distinct from the landing's `seo`)
+   * and its own body copy. EN-only for now — ru/zh/fa/es dicts add their
+   * own `guide` group once the page is translated (Task 7).
+   */
+  guide: {
+    seo: {
+      title: string;
+      description: string;
+    };
+    h1: string;
+    intro: string;
+    whyTun: {
+      title: string;
+      body: string;
+    };
+    prereqTitle: string;
+    prereqHtml: string[];
+    stepsTitle: string;
+    /** Each entry is a bold lead + body, e.g. '<b>Install X</b> — do Y.' */
+    stepsHtml: string[];
+    troubleshootingTitle: string;
+    troubleshootingHtml: string;
+  };
 }
