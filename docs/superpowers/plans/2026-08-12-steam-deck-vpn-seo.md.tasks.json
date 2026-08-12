@@ -4,19 +4,19 @@
     {
       "id": 1,
       "subject": "Task 1: Repo metadata, plugin.json, package.json",
-      "status": "pending",
+      "status": "completed",
       "description": "**Goal:** Inject \"VPN\" + spaced \"Steam Deck\" keywords into every metadata surface GitHub search indexes.\n\n**Files:**\n- Modify: `plugin.json` (publish.description)\n- Modify: `package.json:4` (description) and `package.json:25-31` (keywords)\n- Live (no file): repo description + topics via `gh api`\n\n**Acceptance Criteria:**\n- [ ] `gh repo view --json description` contains \"VPN\" and \"Steam Deck\" (two words)\n- [ ] `gh repo view --json repositoryTopics` lists exactly 20 topics incl. `vpn`, `steam-deck-vpn`, `steamos-vpn`\n- [ ] `plugin.json` publish.description starts with \"VPN & proxy client for Steam Deck\"\n- [ ] `package.json` keywords include `vpn`, `steam-deck`, `steamos`\n\n**Verify:** `gh repo view --json description,repositoryTopics` -> new values; `git diff` shows only the two JSON files changed; `pnpm run lint:prettier` passes.\n\nFull step-by-step commands (exact gh api calls, new JSON values): plan doc `docs/superpowers/plans/2026-08-12-steam-deck-vpn-seo.md` -> Task 1.\n\n```json:metadata\n{\"files\": [\"plugin.json\", \"package.json\"], \"verifyCommand\": \"gh repo view --json description,repositoryTopics && pnpm run lint:prettier\", \"acceptanceCriteria\": [\"repo description contains VPN and Steam Deck\", \"exactly 20 topics incl vpn/steam-deck-vpn/steamos-vpn\", \"plugin.json description starts with VPN & proxy client for Steam Deck\", \"package.json keywords include vpn/steam-deck/steamos\"], \"modelTier\": \"mechanical\"}\n```"
     },
     {
       "id": 2,
       "subject": "Task 2: README (EN) rewrite",
-      "status": "pending",
+      "status": "completed",
       "description": "**Goal:** README H1 + intro carry \"VPN\", \"Steam Deck\" (spaced), \"Gaming Mode\" keywords with honest proxy-based-VPN framing; language switcher row added.\n\n**Files:**\n- Modify: `README.md:1-5` (H1 + intro), `README.md:30` (TUN feature line)\n\n**Acceptance Criteria:**\n- [ ] H1 is `Xray Decky — VPN & Proxy Client for Steam Deck`\n- [ ] Language switcher row links README.ru.md / README.zh-CN.md / README.fa.md / README.es.md (files land in Task 3; links may 404 until then, acceptable inside one PR)\n- [ ] Intro contains phrases \"VPN on your Steam Deck\" and \"Gaming Mode\" verbatim\n- [ ] No sections lost: `grep -c '^## ' README.md` unchanged from before edit\n\n**Verify:** `head -20 README.md` shows new H1/switcher/intro; `pnpm run lint:prettier` passes.\n\nExact replacement markdown for lines 1-5 and line 30: plan doc `docs/superpowers/plans/2026-08-12-steam-deck-vpn-seo.md` -> Task 2.\n\n```json:metadata\n{\"files\": [\"README.md\"], \"verifyCommand\": \"head -20 README.md && pnpm run lint:prettier\", \"acceptanceCriteria\": [\"H1 = Xray Decky — VPN & Proxy Client for Steam Deck\", \"language switcher row present\", \"intro contains 'VPN on your Steam Deck' and 'Gaming Mode'\", \"section count unchanged\"], \"modelTier\": \"mechanical\"}\n```"
     },
     {
       "id": 3,
       "subject": "Task 3: README translations (RU, ZH, FA, ES)",
-      "status": "pending",
+      "status": "completed",
       "blockedBy": [
         2
       ],
@@ -25,13 +25,13 @@
     {
       "id": 4,
       "subject": "Task 4: Astro scaffold + EN site port (visual parity)",
-      "status": "pending",
+      "status": "completed",
       "description": "**Goal:** `site/` Astro project builds the current landing + changelog pages pixel-identical at the same URLs, with copy extracted into an EN dictionary.\n\n**Files:**\n- Create: `site/package.json`, `site/astro.config.mjs`, `site/src/lib/urls.ts`, `site/src/i18n/types.ts`, `site/src/i18n/en.ts`, `site/src/layouts/Base.astro`, `site/src/components/Landing.astro`, `site/src/pages/index.astro`, `site/src/pages/changelog.astro`, `site/.gitignore`\n- Move (git mv): docs/styles, docs/assets, docs/scripts/{demo,changelog}.js -> site/public/...; docs/scripts/optimize-images.sh -> site/optimize-images.sh\n- Keep for now (deleted in Task 8): `docs/index.html`, `docs/changelog.html`\n\n**Acceptance Criteria:**\n- [ ] `cd site && pnpm install && pnpm build` succeeds\n- [ ] `site/dist/index.html` and `site/dist/changelog.html` exist\n- [ ] All copy in Landing.astro comes from `en.ts` dictionary (no hardcoded English prose; markup-bearing strings via `set:html`)\n- [ ] Asset/script/style links built via `withBase()`, never relative\n- [ ] `astro preview` renders landing visually identical to https://vadimonix.github.io/xray-decky/\n\n**Verify:** `cd site && pnpm build && ls dist/index.html dist/changelog.html && grep -c '/xray-decky/styles/main.css' dist/index.html` -> build OK, files exist, >=1 match. Browser check via `pnpm preview`.\n\nComplete config contents + git mv commands: plan doc Task 4. Copy source = docs/index.html lines 6-9, 16-52, 148, 154-353.\n\n```json:metadata\n{\"files\": [\"site/package.json\", \"site/astro.config.mjs\", \"site/src/lib/urls.ts\", \"site/src/i18n/types.ts\", \"site/src/i18n/en.ts\", \"site/src/layouts/Base.astro\", \"site/src/components/Landing.astro\", \"site/src/pages/index.astro\", \"site/src/pages/changelog.astro\"], \"verifyCommand\": \"cd site && pnpm build && ls dist/index.html dist/changelog.html && grep -c '/xray-decky/styles/main.css' dist/index.html\", \"acceptanceCriteria\": [\"build succeeds\", \"dist/index.html + dist/changelog.html exist\", \"all copy from en.ts dictionary\", \"asset links via withBase()\", \"visual parity with production site\"], \"modelTier\": \"standard\"}\n```"
     },
     {
       "id": 5,
       "subject": "Task 5: SEO head — hreflang, canonical, OG, JSON-LD, sitemap",
-      "status": "pending",
+      "status": "completed",
       "blockedBy": [
         4
       ],
@@ -40,7 +40,7 @@
     {
       "id": 6,
       "subject": "Task 6: Guide page (EN) + FAQ extension",
-      "status": "pending",
+      "status": "completed",
       "blockedBy": [
         5
       ],
@@ -49,7 +49,7 @@
     {
       "id": 7,
       "subject": "Task 7: Localized pages — RU, ZH, FA (RTL), ES",
-      "status": "pending",
+      "status": "completed",
       "blockedBy": [
         6
       ],
@@ -58,7 +58,7 @@
     {
       "id": 8,
       "subject": "Task 8: Pages deploy workflow + legacy docs removal",
-      "status": "pending",
+      "status": "completed",
       "blockedBy": [
         7
       ],
@@ -67,7 +67,7 @@
     {
       "id": 9,
       "subject": "Task 9: Final verify, PR, Pages cutover + off-repo checklist",
-      "status": "pending",
+      "status": "in_progress",
       "blockedBy": [
         1,
         3,
@@ -76,5 +76,5 @@
       "description": "**Goal:** Everything green, PR opened, cutover + off-repo actions documented and (where authorized) executed.\n\n**Files:**\n- None new (PR + live `gh` operations)\n\n**Acceptance Criteria:**\n- [ ] Repo-root `pnpm run lint`, `pnpm test`, `pytest tests/` all pass\n- [ ] `cd site && pnpm build` clean\n- [ ] PR opened to master with summary + post-merge cutover checklist (push/PR require user confirmation at checkpoint)\n- [ ] Pages source flipped to workflow AFTER merge, first deploy green, live title contains \"VPN & Proxy Client for Steam Deck\"\n- [ ] Lighthouse SEO score >= 0.95 on live landing (spec criterion)\n- [ ] Off-repo checklist delivered: Google Search Console + sitemap submit, Yandex Webmaster, r/SteamDeck guide post, awesome-list submissions, release-notes phrasing, Decky Store re-submission note\n\n**Verify:** `gh pr checks` green; after cutover curl title check + `curl -s https://vadimonix.github.io/xray-decky/ru/ | grep -c 'hreflang'` -> 6; lighthouse SEO >= 0.95.\n\nCutover commands + full off-repo checklist: plan doc Task 9.\n\n```json:metadata\n{\"files\": [], \"verifyCommand\": \"pnpm run lint && pnpm test && pytest tests/ && (cd site && pnpm build)\", \"acceptanceCriteria\": [\"root lint/tests + site build green\", \"PR opened with cutover checklist\", \"Pages flipped to workflow, live title has VPN\", \"Lighthouse SEO >= 0.95\", \"off-repo checklist delivered\"], \"modelTier\": \"standard\"}\n```"
     }
   ],
-  "lastUpdated": "2026-08-12T00:00:00"
+  "lastUpdated": "2026-08-12T20:16:52.392331"
 }
