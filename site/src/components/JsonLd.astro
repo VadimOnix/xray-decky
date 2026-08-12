@@ -30,6 +30,14 @@ const stripHtml = (html: string): string =>
     .replace(/\s+\./g, '.')
     .trim();
 
+/**
+ * JSON.stringify does not escape "</script>", so a dict string containing it
+ * would terminate the inline script block early. Escape every "<" — valid
+ * JSON, and browsers parse the < form identically.
+ */
+const toJsonLd = (value: unknown): string =>
+  JSON.stringify(value).replace(/</g, '\\u003c');
+
 const softwareApplication = {
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
@@ -61,5 +69,5 @@ const faqPage = {
 };
 ---
 
-<script type="application/ld+json" set:html={JSON.stringify(softwareApplication)} is:inline />
-<script type="application/ld+json" set:html={JSON.stringify(faqPage)} is:inline />
+<script type="application/ld+json" set:html={toJsonLd(softwareApplication)} is:inline />
+<script type="application/ld+json" set:html={toJsonLd(faqPage)} is:inline />
