@@ -2,9 +2,9 @@ import type { Dict } from './types';
 
 export const en = {
   seo: {
-    title: 'Xray Decky — Proxy Client for Steam Deck',
+    title: 'Xray Decky — VPN & Proxy Client for Steam Deck',
     description:
-      'Xray Decky — a full proxy client for Steam Deck. VLESS, VMess, Trojan, Shadowsocks, Hysteria2 and TUIC, multi-server subscriptions, TUN mode, kill switch and a LAN web admin panel.',
+      'Free open-source VPN & proxy client for Steam Deck (Decky Loader plugin). VLESS, VMess, Trojan, Shadowsocks, Hysteria2, TUIC — TUN mode for Gaming Mode, subscriptions, kill switch, web admin panel.',
   },
 
   nav: {

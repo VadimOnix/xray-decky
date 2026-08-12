@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://vadimonix.github.io/xray-decky/sitemap-index.xml
