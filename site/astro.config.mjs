@@ -19,6 +19,18 @@ export default defineConfig({
         defaultLocale: 'en',
         locales: { en: 'en', ru: 'ru', zh: 'zh-CN', fa: 'fa', es: 'es' },
       },
+      // The sitemap derives extensionless URLs from routes (/changelog), but with
+      // build.format 'preserve' the real files — and every page's canonical — end
+      // in .html. Re-append it so sitemap URLs string-match the canonicals.
+      serialize(item) {
+        const url = new URL(item.url);
+        const last = url.pathname.split('/').pop();
+        if (last && !last.includes('.')) {
+          url.pathname += '.html';
+          item.url = url.toString();
+        }
+        return item;
+      },
     }),
   ],
   i18n: {
