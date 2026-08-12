@@ -1,16 +1,14 @@
 import type { Dict } from './types';
-import { withBase } from '../lib/urls';
+import { localeHref } from '../lib/urls';
 
 /**
  * Cross-links baked into this locale's copy at module-eval time (build
- * time), rather than computed inside a component from a `locale` prop —
- * keeps every internal href alongside the prose that carries it, in the
- * dict, and self-contained per locale. EN has an empty locale prefix, so
- * these resolve to `${base}/vpn-on-steam-deck.html` and `${base}/#faq`;
- * a future ru/zh/fa/es dict computes its own with its own prefix.
+ * time). localeHref() derives the prefix from the locale literal, so a
+ * translated dict only has to swap 'en' for its own locale — the actual
+ * path prefix always comes from the localePrefixes single source of truth.
  */
-const guideHref = withBase('vpn-on-steam-deck.html');
-const landingFaqHref = withBase('#faq');
+const guideHref = localeHref('en', 'vpn-on-steam-deck.html');
+const landingFaqHref = `${localeHref('en', '')}#faq`;
 
 export const en = {
   seo: {
@@ -217,16 +215,16 @@ export const en = {
 
   guide: {
     seo: {
-      title: 'How to Set Up a VPN on Steam Deck — Gaming Mode Guide | Xray Decky',
+      title: 'How to Set Up a VPN on Steam Deck (Gaming Mode) | Xray Decky',
       description:
-        'Step-by-step guide: install a VPN on your Steam Deck with Decky Loader and Xray Decky — working in Gaming Mode via TUN, no desktop switching. VLESS, VMess, Trojan, Shadowsocks, Hysteria2, TUIC.',
+        'Step-by-step: install a VPN on your Steam Deck with Decky Loader and Xray Decky — working in Gaming Mode via TUN mode, no desktop switching required.',
     },
     h1: 'How to Set Up a VPN on Steam Deck (Gaming Mode Included)',
     intro:
       'SteamOS has no built-in VPN client, and in Gaming Mode games ignore system proxy settings entirely. This guide sets up Xray Decky — a free, open-source VPN & proxy plugin for Decky Loader — so all your traffic is tunneled system-wide, without ever leaving Gaming Mode.',
     whyTun: {
       title: 'Why you need TUN, not just a proxy',
-      body: 'Steam ignores SOCKS proxy settings in Gaming Mode. TUN mode creates a virtual network interface that captures all system traffic — games, updates, voice chat — and routes it through your encrypted server connection. That is what makes it behave like a VPN rather than a browser-only proxy.',
+      body: 'Steam ignores SOCKS proxy settings in Gaming Mode. TUN mode creates a virtual network interface that captures all system traffic — games, updates, voice chat — and routes it through your encrypted server connection. That is what makes it behave like a VPN rather than a SOCKS proxy that games simply ignore.',
     },
     prereqTitle: 'What you need',
     prereqHtml: [
@@ -237,7 +235,7 @@ export const en = {
     stepsTitle: 'Five steps to a working VPN',
     stepsHtml: [
       '<b>Install Decky Loader</b> — follow the <a href="https://wiki.deckbrew.xyz/" target="_blank" rel="noopener">deckbrew.xyz wiki</a>; skip if you already have it.',
-      '<b>Install Xray Decky</b> — Quick Access (…) → Plugin Store → search “Xray Decky” → Install.',
+      '<b>Install Xray Decky</b> — Quick Access (⋯) → Plugin Store → search “Xray Decky” → Install.',
       '<b>Import your server</b> — open the plugin card in Quick Access and paste a share link or subscription URL; or scan the QR code and paste it from your phone.',
       '<b>Enable TUN mode</b> — one toggle in the plugin options; routes and cleanup are automatic. Optionally arm the kill switch for strict leak protection.',
       '<b>Connect and verify</b> — flip the connection toggle and watch the live speed in the card; open any geo-restricted store page or a what-is-my-ip site in the Deck browser to confirm the new exit IP.',
