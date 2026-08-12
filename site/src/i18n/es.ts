@@ -14,7 +14,7 @@ export const es = {
   seo: {
     title: 'Xray Decky — Cliente VPN y proxy para Steam Deck',
     description:
-      'Cliente VPN y proxy gratuito y de código abierto para Steam Deck (plugin de Decky Loader). VLESS, VMess, Trojan, Shadowsocks, Hysteria2, TUIC — modo TUN para el modo Gaming, suscripciones, kill switch, panel de administración web.',
+      'Cliente VPN y proxy gratuito y de código abierto para Steam Deck (plugin de Decky Loader). VLESS, VMess, Trojan, Shadowsocks, Hysteria2, TUIC — modo TUN para el modo Gaming (Gaming Mode), suscripciones, kill switch, panel de administración web.',
   },
 
   nav: {
@@ -80,7 +80,7 @@ export const es = {
     },
     {
       title: 'Modo TUN',
-      html: 'Enruta <b>todo</b> el tráfico del sistema a través del proxy — la única forma fiable en el modo Gaming, donde Steam ignora la configuración de SOCKS. Sobrevive a la suspensión y reanudación.',
+      html: 'Enruta <b>todo</b> el tráfico del sistema a través del proxy — la única forma fiable en el modo Gaming (Gaming Mode), donde Steam ignora la configuración de SOCKS. Sobrevive a la suspensión y reanudación.',
     },
     {
       title: 'Kill switch que se limpia solo',

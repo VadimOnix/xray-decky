@@ -99,7 +99,7 @@ export const zh = {
   panel: {
     titleHtml: '快速访问菜单用来玩游戏。<br>管理面板用来管理一切。',
     introHtml:
-      'QAM 保持精简：连接、选服务器、看速度。其余的一切都交给插件自身通过 HTTPS 提供的<b>Steam 风格 Web 管理面板</b>：',
+      'QAM 保持精简：连接、选服务器、看速度。其余的一切都交给插件自身通过 HTTPS 提供的 <b>Steam 风格 Web 管理面板</b>：',
     list: [
       '带实时状态和两分钟速度图表的仪表盘',
       '按延迟排序的服务器列表，附协议与内核标签',
@@ -183,11 +183,11 @@ export const zh = {
     },
     {
       q: '断线阻断（kill switch）正在阻止流量',
-      html: '<ul><li>重新连接代理——断线阻断会自动解除</li><li>或在插件/管理面板中点击<b>Unblock traffic</b></li><li>最坏情况下：插件自带的 <code>defaults/recover.sh</code> 可无条件恢复网络</li></ul>',
+      html: '<ul><li>重新连接代理——断线阻断会自动解除</li><li>或在插件/管理面板中点击 <b>Unblock traffic</b></li><li>最坏情况下：插件自带的 <code>defaults/recover.sh</code> 可无条件恢复网络</li></ul>',
     },
     {
       q: '无法从手机打开管理面板',
-      html: '<ul><li>检查 QAM 选项中的<b>Allow LAN access</b>开关——在仅 Deck 模式下，面板会被有意设为其他设备不可访问</li><li>两台设备必须在同一网络下；需接受自签名证书的安全警告</li><li>二维码中内嵌了本次安装专属的令牌——请通过扫描配对，不要手动输入 URL</li></ul>',
+      html: '<ul><li>检查 QAM 选项中的 <b>Allow LAN access</b> 开关——在仅 Deck 模式下，面板会被有意设为其他设备不可访问</li><li>两台设备必须在同一网络下；需接受自签名证书的安全警告</li><li>二维码中内嵌了本次安装专属的令牌——请通过扫描配对，不要手动输入 URL</li></ul>',
     },
     {
       q: '缺少 xray-core 可执行文件',
