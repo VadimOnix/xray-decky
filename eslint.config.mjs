@@ -6,7 +6,10 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import eslintConfigPrettier from 'eslint-config-prettier/flat';
 
 export default [
-  { ignores: ['dist/', 'node_modules/', '*.config.js', '*.config.mjs'] },
+  // site/ is the standalone Astro project with its own toolchain (`pnpm check`
+  // inside site/); linting it here would need Astro-aware parsers and browser
+  // globals the plugin codebase doesn't use.
+  { ignores: ['dist/', 'node_modules/', '*.config.js', '*.config.mjs', 'site/'] },
   eslint.configs.recommended,
   {
     // No-build browser scripts served by the embedded web server.
@@ -21,18 +24,6 @@ export default [
         URLSearchParams: 'readonly',
         setTimeout: 'readonly',
         clearTimeout: 'readonly',
-      },
-    },
-  },
-  {
-    // No-build browser scripts for the GitHub Pages site.
-    files: ['docs/scripts/**/*.js'],
-    languageOptions: {
-      sourceType: 'script',
-      globals: {
-        window: 'readonly',
-        document: 'readonly',
-        IntersectionObserver: 'readonly',
       },
     },
   },
