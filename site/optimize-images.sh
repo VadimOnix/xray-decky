@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Optimize plugin page images for weak networks: WebP/AVIF + multiple widths, fallback PNG.
 set -e
-cd "$(dirname "$0")/.."
-ASSETS="assets"
+cd "$(dirname "$0")"
+ASSETS="public/assets"
 TMP="/tmp/nekodeck-img"
 mkdir -p "$TMP"
 

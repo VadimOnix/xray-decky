@@ -30,6 +30,10 @@ jobs:
           cache-dependency-path: site/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
         working-directory: site
+      # astro check catches locale-dictionary type breakage (missing Dict keys)
+      # that a plain build would silently ship.
+      - run: pnpm run check
+        working-directory: site
       - run: pnpm build
         working-directory: site
       - uses: actions/upload-pages-artifact@v3

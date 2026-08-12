@@ -108,7 +108,7 @@ pnpm run build
 ├── tests/                    # Python test suite (pytest)
 ├── tests/frontend/           # Frontend test suite (vitest: src/ + admin panel)
 ├── bin/                      # Local dev core binaries (xray-core, sing-box)
-├── docs/                     # GitHub Pages (index.html, styles, assets)
+├── site/                     # GitHub Pages site (Astro, 5 locales)
 ├── main.py                   # Backend entry point
 ├── plugin.json
 └── package.json
