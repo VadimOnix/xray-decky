@@ -94,6 +94,22 @@ section { max-width: 1080px; margin: 0 auto; padding: 3.5rem 1.25rem; }
   background: rgba(102, 192, 244, 0.08);
 }
 
+/* ===== Language switcher (small, unobtrusive — sits at the end of the nav) =====
+   Uses logical (inline-start/end) properties rather than left/right so it
+   already mirrors correctly under dir="rtl" with no override block needed. */
+.nav-lang-item { display: flex; }
+.lang-switcher { display: flex; align-items: center; gap: 0.55rem; list-style: none; margin: 0; padding: 0; }
+.lang-switcher li { display: flex; align-items: center; }
+.lang-switcher li:not(:first-child)::before {
+  content: "·"; margin-inline-end: 0.55rem; color: var(--muted);
+}
+.lang-switcher a { color: var(--muted); text-decoration: none; font-size: 0.8rem; }
+.lang-switcher a:hover { color: var(--bright); }
+.lang-switcher a[aria-current="page"] {
+  color: var(--accent-2); font-weight: 700;
+  text-decoration: underline; text-decoration-color: currentColor; text-underline-offset: 0.16em;
+}
+
 /* ===== Hero ===== */
 .hero { position: relative; padding: 4.2rem 1.25rem 3rem; max-width: 1160px; margin: 0 auto; }
 .hero-glow {
@@ -597,4 +613,54 @@ footer { border-top: 1px solid var(--line); background: rgba(23, 26, 33, 0.6); m
   .qam-dot, .ph-orb { animation: none !important; }
   .cl-loading::after { animation: none !important; }
   *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
+
+/* =====================================================================
+   RTL overrides (Task 7 — /fa/ pages, <html dir="rtl">)
+   =====================================================================
+   The `dir="rtl"` attribute (set in Base.astro for locale === 'fa') makes
+   the browser auto-mirror most of this stylesheet for free: `direction`
+   is inherited, so every flexbox `row` and CSS Grid track placement
+   already reverses on its own (nav, hero actions/stats, feature grid,
+   install-methods grid, usage-steps, footer links). Native <ul>/<ol>
+   marker position also follows `direction`.
+
+   What does NOT auto-mirror are physical `left`/`right`/`margin-left`/
+   `padding-left` declarations — those stay pinned to a physical side
+   regardless of `dir`. This block re-points the handful of such rules
+   that actually affect real (non-decorative) content: the protocol-strip
+   note, the bulleted/numbered lists in the panel/install/guide sections,
+   and the FAQ accordion (its list indent + its "+" toggle icon).
+
+   Deliberately left untouched: the animated Deck/phone hero mockup
+   (.deck, .qam, .phone, .ph-* — position/margin rules using left/right).
+   It is a literal illustration of the physical Steam Deck + a phone
+   propped against its corner, not a text-flow layout, so mirroring its
+   coordinates would misrepresent the hardware rather than improve
+   readability. The changelog page is EN-only (no /fa/changelog.html), so
+   its timeline styles (.cl-*) are out of scope here too. */
+[dir="rtl"] {
+  /* Protocol strip: the trailing "Hysteria2 / TUIC run on sing-box…" note
+     is pushed to the end of the flex row via an auto margin — flip which
+     side absorbs the space now that the row's main-end is on the left. */
+  .proto-note { margin-left: 0; margin-right: auto; }
+
+  /* Bulleted/numbered lists (install prerequisites & methods, the panel
+     spotlight's feature list, and the guide's reused .install-prereq) —
+     explicit padding-left indentation must become padding-right so the
+     RTL-flipped marker has room on the correct side. */
+  .install-prereq ul,
+  .install-method ol,
+  .panel-list {
+    padding-left: 0;
+    padding-right: 1.2rem;
+  }
+
+  /* FAQ answers: mirror the asymmetric padding (extra indent on the
+     marker side) left<->right. */
+  .faq-item ul { padding: 0 2.2rem 1rem 1.3rem; }
+  .faq-item p { padding: 0 1.1rem 1rem 1.3rem; }
+
+  /* FAQ "+" / "×" toggle icon sits at the row's trailing edge. */
+  .faq-item summary::after { right: auto; left: 1.1rem; }
 }

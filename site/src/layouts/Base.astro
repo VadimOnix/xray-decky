@@ -3,6 +3,7 @@ import type { Dict } from '../i18n/types';
 import { withBase, absoluteUrl } from '../lib/urls';
 import { localePrefixes, hreflangCodes, type Locale } from '../i18n/locales';
 import JsonLd from '../components/JsonLd.astro';
+import LangSwitcher from '../components/LangSwitcher.astro';
 
 interface Props {
   t: Dict;
@@ -45,9 +46,11 @@ const canonical = absoluteUrl(`${localePrefix}${path}`);
 const enLandingCanonical = absoluteUrl(localePrefixes.en);
 const ogLocale = hreflangCodes[locale];
 const ogImage = absoluteUrl('assets/hero-banner-800w.png');
+/** Farsi is the only RTL locale in LOCALES; everything else reads left-to-right. */
+const dir = locale === 'fa' ? 'rtl' : 'ltr';
 ---
 
-<html lang={hreflangCodes[locale]}>
+<html lang={hreflangCodes[locale]} dir={dir}>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -112,6 +115,9 @@ const ogImage = absoluteUrl('assets/hero-banner-800w.png');
             <a href="https://github.com/VadimOnix/xray-decky" class="nav-github" target="_blank" rel="noopener"
               >{t.nav.github}</a
             >
+          </li>
+          <li class="nav-lang-item">
+            <LangSwitcher locale={locale} path={path} hasVariants={hasVariants} />
           </li>
         </ul>
       </div>
