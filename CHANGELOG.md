@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.0-alpha.1] - 2026-08-13
+
 ### Added
 
 - **Your own SOCKS5 proxy as a server** (`socks://` / `socks5://`). Nothing
