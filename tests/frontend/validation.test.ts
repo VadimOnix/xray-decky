@@ -11,6 +11,9 @@ describe('validateVLESSURL', () => {
     ['hysteria2://password@example.com:443'],
     ['hy2://password@example.com:443'],
     ['tuic://uuid:password@example.com:443'],
+    ['socks://192.168.1.5:1080'],
+    ['socks5://user:password@192.168.1.5:1080'],
+    ['SOCKS5://192.168.1.5:1080#Phone'],
     ['vmess://eyJhZGQiOiJleGFtcGxlLmNvbSJ9'],
     ['https://sub.example.com/link'],
     ['http://sub.example.com/link'],
@@ -34,6 +37,7 @@ describe('validateVLESSURL', () => {
     ['vless://uuid@example.com', 'missing port'],
     ['vless://uuid@example.com:notaport', 'non-numeric port'],
     ['trojan://example.com:443', 'no credentials'],
+    ['socks://192.168.1.5', 'socks without port'],
     ['ftp://example.com/sub', 'unsupported scheme'],
     ['c2hvcnQ=', 'base64 blob under the length floor'],
   ])('rejects %s (%s)', (url) => {

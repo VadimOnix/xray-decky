@@ -131,6 +131,19 @@ class XrayManager:
                     }
                 ]
             }
+        elif protocol == "socks":
+            server: Dict[str, Any] = {"address": address, "port": port}
+            username = vless_config.get("username")
+            if username:
+                server["users"] = [
+                    {"user": username, "pass": vless_config.get("password") or ""}
+                ]
+            settings = {"servers": [server]}
+            # Plain SOCKS5 has no transport security of its own; forcing
+            # tcp/none keeps a mislabelled profile from attempting a TLS
+            # handshake the proxy cannot answer.
+            network = "tcp"
+            security = "none"
         else:
             raise ValueError(f"Unsupported protocol: {protocol}")
 

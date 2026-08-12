@@ -194,6 +194,55 @@ def test_shadowsocks_outbound():
     ]
 
 
+def test_socks_outbound_with_credentials():
+    config = _build(
+        {
+            "protocol": "socks",
+            "username": "alice",
+            "password": "pw",
+            "address": "192.168.1.5",
+            "port": 1080,
+            "network": "tcp",
+            "security": "none",
+        }
+    )
+    outbound = _proxy_outbound(config)
+    assert outbound["protocol"] == "socks"
+    assert outbound["settings"]["servers"] == [
+        {
+            "address": "192.168.1.5",
+            "port": 1080,
+            "users": [{"user": "alice", "pass": "pw"}],
+        }
+    ]
+    assert outbound["streamSettings"]["network"] == "tcp"
+    assert outbound["streamSettings"]["security"] == "none"
+
+
+def test_socks_outbound_without_credentials_omits_users():
+    config = _build(
+        {"protocol": "socks", "address": "192.168.1.5", "port": 1080}
+    )
+    server = _proxy_outbound(config)["settings"]["servers"][0]
+    assert server == {"address": "192.168.1.5", "port": 1080}
+
+
+def test_socks_outbound_never_negotiates_tls():
+    # A stored profile claiming TLS must not produce tlsSettings: plain SOCKS5
+    # has no transport security, and pretending otherwise would fail to dial.
+    config = _build(
+        {
+            "protocol": "socks",
+            "address": "192.168.1.5",
+            "port": 1080,
+            "security": "tls",
+        }
+    )
+    stream = _proxy_outbound(config)["streamSettings"]
+    assert stream["security"] == "none"
+    assert "tlsSettings" not in stream
+
+
 def test_unsupported_protocol_raises():
     with pytest.raises(ValueError):
         _build({"protocol": "hysteria2", "address": "h.io", "port": 443})

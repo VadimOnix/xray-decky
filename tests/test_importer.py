@@ -253,6 +253,16 @@ def test_import_hysteria2_stores_singbox_profile():
     assert store.get_active()["core"] == "sing-box"
 
 
+def test_import_socks_stores_xray_profile():
+    store = _store()
+    result = _run(importer.import_link(store, "socks://user:pw@192.168.1.5:1080#Phone"))
+    assert result["success"] is True
+    active = store.get_active()
+    assert active["protocol"] == "socks"
+    assert active["core"] == "xray"
+    assert active["configType"] == "single"
+
+
 # --- refresh_subscription ---
 
 

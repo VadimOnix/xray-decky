@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Your own SOCKS5 proxy as a server** (`socks://` / `socks5://`). Nothing
+  in the plugin ever required a paid subscription — single share links have
+  always worked — but every supported scheme was an encrypted VPN protocol,
+  so a plain SOCKS5 proxy (a phone's hotspot proxy, an SSH tunnel, a box on
+  the LAN) had no way in. Links parse with or without credentials, in the
+  plain `user:pass@` form and the v2rayN `base64(user:pass)@` form, and
+  export back out with the rest of the profile list. Note that SOCKS5 is not
+  an encrypted transport: the profile is pinned to tcp/none regardless of
+  what a stored profile claims, so a mislabelled entry cannot make the
+  plugin attempt a TLS handshake the proxy will not answer — and the
+  credentials travel in the clear, which the import help text now says.
+  Closes [#69](https://github.com/VadimOnix/xray-decky/issues/69).
+
 ### Fixed
 
 - **CI's backend lint job was broken by an upstream release.** The workflow

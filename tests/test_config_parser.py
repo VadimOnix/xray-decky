@@ -197,6 +197,50 @@ def test_ss_rejects_sip003_plugin():
     assert parse_share_link(url) is None
 
 
+# --- SOCKS ---
+
+
+def test_socks_with_credentials():
+    profile = parse_share_link("socks://user:p%40ss@192.168.1.5:1080#Phone")
+    assert profile is not None
+    assert profile["protocol"] == "socks"
+    assert profile["username"] == "user"
+    assert profile["password"] == "p@ss"
+    assert profile["address"] == "192.168.1.5"
+    assert profile["port"] == 1080
+    assert profile["network"] == "tcp"
+    assert profile["security"] == "none"
+    assert profile["core"] == "xray"
+    assert profile["name"] == "Phone"
+
+
+def test_socks5_alias_without_credentials():
+    profile = parse_share_link("socks5://192.168.1.5:1080#LAN")
+    assert profile is not None
+    assert profile["protocol"] == "socks"
+    assert "username" not in profile
+    assert "password" not in profile
+    assert profile["name"] == "LAN"
+
+
+def test_socks_base64_userinfo():
+    userinfo = base64.urlsafe_b64encode(b"alice:s3cret").decode().rstrip("=")
+    profile = parse_share_link(f"socks://{userinfo}@10.0.0.2:1080")
+    assert profile["username"] == "alice"
+    assert profile["password"] == "s3cret"
+
+
+def test_socks_username_only():
+    profile = parse_share_link("socks://alice@10.0.0.2:1080")
+    assert profile["username"] == "alice"
+    assert "password" not in profile
+
+
+def test_socks_rejects_bad_endpoint():
+    assert parse_share_link("socks://10.0.0.2:99999") is None
+    assert parse_share_link("socks://10.0.0.2") is None
+
+
 # --- VMess ---
 
 
@@ -359,6 +403,11 @@ def test_validate_accepts_all_supported_schemes():
     ):
         is_valid, error = validate_share_link(url)
         assert is_valid, f"{url}: {error}"
+
+
+def test_validate_accepts_socks():
+    assert validate_share_link("socks://192.168.1.5:1080")[0]
+    assert validate_share_link("socks5://user:pw@192.168.1.5:1080")[0]
 
 
 def test_validate_accepts_hysteria2_and_tuic():
