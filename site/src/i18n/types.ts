@@ -56,6 +56,7 @@ export interface Dict {
     guide: string;
     changelog: string;
     help: string;
+    donate: string;
     github: string;
   };
 
@@ -117,6 +118,22 @@ export interface Dict {
 
   faqTitle: string;
   faq: FaqItem[];
+
+  /**
+   * Crypto donation section. Prose only — the wallet addresses themselves are
+   * locale-independent and live in site/src/lib/donations.ts, so a translation
+   * can never drift them.
+   */
+  donate: {
+    title: string;
+    intro: string;
+    assetHeader: string;
+    networkHeader: string;
+    addressHeader: string;
+    /** Copy-button label and its post-click confirmation (see scripts/donate.js). */
+    copy: string;
+    copied: string;
+  };
 
   footer: {
     /** Labels only, in display order — hrefs are structural and live in Base.astro. */

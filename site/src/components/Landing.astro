@@ -1,6 +1,7 @@
 ---
 import type { Dict } from '../i18n/types';
 import { withBase } from '../lib/urls';
+import Donate from './Donate.astro';
 
 interface Props {
   t: Dict;
@@ -247,6 +248,9 @@ const FEATURE_ICONS: string[] = [
       ))}
     </div>
   </section>
+
+  <Donate t={t} />
 </main>
 
 <script is:inline src={withBase('scripts/demo.js')} defer></script>
+<script is:inline src={withBase('scripts/donate.js')} defer></script>

@@ -1,0 +1,3 @@
+# Adds the "Sponsor" button to the repository header. Crypto addresses are
+# listed on the site's donation section and in every README translation.
+custom: ['https://vadimonix.github.io/xray-decky/#donate']

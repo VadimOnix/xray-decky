@@ -25,6 +25,7 @@ export const es = {
     guide: 'Guía',
     changelog: 'Novedades',
     help: 'Ayuda',
+    donate: 'Donar',
     github: 'GitHub ↗',
   },
 
@@ -206,6 +207,17 @@ export const es = {
       html: '<p>Técnicamente es un cliente proxy (xray-core / sing-box) — pero con el modo TUN hace lo mismo que una VPN: una interfaz virtual enruta cada paquete del sistema a través del túnel cifrado. Sin TUN, se comporta como un proxy SOCKS para el modo Desktop.</p>',
     },
   ],
+
+  donate: {
+    title: 'Apoya el proyecto',
+    intro:
+      'Xray Decky es gratuito y de código abierto, desarrollado en el tiempo libre del autor. Si te salvó la partida, una donación en cripto ayuda a mantenerlo. Todas las direcciones siguientes pertenecen al desarrollador.',
+    assetHeader: 'Moneda',
+    networkHeader: 'Red',
+    addressHeader: 'Dirección',
+    copy: 'Copiar',
+    copied: 'Copiado',
+  },
 
   footer: {
     links: ['GitHub', 'Novedades', 'Versiones', 'Reportar un problema', 'Hoja de ruta', 'Decky Loader', 'Xray-core'],

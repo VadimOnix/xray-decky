@@ -25,6 +25,7 @@ export const en = {
     guide: 'Guide',
     changelog: 'Changelog',
     help: 'Help',
+    donate: 'Donate',
     github: 'GitHub ↗',
   },
 
@@ -207,6 +208,17 @@ export const en = {
       html: '<p>Technically a proxy client (xray-core / sing-box) — but with TUN mode it does what a VPN does: a virtual interface routes every packet from the system through the encrypted tunnel. Without TUN it behaves as a SOCKS proxy for Desktop Mode.</p>',
     },
   ],
+
+  donate: {
+    title: 'Support the project',
+    intro:
+      'Xray Decky is free and open source, developed in spare time. If it saved your gaming session, a crypto donation keeps it going — every address below belongs to the maintainer.',
+    assetHeader: 'Asset',
+    networkHeader: 'Network',
+    addressHeader: 'Address',
+    copy: 'Copy',
+    copied: 'Copied',
+  },
 
   footer: {
     links: ['GitHub', 'Changelog', 'Releases', 'Report an issue', 'Roadmap', 'Decky Loader', 'Xray-core'],

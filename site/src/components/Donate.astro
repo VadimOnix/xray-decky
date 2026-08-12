@@ -1,0 +1,40 @@
+---
+import type { Dict } from '../i18n/types';
+import { DONATIONS } from '../lib/donations';
+
+interface Props {
+  t: Dict;
+}
+
+const { t } = Astro.props;
+---
+
+<!-- Donations -->
+<section class="donate" id="donate" aria-labelledby="donate-title">
+  <h2 id="donate-title" class="reveal">{t.donate.title}</h2>
+  <p class="donate-intro reveal">{t.donate.intro}</p>
+
+  <ul class="donate-list reveal">
+    {
+      DONATIONS.map((d) => (
+        <li class="donate-item">
+          <span class="donate-asset">{d.asset}</span>
+          <span class="donate-network">{d.network}</span>
+          {/* dir="ltr" keeps the address readable inside the RTL (fa) layout. */}
+          <code class="donate-address" dir="ltr">
+            {d.address}
+          </code>
+          <button
+            type="button"
+            class="donate-copy"
+            data-copy={d.address}
+            data-copied-label={t.donate.copied}
+            aria-label={`${t.donate.copy} ${d.asset} ${d.network}`}
+          >
+            {t.donate.copy}
+          </button>
+        </li>
+      ))
+    }
+  </ul>
+</section>

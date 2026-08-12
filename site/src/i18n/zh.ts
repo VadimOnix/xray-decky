@@ -25,6 +25,7 @@ export const zh = {
     guide: '指南',
     changelog: '更新日志',
     help: '帮助',
+    donate: '捐赠',
     github: 'GitHub ↗',
   },
 
@@ -206,6 +207,17 @@ export const zh = {
       html: '<p>严格来说它是代理客户端（xray-core / sing-box）——但启用 TUN 模式后，它的效果与 VPN 无异：虚拟接口会将系统的每一个数据包都转发进加密隧道。不启用 TUN 时，它在桌面模式下表现为 SOCKS 代理。</p>',
     },
   ],
+
+  donate: {
+    title: '支持本项目',
+    intro:
+      'Xray Decky 免费且开源，由作者利用业余时间开发。如果它帮你顺利玩上了游戏，可以通过加密货币捐赠支持项目继续维护。下列地址均属于本项目作者。',
+    assetHeader: '币种',
+    networkHeader: '网络',
+    addressHeader: '地址',
+    copy: '复制',
+    copied: '已复制',
+  },
 
   footer: {
     links: ['GitHub', '更新日志', '发行版', '反馈问题', '路线图', 'Decky Loader', 'Xray-core'],

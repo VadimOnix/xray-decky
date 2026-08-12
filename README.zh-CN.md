@@ -2,6 +2,8 @@
 
 [English](README.md) · [Русский](README.ru.md) · **中文** · [فارسی](README.fa.md) · [Español](README.es.md)
 
+![Xray Decky — Steam Deck 的 VPN 与代理客户端](site/public/assets/hero-banner-800w.png)
+
 在你的 Steam Deck 上运行 VPN——包括在游戏模式（Gaming Mode）下。Xray Decky 是一款
 [Decky Loader](https://wiki.deckbrew.xyz/) 插件：一个功能完整的代理客户端
 （VLESS/VMess/Trojan/Shadowsocks/Hysteria2/TUIC），其 TUN 模式会将**全部**系统
@@ -100,6 +102,20 @@ pnpm run build
 ```
 
 更多内容参见 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) 与 [docs/RELEASING.md](docs/RELEASING.md)。
+
+## 支持本项目
+
+Xray Decky 免费且开源，由作者利用业余时间开发。如果它帮你顺利玩上了游戏，
+可以通过加密货币捐赠支持项目继续维护。
+
+| 币种 | 网络 | 地址 |
+| --- | --- | --- |
+| GRAM | TON | `UQC_UNDyKIbeAy7qhTG8b6lFIJL3eyYwZit6pxQRtZZ6Dzo6` |
+| USDT | TON | `UQC_UNDyKIbeAy7qhTG8b6lFIJL3eyYwZit6pxQRtZZ6Dzo6` |
+| USDT | Tron (TRC-20) | `TZ3K36oh6FbpMvxncBwxqPzTC6NnHYQ1pL` |
+| ETH | Ethereum (ERC-20) | `0x5F3FbC45A723c92a4797D98ECeE991f2a7b6eec6` |
+| SOL | Solana | `ACpEC9m3MuacKL4wwEnfTKGCNNDHuvaKdPLD7DuFvvvB` |
+| BTC | Bitcoin | `bc1q9zx6y445lqryl60z3phfekqajyjs45meex4cd4` |
 
 ## 许可证
 

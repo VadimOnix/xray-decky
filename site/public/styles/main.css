@@ -606,6 +606,41 @@ footer { border-top: 1px solid var(--line); background: rgba(23, 26, 33, 0.6); m
   .cl-card { padding: 0.95rem 1rem; }
 }
 
+/* ===== Donations =====
+   Rows are plain flexbox with logical spacing, so the whole block mirrors
+   itself under dir="rtl"; only the address stays LTR (dir="ltr" in the
+   markup) because a wallet address is not directional text. */
+.donate-intro { max-width: 62ch; margin: 0 0 1.4rem; color: var(--muted); font-size: 0.94rem; }
+.donate-list { display: flex; flex-direction: column; gap: 0.55rem; list-style: none; margin: 0; padding: 0; }
+.donate-item {
+  display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;
+  border: 1px solid var(--line); border-radius: var(--radius-sm);
+  background: rgba(27, 40, 56, 0.55); padding: 0.7rem 0.9rem;
+}
+.donate-asset {
+  flex: none; min-width: 3.4rem; font-weight: 700; font-size: 0.86rem;
+  letter-spacing: 0.03em; color: var(--bright);
+}
+.donate-network { flex: none; min-width: 8.5rem; font-size: 0.84rem; color: var(--muted); }
+.donate-address {
+  flex: 1 1 22ch; min-width: 0; overflow-wrap: anywhere;
+  font-size: 0.82rem; color: var(--text);
+  background: rgba(102, 192, 244, 0.07); border-radius: 6px; padding: 0.25rem 0.45rem;
+}
+.donate-copy {
+  flex: none; cursor: pointer; font: inherit; font-size: 0.8rem;
+  color: var(--text); background: rgba(102, 192, 244, 0.1);
+  border: 1px solid var(--line); border-radius: 999px; padding: 0.3rem 0.85rem;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+.donate-copy:hover { background: rgba(102, 192, 244, 0.2); color: var(--bright); }
+.donate-copy.is-copied { color: #06121d; background: var(--accent); border-color: var(--accent); }
+
+@media (max-width: 560px) {
+  .donate-network { min-width: 0; }
+  .donate-address { flex-basis: 100%; }
+}
+
 /* ===== Reduced motion ===== */
 @media (prefers-reduced-motion: reduce) {
   :root { scroll-behavior: auto; }
