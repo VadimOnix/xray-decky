@@ -58,6 +58,10 @@ const dir = locale === 'fa' ? 'rtl' : 'ltr';
     <title>{t.seo.title}</title>
     <link rel="canonical" href={canonical} />
 
+    {/* Search-console ownership proofs; must stay on the property root page. */}
+    <meta name="google-site-verification" content="7VdDcVaYT4Rf-1aCJpn3NNqjWtsx5ViAqhnNq_ZmRLo" />
+    <meta name="yandex-verification" content="0a1eee8884cc32e2" />
+
     {
       // Written out per-locale (rather than looped with .map()) so each
       // <link> lands on its own line in the built HTML — a .map() result
