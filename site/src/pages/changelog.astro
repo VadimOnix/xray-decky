@@ -1,0 +1,41 @@
+---
+import Base from '../layouts/Base.astro';
+import { en } from '../i18n/en';
+import { withBase } from '../lib/urls';
+
+// Changelog has its own <title>/description — everything else (nav, footer,
+// stylesheet) reuses the shared EN dictionary via Base.astro.
+const t = {
+  ...en,
+  seo: {
+    title: 'Changelog — Xray Decky',
+    description:
+      'Xray Decky changelog — every release of the Steam Deck proxy client, rendered live from the repository.',
+  },
+};
+---
+<Base t={t} locale="en" path="changelog">
+  <header class="cl-hero">
+    <h1>What's <span class="grad">new</span></h1>
+    <p>
+      Every release, straight from the repository's
+      <a href="https://github.com/VadimOnix/xray-decky/blob/master/CHANGELOG.md" target="_blank" rel="noopener"
+        >CHANGELOG.md</a
+      >
+      — this page always shows the current history.
+    </p>
+  </header>
+
+  <main class="cl-wrap">
+    <p class="cl-loading" id="cl-loading">Loading the changelog</p>
+    <div class="cl-error" id="cl-error" hidden>
+      Couldn't load the changelog right now. Read it on
+      <a href="https://github.com/VadimOnix/xray-decky/blob/master/CHANGELOG.md" target="_blank" rel="noopener"
+        >GitHub</a
+      > instead.
+    </div>
+    <div class="cl-timeline" id="cl-timeline" hidden></div>
+  </main>
+
+  <script src={withBase('scripts/changelog.js')} defer></script>
+</Base>

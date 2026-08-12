@@ -1,0 +1,94 @@
+---
+import type { Dict } from '../i18n/types';
+import { withBase } from '../lib/urls';
+
+interface Props {
+  t: Dict;
+  locale: string;
+  /** Route slug relative to the site root: '' for the home page, 'changelog' for /changelog. */
+  path: string;
+}
+
+const { t, locale, path } = Astro.props;
+
+const isHome = path === '';
+const homeHref = withBase('index.html');
+/** Section anchors must point at the home page when we're not already on it. */
+const navHome = (hash: string) => (isHome ? hash : `${homeHref}${hash}`);
+
+// NOTE: this is a minimal head for now (charset, viewport, title, meta
+// description, stylesheet). A later task expands it with hreflang, OG tags
+// and JSON-LD — keeping all head generation here so that expansion has one
+// obvious place to land.
+---
+
+<html lang={locale}>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={t.seo.description} />
+    <title>{t.seo.title}</title>
+    <link rel="stylesheet" href={withBase('styles/main.css')} />
+  </head>
+  <body>
+    <!-- Navigation -->
+    <nav class="site-nav" id="site-nav" aria-label={t.nav.ariaLabel}>
+      <div class="nav-inner">
+        <a href={isHome ? '#' : homeHref} class="nav-brand"
+          ><span class="nav-logo" aria-hidden="true"></span>Xray&nbsp;<b>Decky</b></a
+        >
+        <ul class="nav-links">
+          <li><a href={navHome('#features')}>{t.nav.features}</a></li>
+          <li><a href={navHome('#panel')}>{t.nav.panel}</a></li>
+          <li><a href={navHome('#install')}>{t.nav.install}</a></li>
+          <li>
+            <a href={withBase('changelog.html')} aria-current={path === 'changelog' ? 'page' : undefined}
+              >{t.nav.changelog}</a
+            >
+          </li>
+          <li><a href={navHome('#faq')}>{t.nav.help}</a></li>
+          <li>
+            <a href="https://github.com/VadimOnix/xray-decky" class="nav-github" target="_blank" rel="noopener"
+              >{t.nav.github}</a
+            >
+          </li>
+        </ul>
+      </div>
+    </nav>
+
+    <slot />
+
+    <!-- Footer -->
+    <footer>
+      <div class="footer-inner">
+        <div class="footer-links">
+          {(() => {
+            const hrefs = [
+              { href: 'https://github.com/VadimOnix/xray-decky', external: true },
+              { href: withBase('changelog.html'), external: false },
+              { href: 'https://github.com/VadimOnix/xray-decky/releases', external: true },
+              { href: 'https://github.com/VadimOnix/xray-decky/issues', external: true },
+              {
+                href: 'https://github.com/VadimOnix/xray-decky/blob/master/docs/ROADMAP.md',
+                external: true,
+              },
+              { href: 'https://wiki.deckbrew.xyz/', external: true },
+              { href: 'https://xtls.github.io/', external: true },
+            ];
+            return t.footer.links.map((label, i) => {
+              const link = hrefs[i];
+              return link.external ? (
+                <a href={link.href} target="_blank" rel="noopener">
+                  {label}
+                </a>
+              ) : (
+                <a href={link.href}>{label}</a>
+              );
+            });
+          })()}
+        </div>
+        <p class="footer-copy">{t.footer.copy}</p>
+      </div>
+    </footer>
+  </body>
+</html>

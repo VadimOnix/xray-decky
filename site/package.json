@@ -1,0 +1,14 @@
+{
+  "name": "xray-decky-site",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview"
+  },
+  "devDependencies": {
+    "astro": "^5.13.0",
+    "@astrojs/sitemap": "^3.4.0"
+  }
+}
