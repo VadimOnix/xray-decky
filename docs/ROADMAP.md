@@ -129,8 +129,9 @@ Facts that shape the plan:
     (`encryption=mlkem768x25519plus…` passthrough). _(done)_
 - **Add the other xray-native protocols**: **VMess** (`vmess://` base64-JSON),
   **Trojan** (`trojan://`), **Shadowsocks** (`ss://`, incl. 2022 ciphers). _(done;
-  SIP003 plugin links are rejected as unsupported by xray-core)_ WireGuard outbound
-  is optional stretch.
+  SIP003 plugin links are rejected as unsupported by xray-core)_ **SOCKS5**
+  (`socks://` / `socks5://`, with or without credentials) for a user's own proxy
+  _(done)_. WireGuard outbound is optional stretch.
 - **Sane defaults in the generated config**: sniffing
   (`destOverride: ["http","tls","quic"]`) and geoip private → direct now apply in
   all modes _(done)_. _Remaining:_ optional "bypass region" preset, **fakedns**

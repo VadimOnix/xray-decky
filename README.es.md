@@ -6,7 +6,7 @@
 
 Ejecuta una VPN en tu Steam Deck, incluso en el modo Gaming (Gaming Mode).
 Xray Decky es un plugin de [Decky Loader](https://wiki.deckbrew.xyz/): un
-cliente proxy completo (VLESS/VMess/Trojan/Shadowsocks/Hysteria2/TUIC) cuyo
+cliente proxy completo (VLESS/VMess/Trojan/Shadowsocks/SOCKS5/Hysteria2/TUIC) cuyo
 modo TUN enruta **todo** el tráfico del sistema a través de un túnel
 cifrado, ofreciendo una cobertura a nivel de todo el sistema, al estilo
 VPN, que ni siquiera los juegos pueden ignorar. Incluye suscripciones
@@ -20,7 +20,8 @@ switch y estadísticas de tráfico en vivo.
   cifrados 2022) sobre RAW/TCP, WebSocket, gRPC, HTTPUpgrade, XHTTP y mKCP,
   con parámetros completos de TLS / REALITY / huella uTLS. **Hysteria2** y
   **TUIC** se ejecutan sobre el núcleo sing-box, que se descarga bajo
-  demanda.
+  demanda. Tu propio proxy **SOCKS5** (`socks://[user:pass@]host:port`)
+  también sirve — no hace falta suscripción.
 - **Perfiles y suscripciones multiservidor** — almacena muchos servidores;
   importa una URL de suscripción (listas en base64 o de texto plano) y la
   actualiza en el mismo lugar. Los servidores añadidos manualmente se

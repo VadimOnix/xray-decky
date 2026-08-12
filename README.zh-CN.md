@@ -6,7 +6,7 @@
 
 在你的 Steam Deck 上运行 VPN——包括在游戏模式（Gaming Mode）下。Xray Decky 是一款
 [Decky Loader](https://wiki.deckbrew.xyz/) 插件：一个功能完整的代理客户端
-（VLESS/VMess/Trojan/Shadowsocks/Hysteria2/TUIC），其 TUN 模式会将**全部**系统
+（VLESS/VMess/Trojan/Shadowsocks/SOCKS5/Hysteria2/TUIC），其 TUN 模式会将**全部**系统
 流量通过加密隧道转发——实现系统级、VPN 式的全覆盖，游戏也无法绕过。内置多
 服务器订阅、Steam 风格的 Web 管理面板、断线阻断（kill switch）和实时流量统计。
 
@@ -16,7 +16,8 @@
   **VMess**、**Trojan** 和 **Shadowsocks**（含 2022 加密方式），传输方式覆盖
   RAW/TCP、WebSocket、gRPC、HTTPUpgrade、XHTTP 和 mKCP，并提供完整的 TLS /
   REALITY / uTLS 指纹参数。**Hysteria2** 和 **TUIC** 运行在 sing-box 内核上，
-  按需下载。
+  按需下载。也支持你自己的 **SOCKS5** 代理
+  （`socks://[user:pass@]host:port`），无需订阅。
 - **多服务器配置与订阅** — 保存多个服务器；导入订阅链接（base64 或纯文本链接
   列表）并原地刷新。手动添加的服务器在刷新后会被保留，若服务商返回了流量
   配额/到期信息（`Subscription-Userinfo`）也会一并显示。

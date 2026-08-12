@@ -54,6 +54,18 @@ def test_roundtrip_shadowsocks():
     _roundtrip("ss://aes-256-gcm:sspassword@s.example.com:8388#SS%20Node")
 
 
+def test_roundtrip_socks_with_credentials():
+    _roundtrip("socks://alice:s3cr3t@192.168.1.5:1080#Phone%20Hotspot")
+
+
+def test_roundtrip_socks_without_credentials():
+    _roundtrip("socks://192.168.1.5:1080#LAN")
+
+
+def test_roundtrip_socks_username_only():
+    _roundtrip("socks://alice@192.168.1.5:1080")
+
+
 def test_roundtrip_vmess_ws_tls():
     vmess = {
         "v": "2",
