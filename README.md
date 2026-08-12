@@ -1,15 +1,22 @@
-# Xray Decky
+# Xray Decky — VPN & Proxy Client for Steam Deck
 
-Decky Loader plugin for Steam Deck: a full-featured xray-core proxy client
-(VLESS/VMess/Trojan/Shadowsocks) with multi-server subscriptions, a Steam-styled
-web admin panel, and Gaming-Mode TUN routing.
+**English** · [Русский](README.ru.md) · [中文](README.zh-CN.md) · [فارسی](README.fa.md) · [Español](README.es.md)
+
+Run a VPN on your Steam Deck — including Gaming Mode. Xray Decky is a
+[Decky Loader](https://wiki.deckbrew.xyz/) plugin: a full-featured
+proxy client (VLESS/VMess/Trojan/Shadowsocks/Hysteria2/TUIC)
+whose TUN mode routes **all** system traffic through an encrypted tunnel —
+system-wide, VPN-style coverage where games can't ignore it. Multi-server
+subscriptions, a Steam-styled web admin panel, kill switch and live
+traffic stats included.
 
 ## Features
 
 - **Broad protocol & transport coverage** — imports **VLESS** (REALITY /
   XTLS-Vision), **VMess**, **Trojan** and **Shadowsocks** (incl. 2022 ciphers)
   over RAW/TCP, WebSocket, gRPC, HTTPUpgrade, XHTTP and mKCP, with full TLS /
-  REALITY / uTLS-fingerprint parameters.
+  REALITY / uTLS-fingerprint parameters. **Hysteria2** and **TUIC** run on the
+  sing-box core, downloaded on demand.
 - **Multi-server profiles & subscriptions** — store many servers; import a
   subscription URL (base64 or plain-text link lists) and refresh it in place.
   Manually-added servers are preserved across refreshes, and the provider's
@@ -27,7 +34,8 @@ web admin panel, and Gaming-Mode TUN routing.
 - **English / Russian** — both the QAM and the web panel are localized
   (auto-detected from the Steam / browser locale).
 - **Connection Toggle** — turn proxy on/off from Quick Access.
-- **TUN Mode** — system-wide traffic routing, **recommended for Gaming Mode**.
+- **TUN Mode** — system-wide VPN-style routing through a virtual network
+  interface, **recommended for Gaming Mode**.
 - **Kill Switch** — block traffic when the proxy disconnects (optional).
 - **Resilient** — a crashed xray-core is detected instantly and restarted with
   backoff; TUN routes are re-applied after sleep/resume; the pinned core
