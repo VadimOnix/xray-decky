@@ -67,7 +67,7 @@
     {
       "id": 9,
       "subject": "Task 9: Final verify, PR, Pages cutover + off-repo checklist",
-      "status": "in_progress",
+      "status": "completed",
       "blockedBy": [
         1,
         3,
@@ -76,5 +76,5 @@
       "description": "**Goal:** Everything green, PR opened, cutover + off-repo actions documented and (where authorized) executed.\n\n**Files:**\n- None new (PR + live `gh` operations)\n\n**Acceptance Criteria:**\n- [ ] Repo-root `pnpm run lint`, `pnpm test`, `pytest tests/` all pass\n- [ ] `cd site && pnpm build` clean\n- [ ] PR opened to master with summary + post-merge cutover checklist (push/PR require user confirmation at checkpoint)\n- [ ] Pages source flipped to workflow AFTER merge, first deploy green, live title contains \"VPN & Proxy Client for Steam Deck\"\n- [ ] Lighthouse SEO score >= 0.95 on live landing (spec criterion)\n- [ ] Off-repo checklist delivered: Google Search Console + sitemap submit, Yandex Webmaster, r/SteamDeck guide post, awesome-list submissions, release-notes phrasing, Decky Store re-submission note\n\n**Verify:** `gh pr checks` green; after cutover curl title check + `curl -s https://vadimonix.github.io/xray-decky/ru/ | grep -c 'hreflang'` -> 6; lighthouse SEO >= 0.95.\n\nCutover commands + full off-repo checklist: plan doc Task 9.\n\n```json:metadata\n{\"files\": [], \"verifyCommand\": \"pnpm run lint && pnpm test && pytest tests/ && (cd site && pnpm build)\", \"acceptanceCriteria\": [\"root lint/tests + site build green\", \"PR opened with cutover checklist\", \"Pages flipped to workflow, live title has VPN\", \"Lighthouse SEO >= 0.95\", \"off-repo checklist delivered\"], \"modelTier\": \"standard\"}\n```"
     }
   ],
-  "lastUpdated": "2026-08-12T20:16:52.392331"
+  "lastUpdated": "2026-08-12T20:49:41.190317"
 }
