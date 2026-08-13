@@ -20,6 +20,8 @@ import tempfile
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+from .net_env import clean_subprocess_env
+
 SINGBOX_REPO = "SagerNet/sing-box"
 BINARY_NAME = "sing-box"
 # Name of the binary inside the official release archive.
@@ -73,10 +75,8 @@ def _sha256(path: Path) -> str:
 
 
 def _clean_env() -> Dict[str, str]:
-    env = os.environ.copy()
-    env.pop("LD_LIBRARY_PATH", None)
-    env.pop("LD_PRELOAD", None)
-    return env
+    """Environment for system binaries, without the Decky sandbox overrides."""
+    return clean_subprocess_env()
 
 
 def binary_present(binary_path: Path) -> bool:

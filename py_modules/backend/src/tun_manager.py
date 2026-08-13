@@ -6,7 +6,7 @@ Handles privilege checking and TUN interface management for system-wide routing.
 
 import os
 import asyncio
-from typing import Dict, Any, Optional
+from typing import Dict, Any, List, Optional
 
 
 class TUNManager:
@@ -179,8 +179,12 @@ class TUNManager:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
-    async def get_physical_interface(self) -> Optional[str]:
-        """Get the default route's interface (e.g. wlan0) for sockopt.interface binding."""
+    async def _default_route_devices(self) -> List[str]:
+        """
+        The device of every IPv4 default route, in the order ``ip`` prints them
+        (which is by ascending metric, i.e. most-preferred first).
+        """
+        devices: List[str] = []
         try:
             proc = await asyncio.create_subprocess_exec(
                 "ip",
@@ -193,19 +197,48 @@ class TUNManager:
             )
             await proc.wait()
             if proc.returncode != 0:
-                return None
+                return []
             out = await proc.stdout.read()
             for line in out.decode("utf-8", errors="ignore").strip().split("\n"):
                 parts = line.split()
                 for i, p in enumerate(parts):
                     if p == "dev" and i + 1 < len(parts):
                         dev = parts[i + 1]
-                        if dev and dev != self.TUN_INTERFACE:
-                            return dev
+                        if dev:
+                            devices.append(dev)
                         break
         except Exception:
-            pass
+            return []
+        return devices
+
+    async def get_physical_interface(self) -> Optional[str]:
+        """Get the default route's interface (e.g. wlan0) for sockopt.interface binding."""
+        for dev in await self._default_route_devices():
+            if dev != self.TUN_INTERFACE:
+                return dev
         return None
+
+    async def get_tunnel_bypass_interface(self) -> Optional[str]:
+        """
+        The physical interface to bind to in order to leave the tunnel, or None
+        when there is nothing to bypass.
+
+        ``setup_system_route`` installs ``default dev xray0 metric 100``, which
+        outranks the physical default (DHCP gives it metric 600). While that
+        route is in place *every* socket the plugin itself opens is pulled into
+        the tunnel — xray's own outbound escapes only because it sets
+        sockopt.interface. Callers that must reach the network independently of
+        the tunnel's health (fetching a subscription, for one) bind to the
+        device returned here; ``curl --interface`` and SO_BINDTODEVICE override
+        the routing table's choice of device.
+
+        Returns None when no TUN default route is installed, so callers can skip
+        an attempt that would merely duplicate the plain one.
+        """
+        devices = await self._default_route_devices()
+        if self.TUN_INTERFACE not in devices:
+            return None
+        return next((dev for dev in devices if dev != self.TUN_INTERFACE), None)
 
     async def setup_system_route(self) -> Dict[str, Any]:
         """

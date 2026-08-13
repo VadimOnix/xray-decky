@@ -30,6 +30,8 @@ import zipfile
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+from .net_env import clean_subprocess_env
+
 XRAY_REPO = "XTLS/Xray-core"
 XRAY_ASSET = "Xray-linux-64.zip"
 BINARY_NAME = "xray-core"
@@ -94,11 +96,8 @@ _DOWNLOAD_TIMEOUT = 300
 
 
 def _clean_env() -> Dict[str, str]:
-    """Environment for system binaries, without the Decky sandbox lib overrides."""
-    env = os.environ.copy()
-    env.pop("LD_LIBRARY_PATH", None)
-    env.pop("LD_PRELOAD", None)
-    return env
+    """Environment for system binaries, without the Decky sandbox overrides."""
+    return clean_subprocess_env()
 
 
 def binary_present(binary_path: Path) -> bool:

@@ -1,4 +1,4 @@
-"""Tests for TUNManager.ensure_system_route (post-resume route repair)."""
+"""Tests for TUNManager route helpers (post-resume repair, tunnel bypass)."""
 
 import asyncio
 from unittest.mock import patch
@@ -102,3 +102,56 @@ def test_restore_failure_reported():
     assert result["success"] is False
     assert result["restored"] is False
     assert result["error"]
+
+
+# --- get_tunnel_bypass_interface ---
+
+# Both defaults present: setup_system_route's metric-100 route outranks the
+# physical default, so every socket the plugin opens enters the tunnel.
+_TUN_HIJACKED = (
+    b"default dev xray0 scope link metric 100 \n"
+    b"default via 192.168.30.1 dev wlan0 proto dhcp src 192.168.30.209 metric 600 \n"
+)
+_NO_TUN = b"default via 192.168.30.1 dev wlan0 proto dhcp metric 600 \n"
+
+
+def _route_recorder(stdout: bytes, returncode: int = 0):
+    return _Recorder(
+        [
+            (
+                lambda a: a[:4] == ["ip", "-4", "route", "show"],
+                _FakeProcess(returncode, stdout=stdout),
+            )
+        ]
+    )
+
+
+def test_bypass_interface_is_physical_nic_while_tun_hijacks_default():
+    recorder = _route_recorder(_TUN_HIJACKED)
+    with patch("asyncio.create_subprocess_exec", recorder):
+        assert asyncio.run(TUNManager().get_tunnel_bypass_interface()) == "wlan0"
+
+
+def test_no_bypass_interface_when_tun_route_absent():
+    # Nothing to bypass: the physical default is already the winning route.
+    recorder = _route_recorder(_NO_TUN)
+    with patch("asyncio.create_subprocess_exec", recorder):
+        assert asyncio.run(TUNManager().get_tunnel_bypass_interface()) is None
+
+
+def test_no_bypass_interface_when_only_tun_route_exists():
+    recorder = _route_recorder(b"default dev xray0 scope link metric 100 \n")
+    with patch("asyncio.create_subprocess_exec", recorder):
+        assert asyncio.run(TUNManager().get_tunnel_bypass_interface()) is None
+
+
+def test_bypass_interface_none_when_ip_command_fails():
+    recorder = _route_recorder(b"", returncode=1)
+    with patch("asyncio.create_subprocess_exec", recorder):
+        assert asyncio.run(TUNManager().get_tunnel_bypass_interface()) is None
+
+
+def test_physical_interface_still_skips_tun_device():
+    recorder = _route_recorder(_TUN_HIJACKED)
+    with patch("asyncio.create_subprocess_exec", recorder):
+        assert asyncio.run(TUNManager().get_physical_interface()) == "wlan0"
