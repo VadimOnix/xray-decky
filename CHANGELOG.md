@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `pnpm-lock.yaml` regenerated in the pnpm 9 format (`lockfileVersion: 9.0`).
+  It had been left at the pnpm 8 format while CI and the documented toolchain
+  both moved to pnpm 9, so every `pnpm install` rewrote 5000+ lines and no
+  one could tell a real dependency change from format churn. Nothing in the
+  dependency graph moved: the same 555 packages resolve to the same versions
+  before and after, and `pnpm install --frozen-lockfile` now succeeds.
+  `site/pnpm-lock.yaml` was already on 9.0.
+
 ## [2.3.0] - 2026-08-13
 
 ### Fixed
