@@ -36,6 +36,9 @@ jobs:
         working-directory: site
       - run: pnpm build
         working-directory: site
+      # SEO invariants over the built output: titles, hreflang, canonicals ==
+      # sitemap, JSON-LD version, donation addresses (rules: AGENTS.md).
+      - run: node scripts/seo-check.mjs --site
       - uses: actions/upload-pages-artifact@v5
         with:
           path: site/dist

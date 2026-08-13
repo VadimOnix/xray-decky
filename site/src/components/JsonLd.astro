@@ -1,5 +1,9 @@
 ---
 import type { Dict } from '../i18n/types';
+// Root package.json: softwareVersion must always match the released plugin
+// version — importing it here removes the manual bump that drifted before
+// (scripts/seo-check.mjs --site guards the invariant in CI).
+import pkg from '../../../package.json';
 
 interface Props {
   t: Dict;
@@ -51,7 +55,7 @@ const softwareApplication = {
     priceCurrency: 'USD',
   },
   url: canonical,
-  softwareVersion: '2.2.0',
+  softwareVersion: pkg.version,
   license: 'MIT',
   sameAs: 'https://github.com/VadimOnix/xray-decky',
 };

@@ -27,6 +27,17 @@ export default [
       },
     },
   },
+  {
+    // Node maintenance/CI scripts (e.g. scripts/seo-check.mjs) — ES modules
+    // running under plain Node, so they get the Node globals.
+    files: ['scripts/**/*.mjs'],
+    languageOptions: {
+      globals: {
+        console: 'readonly',
+        process: 'readonly',
+      },
+    },
+  },
   ...tseslint.configs.recommended,
   {
     files: ['**/*.{ts,tsx}'],

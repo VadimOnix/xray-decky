@@ -47,3 +47,4 @@ Known thresholds: Astro 6 requires Node ≥22 (pages.yml already on 22) and drop
 
 - `optimize-images.sh` — image pipeline for `public/`; run after adding heavy assets.
 - Search Console / Yandex verification tags live in the layout head — don't strip them.
+- Wording/positioning rules for the site copy (and every other user-facing surface — READMEs, plugin.json, repo metadata) live in the `seo-surfaces` skill + AGENTS.md "SEO surfaces". CI: `node scripts/seo-check.mjs --site` runs against `dist/` in the Pages workflow.

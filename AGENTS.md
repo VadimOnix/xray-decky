@@ -84,6 +84,17 @@ Deploy scripts read `DECK_HOST`, `DECK_PLUGINS_DIR`, `DECK_RESTART`, `DECK_UPLOA
 - SteamOS has an immutable filesystem and network quirks — see `steamos network restrictions.md` before touching TUN/kill-switch/system-proxy code.
 - Decky plugin platform specifics (plugin.json flags, packaging layout, store rules): `decky-loader-plugin-best-practices.md`.
 
+## SEO surfaces
+
+The repo deliberately ranks for "steam deck vpn" and related queries. A fixed set of surfaces carries that positioning; edits to any of them must keep the set consistent (CI enforces the mechanical parts via `scripts/seo-check.mjs`).
+
+- **Positioning**: the product is a "VPN & proxy client for Steam Deck". Keep both words. Honest framing only — TUN mode gives *VPN-style* system-wide coverage; never claim it is a classic (WireGuard/OpenVPN) VPN. Write "Steam Deck" as two words, never "SteamDeck" (search tokenization). Core queries to preserve in titles/H1s/intros: *steam deck vpn*, *steamos vpn*, *vpn in Gaming Mode*.
+- **The surfaces**: GitHub repo description + topics (live, via `gh api` — maintainer sign-off required), `plugin.json` `publish.description` (Decky Store listing), `package.json` description/keywords, the five READMEs, and the site dictionaries (`site/src/i18n/*.ts`). A wording change lands on all relevant surfaces in the same change, not "later".
+- **README×5 sync**: README.md has four mirrors (`README.ru.md`, `README.zh-CN.md`, `README.fa.md`, `README.es.md`) with identical section structure, switcher row and hero banner. Any content edit to one is an edit to all five, in the same commit. The translations are also the approved terminology glossary.
+- **Donation addresses** live only in `site/src/lib/donations.ts`; READMEs and site render from/against it — never retype an address anywhere else.
+- **Site URL/SEO contract** (canonicals, hreflang, sitemap, JSON-LD): see `.claude/skills/site-astro/`. JSON-LD `softwareVersion` is imported from the root `package.json` — no manual bumps.
+- **Verify**: `node scripts/seo-check.mjs --readme` (fast, no build) and `--site` (after `cd site && pnpm build`). CI runs both; when a check fires, fix the content, don't delete the check.
+
 ## Feature workflow
 
 Feature work follows the [superpowers](https://github.com/obra/superpowers) skills: brainstorm before designing, write an implementation plan before coding, execute plans with TDD. Plans and design notes live in `docs/superpowers/`. `specs/NNN-slug/` is a **read-only archive** of past features from the earlier spec-kit workflow — useful as decision history, not a template for new work.

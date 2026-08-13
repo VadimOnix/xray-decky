@@ -153,6 +153,10 @@ jobs:
           test -f LICENSE || (echo "LICENSE missing" && exit 1)
           test -f main.py || (echo "main.py missing" && exit 1)
           echo "All mandatory files present"
+      - name: SEO surfaces — README×5 parity
+        # Rules in AGENTS.md "SEO surfaces": translations mirror README.md
+        # section-for-section; donation addresses match site/src/lib/donations.ts.
+        run: node scripts/seo-check.mjs --readme
       - name: Validate metadata and pinned-version files
         run: |
           # plugin.json / package.json must be valid JSON.
