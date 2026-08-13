@@ -1,6 +1,11 @@
 import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
 
+// Non-default locales are directories (ru/index.html), so their sitemap URLs
+// must be the trailing-slash form the pages themselves use as canonical —
+// appending .html would point at ru.html, which does not exist (404).
+const LOCALE_DIRS = new Set(['ru', 'zh', 'fa', 'es']);
+
 export default defineConfig({
   site: 'https://vadimonix.github.io',
   base: '/xray-decky',
@@ -21,13 +26,21 @@ export default defineConfig({
       },
       // The sitemap derives extensionless URLs from routes (/changelog), but with
       // build.format 'preserve' the real files — and every page's canonical — end
-      // in .html. Re-append it so sitemap URLs string-match the canonicals.
+      // in .html (locale roots: trailing slash). Rewrite both the <loc> and the
+      // auto-generated hreflang alternates so every sitemap URL string-matches
+      // the canonical/hreflang the page itself declares.
       serialize(item) {
-        const url = new URL(item.url);
-        const last = url.pathname.split('/').pop();
-        if (last && !last.includes('.')) {
-          url.pathname += '.html';
-          item.url = url.toString();
+        const fix = (u) => {
+          const url = new URL(u);
+          const last = url.pathname.split('/').pop();
+          if (last && !last.includes('.')) {
+            url.pathname += LOCALE_DIRS.has(last) ? '/' : '.html';
+          }
+          return url.toString();
+        };
+        item.url = fix(item.url);
+        if (item.links) {
+          item.links = item.links.map((link) => ({ ...link, url: fix(link.url) }));
         }
         return item;
       },
