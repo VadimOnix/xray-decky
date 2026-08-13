@@ -1,0 +1,41 @@
+---
+name: decky-release
+description: Release flow for this plugin — prepare-release.sh, CHANGELOG rules, auto-release on version bump, v-prefixed tags, zip packaging, Decky store submission. Use when cutting a release, bumping the version, editing CHANGELOG.md, fixing a broken/wrong tag, or preparing the plugin for the Decky Plugin Store.
+---
+
+# Releasing xray-decky
+
+Canonical doc: `docs/RELEASING.md`. SemVer + Keep a Changelog.
+
+## The one rule
+
+**A `package.json` version bump merged to `master` IS the release.** `auto-release.yml` sees a version with no matching `v<version>` tag, creates the tag, and dispatches the Release workflow (build → zip with pinned xray-core → GitHub Release). Merges that don't change the version never release.
+
+## Standard flow
+
+```bash
+scripts/prepare-release.sh 2.4.0        # bumps package.json + rolls [Unreleased] → dated section
+```
+
+Review diff → PR → merge to `master`. Done.
+
+Guard rails:
+- CI **fails** if `package.json` has a version with no matching `CHANGELOG.md` section (unless already tagged) — a release can't ship without its changelog slice.
+- Versions containing `-` (`2.4.0-alpha.1`) are auto-marked pre-release and get a WIP warning in release notes.
+- Ongoing work goes under `[Unreleased]` in Keep a Changelog categories (Added/Changed/Fixed/…), dates `YYYY-MM-DD`.
+
+## Manual tag (fallback)
+
+```bash
+git tag v1.0.0 && git push origin v1.0.0   # must match package.json version
+```
+
+Tag format `v*` is mandatory — `1.0.0` without prefix silently does nothing. Wrong tag cleanup: `git tag -d 1.0.0 && git push origin :refs/tags/1.0.0`, then retag correctly.
+
+## What ships
+
+Zip staged by `scripts/stage-plugin.sh`: `dist/`, `package.json`, `plugin.json`, `main.py`, `py_modules/`, `static/` (web panel), `LICENSE`, `README.md`, plus xray-core binary + geo data under `bin/` (version pinned in `py_modules/backend/src/xray_version.json` — update the pin before release if a new core is out).
+
+## Decky Plugin Store
+
+Submission = PR adding the plugin as a submodule to [decky-plugin-database](https://github.com/SteamDeckHomebrew/decky-plugin-database). Requirements: LICENSE in repo root, PNG store image in `plugin.json` → `publish`, version bumped, `remote_binary` (name/url/sha256hash in package.json) for binaries >10MB instead of bundling.

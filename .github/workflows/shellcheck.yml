@@ -26,5 +26,4 @@ jobs:
         with:
           # Cover both scripts/ and the root deploy scripts.
           scandir: "."
-          # .specify is third-party spec-kit scaffolding, not shipped code.
-          ignore_paths: node_modules dist .specify
+          ignore_paths: node_modules dist
