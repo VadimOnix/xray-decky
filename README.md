@@ -1,15 +1,25 @@
-# Xray Decky
+# Xray Decky — VPN & Proxy Client for Steam Deck
 
-Decky Loader plugin for Steam Deck: a full-featured xray-core proxy client
-(VLESS/VMess/Trojan/Shadowsocks) with multi-server subscriptions, a Steam-styled
-web admin panel, and Gaming-Mode TUN routing.
+**English** · [Русский](README.ru.md) · [中文](README.zh-CN.md) · [فارسی](README.fa.md) · [Español](README.es.md)
+
+![Xray Decky — VPN and proxy client for Steam Deck](site/public/assets/hero-banner-800w.png)
+
+Run a VPN on your Steam Deck — including Gaming Mode. Xray Decky is a
+[Decky Loader](https://wiki.deckbrew.xyz/) plugin: a full-featured
+proxy client (VLESS/VMess/Trojan/Shadowsocks/SOCKS5/Hysteria2/TUIC)
+whose TUN mode routes **all** system traffic through an encrypted tunnel —
+system-wide, VPN-style coverage where games can't ignore it. Multi-server
+subscriptions, a Steam-styled web admin panel, kill switch and live
+traffic stats included.
 
 ## Features
 
 - **Broad protocol & transport coverage** — imports **VLESS** (REALITY /
   XTLS-Vision), **VMess**, **Trojan** and **Shadowsocks** (incl. 2022 ciphers)
   over RAW/TCP, WebSocket, gRPC, HTTPUpgrade, XHTTP and mKCP, with full TLS /
-  REALITY / uTLS-fingerprint parameters.
+  REALITY / uTLS-fingerprint parameters. **Hysteria2** and **TUIC** run on the
+  sing-box core, downloaded on demand. Your own **SOCKS5** proxy
+  (`socks://[user:pass@]host:port`) works too — no subscription needed.
 - **Multi-server profiles & subscriptions** — store many servers; import a
   subscription URL (base64 or plain-text link lists) and refresh it in place.
   Manually-added servers are preserved across refreshes, and the provider's
@@ -27,7 +37,8 @@ web admin panel, and Gaming-Mode TUN routing.
 - **English / Russian** — both the QAM and the web panel are localized
   (auto-detected from the Steam / browser locale).
 - **Connection Toggle** — turn proxy on/off from Quick Access.
-- **TUN Mode** — system-wide traffic routing, **recommended for Gaming Mode**.
+- **TUN Mode** — system-wide VPN-style routing through a virtual network
+  interface, **recommended for Gaming Mode**.
 - **Kill Switch** — block traffic when the proxy disconnects (optional).
 - **Resilient** — a crashed xray-core is detected instantly and restarted with
   backoff; TUN routes are re-applied after sleep/resume; the pinned core
@@ -85,13 +96,27 @@ See [Tests and linters](CONTRIBUTING.md#tests-and-linters).
 ├── tests/                    # Python test suite (pytest)
 ├── tests/frontend/           # Frontend test suite (vitest: src/ + admin panel)
 ├── bin/                      # Local dev core binaries (xray-core, sing-box)
-├── docs/                     # GitHub Pages (index.html, styles, assets)
+├── site/                     # GitHub Pages site (Astro, 5 locales)
 ├── main.py                   # Backend entry point
 ├── plugin.json
 └── package.json
 ```
 
 See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) and [docs/RELEASING.md](docs/RELEASING.md) for more.
+
+## Support the project
+
+Xray Decky is free and open source, developed in spare time. If it saved your
+gaming session, a crypto donation keeps it going.
+
+| Asset | Network | Address |
+| --- | --- | --- |
+| GRAM | TON | `UQC_UNDyKIbeAy7qhTG8b6lFIJL3eyYwZit6pxQRtZZ6Dzo6` |
+| USDT | TON | `UQC_UNDyKIbeAy7qhTG8b6lFIJL3eyYwZit6pxQRtZZ6Dzo6` |
+| USDT | Tron (TRC-20) | `TZ3K36oh6FbpMvxncBwxqPzTC6NnHYQ1pL` |
+| ETH | Ethereum (ERC-20) | `0x5F3FbC45A723c92a4797D98ECeE991f2a7b6eec6` |
+| SOL | Solana | `ACpEC9m3MuacKL4wwEnfTKGCNNDHuvaKdPLD7DuFvvvB` |
+| BTC | Bitcoin | `bc1q9zx6y445lqryl60z3phfekqajyjs45meex4cd4` |
 
 ## License
 

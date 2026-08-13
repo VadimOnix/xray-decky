@@ -2,9 +2,9 @@
 Export stored profiles back into share links.
 
 The inverse of ``config_parser.parse_share_link``: a stored profile becomes a
-standard ``vless://`` / ``vmess://`` / ``trojan://`` / ``ss://`` /
-``hysteria2://`` / ``tuic://`` link, so servers can be moved to another client
-or backed up. Round-trip tests (profile → link → parse → same profile) keep
+standard ``vless://`` / ``vmess://`` / ``trojan://`` / ``ss://`` / ``socks://``
+/ ``hysteria2://`` / ``tuic://`` link, so servers can be moved to another
+client or backed up. Round-trip tests (profile → link → parse → same profile) keep
 this in lockstep with the parser.
 
 Unlike the admin panel's list view — which redacts credentials — an export
@@ -160,6 +160,22 @@ def _shadowsocks_link(profile: Dict[str, Any]) -> Optional[str]:
     return f"ss://{userinfo}@{host}:{port}{_frag(profile)}"
 
 
+def _socks_link(profile: Dict[str, Any]) -> Optional[str]:
+    endpoint = _endpoint(profile)
+    if not endpoint:
+        return None
+    host, port = endpoint
+    username = profile.get("username")
+    userinfo = ""
+    if username:
+        password = profile.get("password")
+        userinfo = _q(username)
+        if password:
+            userinfo += f":{_q(password)}"
+        userinfo += "@"
+    return f"socks://{userinfo}{host}:{port}{_frag(profile)}"
+
+
 def _vmess_link(profile: Dict[str, Any]) -> Optional[str]:
     endpoint = _endpoint(profile)
     uuid = profile.get("uuid")
@@ -251,6 +267,7 @@ _BUILDERS = {
     "vmess": _vmess_link,
     "trojan": _trojan_link,
     "shadowsocks": _shadowsocks_link,
+    "socks": _socks_link,
     "hysteria2": _hysteria2_link,
     "tuic": _tuic_link,
 }

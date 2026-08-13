@@ -1,0 +1,13 @@
+---
+import Base from '../../layouts/Base.astro';
+import Guide from '../../components/Guide.astro';
+import { zh } from '../../i18n/zh';
+
+// The guide has its own <title>/description (t.guide.seo) — everything else
+// (nav, footer, stylesheet) reuses the shared ZH dictionary via Base.astro,
+// same pattern as the EN guide page.
+const t = { ...zh, seo: zh.guide.seo };
+---
+<Base t={t} locale="zh" path="vpn-on-steam-deck.html">
+  <Guide t={zh} locale="zh" />
+</Base>

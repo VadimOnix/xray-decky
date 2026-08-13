@@ -609,7 +609,7 @@ class Plugin:
         Import and validate a proxy share link.
 
         Args:
-            url: Share link (vless://, vmess://, trojan://, ss://),
+            url: Share link (vless://, vmess://, trojan://, ss://, socks://),
                 a subscription URL (http:// or https://), or pasted
                 base64 subscription content
 

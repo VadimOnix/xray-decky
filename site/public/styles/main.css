@@ -94,6 +94,22 @@ section { max-width: 1080px; margin: 0 auto; padding: 3.5rem 1.25rem; }
   background: rgba(102, 192, 244, 0.08);
 }
 
+/* ===== Language switcher (small, unobtrusive — sits at the end of the nav) =====
+   Uses logical (inline-start/end) properties rather than left/right so it
+   already mirrors correctly under dir="rtl" with no override block needed. */
+.nav-lang-item { display: flex; }
+.lang-switcher { display: flex; align-items: center; gap: 0.55rem; list-style: none; margin: 0; padding: 0; }
+.lang-switcher li { display: flex; align-items: center; }
+.lang-switcher li:not(:first-child)::before {
+  content: "·"; margin-inline-end: 0.55rem; color: var(--muted);
+}
+.lang-switcher a { color: var(--muted); text-decoration: none; font-size: 0.8rem; white-space: nowrap; }
+.lang-switcher a:hover { color: var(--bright); }
+.lang-switcher a[aria-current="page"] {
+  color: var(--accent-2); font-weight: 700;
+  text-decoration: underline; text-decoration-color: currentColor; text-underline-offset: 0.16em;
+}
+
 /* ===== Hero ===== */
 .hero { position: relative; padding: 4.2rem 1.25rem 3rem; max-width: 1160px; margin: 0 auto; }
 .hero-glow {
@@ -435,6 +451,10 @@ section { max-width: 1080px; margin: 0 auto; padding: 3.5rem 1.25rem; }
 
 /* ===== Usage ===== */
 .usage-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.2rem; }
+/* The guide page (Task 6) reuses this grid on a semantic <ol>/<li> pair for
+   its numbered steps — strip the browser's default list markers/indent so
+   only the .step-number circle shows a number. */
+ol.usage-steps { list-style: none; margin: 0; padding: 0; }
 .usage-step { display: flex; gap: 0.9rem; align-items: flex-start; }
 .step-number {
   flex: none; width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center;
@@ -464,6 +484,10 @@ section { max-width: 1080px; margin: 0 auto; padding: 3.5rem 1.25rem; }
 .faq-item summary:hover { background: rgba(102, 192, 244, 0.06); }
 .faq-item ul { margin: 0; padding: 0 1.3rem 1rem 2.2rem; }
 .faq-item li { margin-bottom: 0.3rem; font-size: 0.92rem; }
+/* Plain-prose FAQ answers (the 3 search-phrased entries from Task 6) use a
+   <p> instead of a <ul> — match the same right/bottom spacing, indented to
+   the summary's own left edge since there's no list marker to clear. */
+.faq-item p { margin: 0; padding: 0 1.3rem 1rem 1.1rem; font-size: 0.92rem; }
 
 /* ===== Footer ===== */
 footer { border-top: 1px solid var(--line); background: rgba(23, 26, 33, 0.6); margin-top: 2rem; }
@@ -582,6 +606,41 @@ footer { border-top: 1px solid var(--line); background: rgba(23, 26, 33, 0.6); m
   .cl-card { padding: 0.95rem 1rem; }
 }
 
+/* ===== Donations =====
+   Rows are plain flexbox with logical spacing, so the whole block mirrors
+   itself under dir="rtl"; only the address stays LTR (dir="ltr" in the
+   markup) because a wallet address is not directional text. */
+.donate-intro { max-width: 62ch; margin: 0 0 1.4rem; color: var(--muted); font-size: 0.94rem; }
+.donate-list { display: flex; flex-direction: column; gap: 0.55rem; list-style: none; margin: 0; padding: 0; }
+.donate-item {
+  display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;
+  border: 1px solid var(--line); border-radius: var(--radius-sm);
+  background: rgba(27, 40, 56, 0.55); padding: 0.7rem 0.9rem;
+}
+.donate-asset {
+  flex: none; min-width: 3.4rem; font-weight: 700; font-size: 0.86rem;
+  letter-spacing: 0.03em; color: var(--bright);
+}
+.donate-network { flex: none; min-width: 8.5rem; font-size: 0.84rem; color: var(--muted); }
+.donate-address {
+  flex: 1 1 22ch; min-width: 0; overflow-wrap: anywhere;
+  font-size: 0.82rem; color: var(--text);
+  background: rgba(102, 192, 244, 0.07); border-radius: 6px; padding: 0.25rem 0.45rem;
+}
+.donate-copy {
+  flex: none; cursor: pointer; font: inherit; font-size: 0.8rem;
+  color: var(--text); background: rgba(102, 192, 244, 0.1);
+  border: 1px solid var(--line); border-radius: 999px; padding: 0.3rem 0.85rem;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+.donate-copy:hover { background: rgba(102, 192, 244, 0.2); color: var(--bright); }
+.donate-copy.is-copied { color: #06121d; background: var(--accent); border-color: var(--accent); }
+
+@media (max-width: 560px) {
+  .donate-network { min-width: 0; }
+  .donate-address { flex-basis: 100%; }
+}
+
 /* ===== Reduced motion ===== */
 @media (prefers-reduced-motion: reduce) {
   :root { scroll-behavior: auto; }
@@ -589,4 +648,54 @@ footer { border-top: 1px solid var(--line); background: rgba(23, 26, 33, 0.6); m
   .qam-dot, .ph-orb { animation: none !important; }
   .cl-loading::after { animation: none !important; }
   *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
+
+/* =====================================================================
+   RTL overrides (Task 7 — /fa/ pages, <html dir="rtl">)
+   =====================================================================
+   The `dir="rtl"` attribute (set in Base.astro for locale === 'fa') makes
+   the browser auto-mirror most of this stylesheet for free: `direction`
+   is inherited, so every flexbox `row` and CSS Grid track placement
+   already reverses on its own (nav, hero actions/stats, feature grid,
+   install-methods grid, usage-steps, footer links). Native <ul>/<ol>
+   marker position also follows `direction`.
+
+   What does NOT auto-mirror are physical `left`/`right`/`margin-left`/
+   `padding-left` declarations — those stay pinned to a physical side
+   regardless of `dir`. This block re-points the handful of such rules
+   that actually affect real (non-decorative) content: the protocol-strip
+   note, the bulleted/numbered lists in the panel/install/guide sections,
+   and the FAQ accordion (its list indent + its "+" toggle icon).
+
+   Deliberately left untouched: the animated Deck/phone hero mockup
+   (.deck, .qam, .phone, .ph-* — position/margin rules using left/right).
+   It is a literal illustration of the physical Steam Deck + a phone
+   propped against its corner, not a text-flow layout, so mirroring its
+   coordinates would misrepresent the hardware rather than improve
+   readability. The changelog page is EN-only (no /fa/changelog.html), so
+   its timeline styles (.cl-*) are out of scope here too. */
+[dir="rtl"] {
+  /* Protocol strip: the trailing "Hysteria2 / TUIC run on sing-box…" note
+     is pushed to the end of the flex row via an auto margin — flip which
+     side absorbs the space now that the row's main-end is on the left. */
+  .proto-note { margin-left: 0; margin-right: auto; }
+
+  /* Bulleted/numbered lists (install prerequisites & methods, the panel
+     spotlight's feature list, and the guide's reused .install-prereq) —
+     explicit padding-left indentation must become padding-right so the
+     RTL-flipped marker has room on the correct side. */
+  .install-prereq ul,
+  .install-method ol,
+  .panel-list {
+    padding-left: 0;
+    padding-right: 1.2rem;
+  }
+
+  /* FAQ answers: mirror the asymmetric padding (extra indent on the
+     marker side) left<->right. */
+  .faq-item ul { padding: 0 2.2rem 1rem 1.3rem; }
+  .faq-item p { padding: 0 1.1rem 1rem 1.3rem; }
+
+  /* FAQ "+" / "×" toggle icon sits at the row's trailing edge. */
+  .faq-item summary::after { right: auto; left: 1.1rem; }
 }

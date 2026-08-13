@@ -16,11 +16,21 @@ from typing import Any, Dict, List, Optional, Tuple
 from uuid import UUID
 
 
-SUPPORTED_SCHEMES = ("vless", "vmess", "trojan", "ss", "hysteria2", "hy2", "tuic")
+SUPPORTED_SCHEMES = (
+    "vless",
+    "vmess",
+    "trojan",
+    "ss",
+    "socks",
+    "socks5",
+    "hysteria2",
+    "hy2",
+    "tuic",
+)
 
 # Which core each protocol runs on. xray-core handles the classic protocols;
 # hysteria2/tuic need the sing-box second core.
-_XRAY_PROTOCOLS = ("vless", "vmess", "trojan", "shadowsocks")
+_XRAY_PROTOCOLS = ("vless", "vmess", "trojan", "shadowsocks", "socks")
 _SINGBOX_PROTOCOLS = ("hysteria2", "tuic")
 
 
@@ -358,6 +368,60 @@ def _parse_ss(url: str) -> Optional[Dict[str, Any]]:
     return profile
 
 
+def _socks_credentials(parts) -> Tuple[str, str]:
+    """
+    Resolve socks userinfo into (username, password); ("", "") when absent.
+
+    Accepts the plain ``user:pass@`` form and the v2rayN-style
+    ``base64(user:pass)@`` form.
+    """
+    if parts.password is not None:
+        return (
+            urllib.parse.unquote(parts.username or ""),
+            urllib.parse.unquote(parts.password),
+        )
+    username = urllib.parse.unquote(parts.username or "")
+    if not username:
+        return "", ""
+    decoded = _decode_base64(username)
+    if decoded and ":" in decoded:
+        user, password = decoded.split(":", 1)
+        return user, password
+    # Username with no password — valid for servers that only check the user.
+    return username, ""
+
+
+def _parse_socks(url: str) -> Optional[Dict[str, Any]]:
+    """
+    Parse a socks:// (socks5://) link pointing at a user's own SOCKS5 proxy.
+
+    Plain SOCKS5 carries no transport encryption, so the profile is always
+    tcp/none — any query parameters are ignored rather than silently
+    promising TLS the protocol does not provide.
+    """
+    split = _split_url(url)
+    if not split:
+        return None
+    parts, host, port = split
+
+    username, password = _socks_credentials(parts)
+
+    profile: Dict[str, Any] = {
+        "protocol": "socks",
+        "address": host,
+        "port": port,
+        "network": "tcp",
+        "security": "none",
+    }
+    if username:
+        profile["username"] = username
+        if password:
+            profile["password"] = password
+    if parts.fragment:
+        profile["name"] = urllib.parse.unquote(parts.fragment)
+    return profile
+
+
 def _parse_vmess(url: str) -> Optional[Dict[str, Any]]:
     decoded = _decode_base64(url[len("vmess://"):])
     if not decoded:
@@ -519,7 +583,8 @@ def parse_share_link(url: str) -> Optional[Dict[str, Any]]:
     Parse a single share link into a profile dictionary.
 
     Supported schemes: vless://, vmess://, trojan://, ss://,
-    hysteria2:// (hy2://), tuic://. Each profile carries a "core" field
+    socks:// (socks5://), hysteria2:// (hy2://), tuic://.
+    Each profile carries a "core" field
     ("xray" or "sing-box") naming the core that runs it.
 
     Returns:
@@ -538,6 +603,8 @@ def parse_share_link(url: str) -> Optional[Dict[str, Any]]:
         profile = _parse_trojan(url)
     elif lowered.startswith("ss://"):
         profile = _parse_ss(url)
+    elif lowered.startswith("socks://") or lowered.startswith("socks5://"):
+        profile = _parse_socks(url)
     elif lowered.startswith("hysteria2://") or lowered.startswith("hy2://"):
         return _parse_hysteria2(url)
     elif lowered.startswith("tuic://"):
@@ -637,13 +704,13 @@ def validate_share_link(url: str) -> Tuple[bool, Optional[str]]:
             return (
                 False,
                 f"Unsupported protocol '{scheme}'. "
-                "Supported: vless, vmess, trojan, ss",
+                "Supported: vless, vmess, trojan, ss, socks",
             )
 
     return (
         False,
         "Invalid share link. Expected vless://, vmess://, trojan://, ss://, "
-        "a subscription URL (http(s)://) or base64 subscription content",
+        "socks://, a subscription URL (http(s)://) or base64 subscription content",
     )
 
 

@@ -1,7 +1,7 @@
 {
   "name": "xray-decky",
-  "version": "2.2.0",
-  "description": "Decky Loader plugin for VLESS proxy connections with Reality protocol support",
+  "version": "2.3.0-alpha.1",
+  "description": "VPN & proxy client for Steam Deck — Decky Loader plugin for VLESS (REALITY), VMess, Trojan, Shadowsocks, Hysteria2 and TUIC with TUN mode for Gaming Mode",
   "type": "module",
   "scripts": {
     "build": "rollup -c",
@@ -27,7 +27,12 @@
     "plugin",
     "vless",
     "proxy",
-    "xray"
+    "xray",
+    "vpn",
+    "vpn-client",
+    "steam-deck",
+    "steamos",
+    "sing-box"
   ],
   "author": "",
   "license": "MIT",

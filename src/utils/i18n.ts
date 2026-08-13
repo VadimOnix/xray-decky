@@ -98,7 +98,7 @@ const en: Dict = {
   'import.save': 'Save configuration',
   'import.shareLink': 'Share link',
   'import.shareDesc':
-    'Paste a vless://, vmess://, trojan:// or ss:// link, or a subscription URL (https://). We validate it before saving.',
+    'Paste a vless://, vmess://, trojan://, ss:// or socks:// link, or a subscription URL (https://). We validate it before saving.',
   'import.helpShare': 'Help: share link',
   'import.successLabel': 'Success:',
   'import.saveDesc': 'Save the link and switch to the configured layout.',
@@ -145,7 +145,7 @@ const en: Dict = {
   'help.setup.lan_address.body': 'Open the import URL from a device on the same local network.',
   'help.setup.vless_link.title': 'Share link',
   'help.setup.vless_link.body':
-    'Paste a vless://, vmess://, trojan:// or ss:// link, or a subscription URL (https://). Invalid links are rejected and do not overwrite a valid config.',
+    'Paste a vless://, vmess://, trojan://, ss:// or socks:// link, or a subscription URL (https://). Invalid links are rejected and do not overwrite a valid config. socks:// sends credentials unencrypted — use it only for your own proxy on a network you trust.',
   'help.configured.status.title': 'Status meanings',
   'help.configured.status.body':
     'Connected: proxy active. Connecting: starting up. Blocked: kill switch active. Disconnected: idle.',
@@ -248,7 +248,7 @@ const ru: Dict = {
   'import.save': 'Сохранить конфигурацию',
   'import.shareLink': 'Ссылка',
   'import.shareDesc':
-    'Вставьте ссылку vless://, vmess://, trojan:// или ss:// либо URL подписки (https://). Мы проверим её перед сохранением.',
+    'Вставьте ссылку vless://, vmess://, trojan://, ss:// или socks:// либо URL подписки (https://). Мы проверим её перед сохранением.',
   'import.helpShare': 'Справка: ссылка',
   'import.successLabel': 'Успех:',
   'import.saveDesc': 'Сохранить ссылку и перейти к настроенному виду.',
@@ -294,7 +294,7 @@ const ru: Dict = {
   'help.setup.lan_address.body': 'Откройте ссылку импорта с устройства в той же локальной сети.',
   'help.setup.vless_link.title': 'Ссылка',
   'help.setup.vless_link.body':
-    'Вставьте ссылку vless://, vmess://, trojan:// или ss:// либо URL подписки (https://). Неверные ссылки отклоняются и не затирают рабочую конфигурацию.',
+    'Вставьте ссылку vless://, vmess://, trojan://, ss:// или socks:// либо URL подписки (https://). Неверные ссылки отклоняются и не затирают рабочую конфигурацию. socks:// передаёт учётные данные без шифрования — используйте только для своего прокси в доверенной сети.',
   'help.configured.status.title': 'Значения статусов',
   'help.configured.status.body':
     'Подключено: прокси активен. Подключение: запуск. Заблокировано: активен kill switch. Отключено: простой.',

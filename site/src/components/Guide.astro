@@ -1,0 +1,57 @@
+---
+import type { Dict } from '../i18n/types';
+
+interface Props {
+  t: Dict;
+  /**
+   * Not read yet — forward-compat for Task 7's translated guide dicts, same
+   * pattern as Landing.astro's `locale` prop.
+   */
+  locale: string;
+}
+
+const { t } = Astro.props;
+const { guide } = t;
+---
+
+<header class="cl-hero">
+  <h1>{guide.h1}</h1>
+  <p>{guide.intro}</p>
+</header>
+
+<main>
+  <!-- Why TUN, not just a proxy -->
+  <section id="why-tun" aria-labelledby="why-tun-title">
+    <h2 id="why-tun-title">{guide.whyTun.title}</h2>
+    <p>{guide.whyTun.body}</p>
+  </section>
+
+  <!-- Prerequisites -->
+  <section id="prerequisites" aria-labelledby="prereq-title">
+    <h2 id="prereq-title">{guide.prereqTitle}</h2>
+    <div class="install-prereq">
+      <ul>
+        {guide.prereqHtml.map((item) => <li set:html={item} />)}
+      </ul>
+    </div>
+  </section>
+
+  <!-- The five steps -->
+  <section id="steps" aria-labelledby="steps-title">
+    <h2 id="steps-title">{guide.stepsTitle}</h2>
+    <ol class="usage-steps">
+      {guide.stepsHtml.map((step, i) => (
+        <li class="usage-step">
+          <span class="step-number">{i + 1}</span>
+          <p set:html={step} />
+        </li>
+      ))}
+    </ol>
+  </section>
+
+  <!-- Troubleshooting pointer back to the landing FAQ -->
+  <section id="troubleshooting" aria-labelledby="troubleshooting-title">
+    <h2 id="troubleshooting-title">{guide.troubleshootingTitle}</h2>
+    <p set:html={guide.troubleshootingHtml} />
+  </section>
+</main>

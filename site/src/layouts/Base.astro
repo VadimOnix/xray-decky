@@ -1,0 +1,166 @@
+---
+import type { Dict } from '../i18n/types';
+import { withBase, absoluteUrl } from '../lib/urls';
+import { localePrefixes, hreflangCodes, type Locale } from '../i18n/locales';
+import JsonLd from '../components/JsonLd.astro';
+import LangSwitcher from '../components/LangSwitcher.astro';
+
+interface Props {
+  t: Dict;
+  locale: Locale;
+  /**
+   * Route slug relative to each locale's root, e.g. '' for the home page,
+   * 'changelog.html' for /changelog.html, 'vpn-on-steam-deck.html' for the
+   * (future) guide. Used to build this page's canonical URL and — when
+   * `hasVariants` is true — the hreflang alternates for every locale.
+   */
+  path: string;
+  /**
+   * Whether a translated copy of this exact `path` exists under every
+   * locale prefix. Landing (and the future guide) are translated into all
+   * 5 locales; the changelog is EN-only for now, so it passes `false` to
+   * get a canonical link with no hreflang alternates — alternates would
+   * otherwise point at locale variants that don't exist (404).
+   */
+  hasVariants?: boolean;
+}
+
+const { t, locale, path, hasVariants = true } = Astro.props;
+
+const isHome = path === '';
+// Every non-EN locale lives under its own /<locale>/ prefix (routing.prefixDefaultLocale
+// is false in astro.config.mjs, so EN alone stays unprefixed at the site root).
+const localePrefix = localePrefixes[locale];
+/** This locale's home page: '/xray-decky/' for en, '/xray-decky/ru/' for ru, etc. */
+const homeHref = withBase(localePrefix);
+/** Section anchors must point at the home page when we're not already on it. */
+const navHome = (hash: string) => (isHome ? hash : `${homeHref}${hash}`);
+
+/** This page's own URL — used for both <link rel="canonical"> and og:url. */
+const canonical = absoluteUrl(`${localePrefix}${path}`);
+/**
+ * The EN landing page's URL, used as the JSON-LD SoftwareApplication's
+ * identity regardless of which locale's landing page renders it (see
+ * JsonLd.astro).
+ */
+const enLandingCanonical = absoluteUrl(localePrefixes.en);
+const ogLocale = hreflangCodes[locale];
+const ogImage = absoluteUrl('assets/hero-banner-800w.png');
+/** Farsi is the only RTL locale in LOCALES; everything else reads left-to-right. */
+const dir = locale === 'fa' ? 'rtl' : 'ltr';
+---
+
+<html lang={hreflangCodes[locale]} dir={dir}>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={t.seo.description} />
+    <title>{t.seo.title}</title>
+    <link rel="canonical" href={canonical} />
+
+    {/* Search-console ownership proofs; must stay on the property root page. */}
+    <meta name="google-site-verification" content="7VdDcVaYT4Rf-1aCJpn3NNqjWtsx5ViAqhnNq_ZmRLo" />
+    <meta name="yandex-verification" content="0a1eee8884cc32e2" />
+
+    {
+      // Written out per-locale (rather than looped with .map()) so each
+      // <link> lands on its own line in the built HTML — a .map() result
+      // renders its items back-to-back with no newline between them, which
+      // would bury all 5 alternates + x-default on a single line.
+      hasVariants && (
+        <>
+          <link rel="alternate" hreflang={hreflangCodes.en} href={absoluteUrl(`${localePrefixes.en}${path}`)} />
+          <link rel="alternate" hreflang={hreflangCodes.ru} href={absoluteUrl(`${localePrefixes.ru}${path}`)} />
+          <link rel="alternate" hreflang={hreflangCodes.zh} href={absoluteUrl(`${localePrefixes.zh}${path}`)} />
+          <link rel="alternate" hreflang={hreflangCodes.fa} href={absoluteUrl(`${localePrefixes.fa}${path}`)} />
+          <link rel="alternate" hreflang={hreflangCodes.es} href={absoluteUrl(`${localePrefixes.es}${path}`)} />
+          <link rel="alternate" hreflang="x-default" href={absoluteUrl(`${localePrefixes.en}${path}`)} />
+        </>
+      )
+    }
+
+    <meta property="og:title" content={t.seo.title} />
+    <meta property="og:description" content={t.seo.description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:locale" content={ogLocale} />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <link rel="stylesheet" href={withBase('styles/main.css')} />
+
+    {isHome && <JsonLd t={t} canonical={enLandingCanonical} />}
+  </head>
+  <body>
+    <!-- Navigation -->
+    <nav class="site-nav" id="site-nav" aria-label={t.nav.ariaLabel}>
+      <div class="nav-inner">
+        <a href={homeHref} class="nav-brand"
+          ><span class="nav-logo" aria-hidden="true"></span>Xray&nbsp;<b>Decky</b></a
+        >
+        <ul class="nav-links">
+          <li><a href={navHome('#features')}>{t.nav.features}</a></li>
+          <li><a href={navHome('#panel')}>{t.nav.panel}</a></li>
+          <li><a href={navHome('#install')}>{t.nav.install}</a></li>
+          <li>
+            <a
+              href={withBase(`${localePrefix}vpn-on-steam-deck.html`)}
+              aria-current={path === 'vpn-on-steam-deck.html' ? 'page' : undefined}
+              >{t.nav.guide}</a
+            >
+          </li>
+          <li>
+            <a href={withBase('changelog.html')} aria-current={path === 'changelog.html' ? 'page' : undefined}
+              >{t.nav.changelog}</a
+            >
+          </li>
+          <li><a href={navHome('#faq')}>{t.nav.help}</a></li>
+          <li><a href={navHome('#donate')}>{t.nav.donate}</a></li>
+          <li>
+            <a href="https://github.com/VadimOnix/xray-decky" class="nav-github" target="_blank" rel="noopener"
+              >{t.nav.github}</a
+            >
+          </li>
+          <li class="nav-lang-item">
+            <LangSwitcher locale={locale} path={path} hasVariants={hasVariants} />
+          </li>
+        </ul>
+      </div>
+    </nav>
+
+    <slot />
+
+    <!-- Footer -->
+    <footer>
+      <div class="footer-inner">
+        <div class="footer-links">
+          {(() => {
+            const hrefs = [
+              { href: 'https://github.com/VadimOnix/xray-decky', external: true },
+              { href: withBase('changelog.html'), external: false },
+              { href: 'https://github.com/VadimOnix/xray-decky/releases', external: true },
+              { href: 'https://github.com/VadimOnix/xray-decky/issues', external: true },
+              {
+                href: 'https://github.com/VadimOnix/xray-decky/blob/master/docs/ROADMAP.md',
+                external: true,
+              },
+              { href: 'https://wiki.deckbrew.xyz/', external: true },
+              { href: 'https://xtls.github.io/', external: true },
+            ];
+            return t.footer.links.map((label, i) => {
+              const link = hrefs[i];
+              return link.external ? (
+                <a href={link.href} target="_blank" rel="noopener">
+                  {label}
+                </a>
+              ) : (
+                <a href={link.href}>{label}</a>
+              );
+            });
+          })()}
+        </div>
+        <p class="footer-copy">{t.footer.copy}</p>
+      </div>
+    </footer>
+  </body>
+</html>

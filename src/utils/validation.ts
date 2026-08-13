@@ -4,7 +4,7 @@
 
 /**
  * Basic share-link format validation (regex check before backend call).
- * Accepts vless://, vmess://, trojan://, ss:// and base64 subscriptions.
+ * Accepts vless://, vmess://, trojan://, ss://, socks:// and base64 subscriptions.
  *
  * @param url - Share link to validate
  * @returns true if the format looks valid, false otherwise
@@ -22,6 +22,8 @@ export function validateVLESSURL(url: string): boolean {
     /^trojan:\/\/.+@.+:\d+/i,
     /^ss:\/\/.+/i,
     /^(hysteria2|hy2|tuic):\/\/.+@.+:\d+/i,
+    // socks5 needs no credentials — a personal proxy is often open on the LAN
+    /^socks5?:\/\/.+:\d+/i,
     // vmess is a base64-encoded JSON payload
     /^vmess:\/\/[A-Za-z0-9+/=_-]+$/i,
     // subscription URL, fetched by the backend
@@ -55,7 +57,7 @@ export function getValidationErrorMessage(error?: string): string {
   // Map common error messages to user-friendly versions
   const errorMap: Record<string, string> = {
     'Invalid VLESS URL format':
-      'Invalid share link. Expected: vless://, vmess://, trojan://, ss://, a subscription URL (https://) or base64 subscription',
+      'Invalid share link. Expected: vless://, vmess://, trojan://, ss://, socks://, a subscription URL (https://) or base64 subscription',
     'Invalid UUID format': 'Invalid UUID format in VLESS URL',
     'Port must be between 1 and 65535': 'Port number must be between 1 and 65535',
     'Failed to fetch subscription':

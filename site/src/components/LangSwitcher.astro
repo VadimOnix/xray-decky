@@ -1,0 +1,51 @@
+---
+import { LOCALES, localePrefixes, type Locale } from '../i18n/locales';
+import { withBase } from '../lib/urls';
+
+interface Props {
+  /** The locale this page is currently rendering as. */
+  locale: Locale;
+  /**
+   * Route slug relative to each locale's root — same value passed to
+   * Base's `path` prop ('' for home, 'vpn-on-steam-deck.html' for the
+   * guide, 'changelog.html' for the changelog).
+   */
+  path: string;
+  /**
+   * Whether a translated copy of this exact `path` exists under every
+   * locale prefix (mirrors Base's `hasVariants`). The changelog is EN-only,
+   * so it passes `false` here too — the switcher then links every locale to
+   * its own landing page instead of a nonexistent translated changelog.
+   */
+  hasVariants?: boolean;
+}
+
+const { locale, path, hasVariants = true } = Astro.props;
+
+/** Falls back to each locale's home page when this exact path has no translation. */
+const targetPath = hasVariants ? path : '';
+
+const LABELS: Record<Locale, string> = {
+  en: 'EN',
+  ru: 'Русский',
+  zh: '中文',
+  fa: 'فارسی',
+  es: 'Español',
+};
+---
+
+<ul class="lang-switcher" aria-label="Language">
+  {
+    LOCALES.map((loc) => (
+      <li>
+        <a
+          href={withBase(`${localePrefixes[loc]}${targetPath}`)}
+          aria-current={loc === locale ? 'page' : undefined}
+          lang={loc}
+        >
+          {LABELS[loc]}
+        </a>
+      </li>
+    ))
+  }
+</ul>
