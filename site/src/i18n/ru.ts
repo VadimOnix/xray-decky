@@ -14,7 +14,7 @@ export const ru = {
   seo: {
     title: 'Xray Decky — VPN и прокси-клиент для Steam Deck',
     description:
-      'Бесплатный VPN и прокси-клиент с открытым исходным кодом для Steam Deck (плагин Decky Loader). VLESS, VMess, Trojan, Shadowsocks, Hysteria2, TUIC — режим TUN для игрового режима (Gaming Mode), подписки, kill switch, веб-панель администратора.',
+      'Бесплатный VPN и прокси-клиент с открытым исходным кодом для Steam Deck (плагин Decky Loader). VLESS, VMess, Trojan, Shadowsocks, SOCKS5, Hysteria2, TUIC — режим TUN для игрового режима (Gaming Mode), подписки, kill switch, веб-панель администратора.',
   },
 
   nav: {
@@ -34,7 +34,7 @@ export const ru = {
     badgeContext: 'Steam Deck · Decky Loader · Открытый код',
     titleHtml: 'Настоящий прокси-клиент.<br>Прямо на вашем <span class="grad">Steam&nbsp;Deck</span>.',
     purpose:
-      'VLESS · VMess · Trojan · Shadowsocks · Hysteria2 · TUIC — с REALITY и современными транспортами. Подписки с управляемым списком серверов, режим TUN, kill switch, статистика трафика в реальном времени — и полноценная веб-панель администратора, которую вы открываете с телефона.',
+      'VLESS · VMess · Trojan · Shadowsocks · SOCKS5 · Hysteria2 · TUIC — с REALITY и современными транспортами. Подписки с управляемым списком серверов, режим TUN, kill switch, статистика трафика в реальном времени — и полноценная веб-панель администратора, которую вы открываете с телефона.',
     ctaInstall: 'Установить плагин',
     ctaGithub: 'Смотреть на GitHub',
     statsAriaLabel: 'Факты о проекте',
@@ -58,7 +58,7 @@ export const ru = {
 
   protocols: {
     ariaLabel: 'Поддерживаемые протоколы',
-    chips: ['VLESS + REALITY', 'VMess', 'Trojan', 'Shadowsocks', 'Hysteria2', 'TUIC'],
+    chips: ['VLESS + REALITY', 'VMess', 'Trojan', 'Shadowsocks', 'SOCKS5', 'Hysteria2', 'TUIC'],
     note: 'Hysteria2 и TUIC работают на ядре sing-box, которое загружается по требованию',
   },
 
