@@ -6,6 +6,6 @@
   "publish": {
     "tags": ["network", "proxy", "vpn", "vless", "hysteria2"],
     "description": "VPN & proxy client for Steam Deck: VLESS (REALITY), VMess, Trojan, Shadowsocks, Hysteria2 and TUIC. TUN mode gives system-wide VPN coverage in Gaming Mode — subscriptions with a managed server list, kill switch, live traffic stats and a phone-friendly web admin panel.",
-    "image": "https://vadimonix.github.io/xray-decky/assets/hero-banner-800w.png"
+    "image": "https://vadimonix.github.io/xray-decky/assets/icon-gradient-512.png"
   }
 }

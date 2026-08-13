@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `plugin.json` `publish.image` now points at a dedicated gradient-circle icon
+  (`site/public/assets/icon-gradient-512.png`, rendered from the same
+  `conic-gradient` used for the site nav/QAM logo) instead of the hero-banner
+  screenshot, for the Decky Plugin Store submission.
 - `pnpm-lock.yaml` regenerated in the pnpm 9 format (`lockfileVersion: 9.0`).
   It had been left at the pnpm 8 format while CI and the documented toolchain
   both moved to pnpm 9, so every `pnpm install` rewrote 5000+ lines and no
