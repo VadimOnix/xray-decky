@@ -7,6 +7,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.0] - 2026-08-13
+
+### Fixed
+
+- **Every outbound HTTPS request from the backend failed instantly** — which
+  showed up as "Failed to fetch subscription URL" for any `https://`
+  subscription, in the QAM setup screen and the web admin panel alike, on a
+  perfectly reachable server. The Decky sandbox hands plugin backends an
+  environment aimed at Decky Loader's own PyInstaller bundle, and both halves
+  of it break TLS clients: `LD_LIBRARY_PATH` puts the bundle's older
+  `libssl.so.3` ahead of the system one, so system `curl` dies with
+  `version 'OPENSSL_3.2.0' not found` before it opens a socket; and the
+  bundle's CA variables (`SSL_CERT_FILE`/`SSL_CERT_DIR`) make Python's default
+  SSL context verify against material that resolves to nothing. Server-side
+  TLS needs no CA store, so the plugin's own HTTPS admin panel kept working
+  and hid the problem — the only visible signature was that plain HTTP
+  succeeded while every HTTPS request failed in well under a second. The new
+  `net_env` module pins the system trust store for in-process aiohttp and
+  hands system binaries a scrubbed environment plus an explicit `--cacert`;
+  the two core downloaders' local `_clean_env()` helpers, which stripped only
+  the `LD_*` pair, now delegate to it, and the update checker pins the trust
+  store too. Subscription import, core downloads and update checks were all
+  affected by this single cause.
+- **Importing or refreshing a subscription failed while TUN mode was
+  connected.** TUN mode installs `default dev xray0` at metric 100, which
+  outranks the physical default route (DHCP gives it 600), so every socket
+  the backend itself opened was pulled into the tunnel — xray's own outbound
+  escapes only because it sets `sockopt.interface`. The fetch had three
+  "fallback" attempts, but two of them (the plain aiohttp GET and the curl
+  GET) took that same hijacked route and the third went through the tunnel
+  on purpose, so all three failed together and instantly, and the plugin
+  reported the subscription URL as unreachable when it was merely
+  unreachable *through itself*. Subscription fetches now detect the hijacked
+  default route and add an attempt bound to the physical interface
+  (`curl --interface`, i.e. SO_BINDTODEVICE), tried right after the plain
+  GET and before the tunnel paths — so a tunnel that cannot carry the
+  request no longer blocks an import, while a subscription host that only
+  the tunnel can reach still resolves via the proxy attempt. The extra
+  attempt is skipped entirely when no TUN route is present.
+- **Subscription bodies arriving in more than one chunk were truncated.**
+  The response was read with a single `StreamReader.read(n)` call, which
+  returns whatever is buffered at that moment rather than `n` bytes, so a
+  large profile list could be cut mid-link. The body is now read to EOF and
+  still stops one byte past the 2 MB cap.
+- Subscription fetch diagnostics now record the HTTP status the server
+  answered with, instead of only "returned no usable body".
+
 ## [2.3.0-alpha.1] - 2026-08-13
 
 ### Added

@@ -15,6 +15,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import aiohttp
 
 from backend.src import singbox_downloader, xray_downloader
+from backend.src.net_env import client_ssl_context
 
 _RELEASE_API = "https://api.github.com/repos/{repo}/releases/latest"
 _REQUEST_TIMEOUT = 10
@@ -144,7 +145,10 @@ async def check_core_updates(
 
     owns_session = session is None
     if owns_session:
-        session = aiohttp.ClientSession()
+        # Pinned trust store — the sandbox's CA variables verify nothing.
+        session = aiohttp.ClientSession(
+            connector=aiohttp.TCPConnector(ssl=client_ssl_context())
+        )
     try:
         results = []
         for name, repo, current in cores:
@@ -166,7 +170,10 @@ async def check_updates(
     """
     owns_session = session is None
     if owns_session:
-        session = aiohttp.ClientSession()
+        # Pinned trust store — the sandbox's CA variables verify nothing.
+        session = aiohttp.ClientSession(
+            connector=aiohttp.TCPConnector(ssl=client_ssl_context())
+        )
     try:
         results: List[Dict[str, Any]] = []
         current = plugin_version()

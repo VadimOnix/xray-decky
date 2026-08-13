@@ -124,21 +124,42 @@ def _failing_aiohttp(calls):
     return fake
 
 
+def _no_bypass():
+    """No TUN default route in place, so no tunnel-bypass attempt is offered."""
+
+    async def fake():
+        return None
+
+    return patch.object(importer, "_tunnel_bypass_interface", fake)
+
+
+def _bypass_via(interface):
+    async def fake():
+        return interface
+
+    return patch.object(importer, "_tunnel_bypass_interface", fake)
+
+
 def test_fetch_falls_back_to_proxy_then_curl():
     aiohttp_calls, curl_calls = [], []
 
-    async def fake_curl(_url, _timeout):
-        curl_calls.append(True)
+    async def fake_curl(_url, _timeout, interface=None):
+        curl_calls.append(interface)
         return importer.SubscriptionResponse(LINK_A, None)
 
-    with patch.object(importer, "_fetch_via_aiohttp", _failing_aiohttp(aiohttp_calls)):
-        with patch.object(importer, "_fetch_via_curl", fake_curl):
-            response = _run(importer.fetch_subscription("https://sub.example.com/s"))
+    with _no_bypass():
+        with patch.object(
+            importer, "_fetch_via_aiohttp", _failing_aiohttp(aiohttp_calls)
+        ):
+            with patch.object(importer, "_fetch_via_curl", fake_curl):
+                response = _run(
+                    importer.fetch_subscription("https://sub.example.com/s")
+                )
 
     assert response.body == LINK_A
     # Direct first, then through the local proxy, then curl.
     assert aiohttp_calls == [None, importer._LOCAL_HTTP_PROXY]
-    assert curl_calls == [True]
+    assert curl_calls == [None]
 
 
 def test_fetch_proxy_success_skips_curl():
@@ -147,25 +168,231 @@ def test_fetch_proxy_success_skips_curl():
             raise OSError("stalled")
         return importer.SubscriptionResponse(LINK_A, None)
 
-    async def fake_curl(_url, _timeout):
+    async def fake_curl(_url, _timeout, interface=None):
         raise AssertionError("curl must not run when the proxy path succeeds")
 
-    with patch.object(importer, "_fetch_via_aiohttp", fake_aiohttp):
-        with patch.object(importer, "_fetch_via_curl", fake_curl):
-            response = _run(importer.fetch_subscription("https://sub.example.com/s"))
+    with _no_bypass():
+        with patch.object(importer, "_fetch_via_aiohttp", fake_aiohttp):
+            with patch.object(importer, "_fetch_via_curl", fake_curl):
+                response = _run(
+                    importer.fetch_subscription("https://sub.example.com/s")
+                )
 
     assert response.body == LINK_A
 
 
 def test_fetch_all_attempts_failing_returns_none():
-    async def fake_curl(_url, _timeout):
+    async def fake_curl(_url, _timeout, interface=None):
         return importer.SubscriptionResponse(None, None)
 
-    with patch.object(importer, "_fetch_via_aiohttp", _failing_aiohttp([])):
-        with patch.object(importer, "_fetch_via_curl", fake_curl):
-            response = _run(importer.fetch_subscription("https://sub.example.com/s"))
+    with _no_bypass():
+        with patch.object(importer, "_fetch_via_aiohttp", _failing_aiohttp([])):
+            with patch.object(importer, "_fetch_via_curl", fake_curl):
+                response = _run(
+                    importer.fetch_subscription("https://sub.example.com/s")
+                )
 
     assert response.body is None
+
+
+# --- tunnel bypass (TUN mode hijacks the default route) ---
+
+
+def test_fetch_bypasses_tunnel_via_physical_interface():
+    """
+    With TUN mode up, ``default dev xray0 metric 100`` outranks the physical
+    default, so the plain aiohttp GET and the plain curl GET both enter the
+    tunnel and fail together. The interface-bound attempt is the only one that
+    leaves the Deck over wlan0 — it must run, and run before the tunnel-only
+    local-proxy attempt.
+    """
+    order, curl_calls = [], []
+
+    async def fake_aiohttp(_url, _timeout, proxy=None):
+        order.append(f"aiohttp:{proxy}")
+        raise OSError("Network is unreachable")
+
+    async def fake_curl(_url, _timeout, interface=None):
+        order.append(f"curl:{interface}")
+        curl_calls.append(interface)
+        if interface == "wlan0":
+            return importer.SubscriptionResponse(LINK_A, None)
+        return importer.SubscriptionResponse(None, None)
+
+    with _bypass_via("wlan0"):
+        with patch.object(importer, "_fetch_via_aiohttp", fake_aiohttp):
+            with patch.object(importer, "_fetch_via_curl", fake_curl):
+                response = _run(
+                    importer.fetch_subscription("https://sub.example.com/s")
+                )
+
+    assert response.body == LINK_A
+    assert curl_calls == ["wlan0"]
+    # Bypass is attempted right after the plain GET, before the proxy path.
+    assert order == ["aiohttp:None", "curl:wlan0"]
+
+
+def test_fetch_still_tries_tunnel_when_bypass_fails():
+    """
+    Mirror case: the subscription host is blocked by the ISP but reachable
+    through the tunnel. The bypass must not short-circuit the proxy attempt.
+    """
+
+    async def fake_aiohttp(_url, _timeout, proxy=None):
+        if proxy is None:
+            raise OSError("blocked")
+        return importer.SubscriptionResponse(LINK_B, None)
+
+    async def fake_curl(_url, _timeout, interface=None):
+        return importer.SubscriptionResponse(None, None)
+
+    with _bypass_via("wlan0"):
+        with patch.object(importer, "_fetch_via_aiohttp", fake_aiohttp):
+            with patch.object(importer, "_fetch_via_curl", fake_curl):
+                response = _run(
+                    importer.fetch_subscription("https://sub.example.com/s")
+                )
+
+    assert response.body == LINK_B
+
+
+def test_fetch_skips_bypass_attempt_when_no_tun_route():
+    """Without a TUN default route the bypass would just duplicate 'direct'."""
+    curl_calls = []
+
+    async def fake_curl(_url, _timeout, interface=None):
+        curl_calls.append(interface)
+        return importer.SubscriptionResponse(None, None)
+
+    with _no_bypass():
+        with patch.object(importer, "_fetch_via_aiohttp", _failing_aiohttp([])):
+            with patch.object(importer, "_fetch_via_curl", fake_curl):
+                _run(importer.fetch_subscription("https://sub.example.com/s"))
+
+    assert curl_calls == [None]
+
+
+def test_bypass_detection_failure_does_not_break_fetch():
+    async def exploding_bypass():
+        raise OSError("ip: command not found")
+
+    async def fake_aiohttp(_url, _timeout, proxy=None):
+        return importer.SubscriptionResponse(LINK_A, None)
+
+    with patch.object(importer, "_tunnel_bypass_interface", exploding_bypass):
+        with patch.object(importer, "_fetch_via_aiohttp", fake_aiohttp):
+            response = _run(importer.fetch_subscription("https://sub.example.com/s"))
+
+    assert response.body == LINK_A
+
+
+def test_curl_binds_to_interface_when_given():
+    """The bypass relies on curl's --interface (SO_BINDTODEVICE on Linux)."""
+    argv, _ = _run(_captured_curl_call(interface="wlan0"))
+    assert "--interface" in argv
+    assert argv[argv.index("--interface") + 1] == "wlan0"
+
+
+def test_curl_omits_interface_flag_by_default():
+    argv, _ = _run(_captured_curl_call(interface=None))
+    assert "--interface" not in argv
+
+
+def test_curl_pins_the_system_ca_bundle():
+    """
+    Without --cacert, curl uses whatever the sandbox's CA variables point at.
+    """
+    with patch.object(importer, "system_ca_bundle", lambda: "/etc/ssl/ca.pem"):
+        argv, _ = _run(_captured_curl_call(interface=None))
+    assert argv[argv.index("--cacert") + 1] == "/etc/ssl/ca.pem"
+
+
+def test_curl_omits_cacert_when_no_bundle_is_found():
+    with patch.object(importer, "system_ca_bundle", lambda: None):
+        argv, _ = _run(_captured_curl_call(interface=None))
+    assert "--cacert" not in argv
+
+
+def test_curl_runs_with_a_scrubbed_environment():
+    """
+    Under the sandbox's LD_LIBRARY_PATH curl loads the bundle's older
+    libssl.so.3 and dies before opening a socket.
+    """
+    dirty = {"PATH": "/usr/bin", "LD_LIBRARY_PATH": "/tmp/_MEIabc"}
+    with patch.dict("os.environ", dirty, clear=True):
+        _, kwargs = _run(_captured_curl_call(interface=None))
+    env = kwargs.get("env")
+    assert env is not None, "curl must not inherit the sandbox environment"
+    assert "LD_LIBRARY_PATH" not in env
+    assert env["PATH"] == "/usr/bin"
+
+
+async def _captured_curl_call(interface):
+    """Run _fetch_via_curl against a stubbed subprocess; return (argv, kwargs)."""
+    seen = []
+    seen_kwargs = {}
+
+    class _Proc:
+        returncode = 0
+
+        async def communicate(self):
+            return b"HTTP/1.1 200 OK\r\n\r\n" + LINK_A.encode(), b""
+
+    async def fake_exec(*args, **kwargs):
+        seen.extend(args)
+        seen_kwargs.update(kwargs)
+        return _Proc()
+
+    with patch("shutil.which", lambda _name: "/usr/bin/curl"):
+        with patch("asyncio.create_subprocess_exec", fake_exec):
+            await importer._fetch_via_curl(
+                "https://sub.example.com/s", 8.0, interface=interface
+            )
+    return list(seen), dict(seen_kwargs)
+
+
+# --- capped body reads ---
+
+
+class _ChunkedStream:
+    """
+    Stand-in for aiohttp's StreamReader: read(n) hands back at most one
+    buffered chunk, so it returns fewer than n bytes even when more are coming.
+    """
+
+    def __init__(self, chunks):
+        self._chunks = list(chunks)
+        self.requested = []
+
+    async def read(self, n):
+        self.requested.append(n)
+        if not self._chunks:
+            return b""
+        chunk = self._chunks.pop(0)
+        if len(chunk) > n:
+            self._chunks.insert(0, chunk[n:])
+            chunk = chunk[:n]
+        return chunk
+
+
+def test_read_capped_joins_short_reads():
+    stream = _ChunkedStream([b"vless://a", b"\ntrojan://b", b"\n"])
+    body = _run(importer._read_capped(stream, 1024))
+    assert body == b"vless://a\ntrojan://b\n"
+
+
+def test_read_capped_accepts_body_exactly_at_the_limit():
+    stream = _ChunkedStream([b"x" * 5, b"x" * 5])
+    assert _run(importer._read_capped(stream, 10)) == b"x" * 10
+
+
+def test_read_capped_stops_one_byte_past_the_limit():
+    stream = _ChunkedStream([b"x" * 8, b"y" * 8, b"z" * 8])
+    body = _run(importer._read_capped(stream, 10))
+    # One byte past the cap: enough for the caller to reject an oversized body,
+    # without draining a hostile server's stream.
+    assert len(body) == 11
+    assert stream._chunks  # stopped early rather than reading to EOF
 
 
 def test_fetch_rejects_non_http_schemes():

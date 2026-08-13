@@ -24,8 +24,10 @@ from .config_parser import (
     parse_subscription_content,
     validate_share_link,
 )
+from .net_env import clean_subprocess_env, client_ssl_context, system_ca_bundle
 from .profile_store import ProfileStore
 from .singbox_import import looks_like_singbox_config, parse_singbox_config
+from .tun_manager import TUNManager
 
 FETCH_TIMEOUT = 15.0
 _USER_AGENT = "xray-decky (Steam Deck; +https://github.com/VadimOnix/xray-decky)"
@@ -77,18 +79,56 @@ def parse_subscription_userinfo(header: Optional[str]) -> Optional[Dict[str, int
     return info or None
 
 
+async def _tunnel_bypass_interface() -> Optional[str]:
+    """
+    The physical interface that escapes the tunnel, or None when TUN mode is
+    not hijacking the default route. See TUNManager.get_tunnel_bypass_interface.
+    """
+    return await TUNManager().get_tunnel_bypass_interface()
+
+
+async def _read_capped(stream: Any, max_bytes: int) -> bytes:
+    """
+    Read up to ``max_bytes + 1`` bytes from an aiohttp stream.
+
+    ``StreamReader.read(n)`` returns whatever is buffered at the time — not n
+    bytes — so a single call truncates any body that arrives in more than one
+    chunk. Read until EOF, stopping one byte past the cap so the caller can
+    still tell an oversized body from an exact fit.
+    """
+    chunks = []
+    total = 0
+    while total <= max_bytes:
+        chunk = await stream.read(max_bytes + 1 - total)
+        if not chunk:
+            break
+        chunks.append(chunk)
+        total += len(chunk)
+    return b"".join(chunks)
+
+
 async def _fetch_via_aiohttp(
     url: str, timeout: float, proxy: Optional[str] = None
 ) -> SubscriptionResponse:
     """One aiohttp GET (optionally through a proxy); raises on transport errors."""
     client_timeout = aiohttp.ClientTimeout(total=timeout)
-    async with aiohttp.ClientSession(timeout=client_timeout) as session:
+    # Pin the trust store: the Decky sandbox can point SSL_CERT_FILE/SSL_CERT_DIR
+    # at CA material that verifies nothing, which fails every HTTPS request
+    # while leaving plain HTTP (and our own TLS *server*) working. See net_env.
+    connector = aiohttp.TCPConnector(ssl=client_ssl_context())
+    async with aiohttp.ClientSession(
+        timeout=client_timeout, connector=connector
+    ) as session:
         async with session.get(
             url, headers={"User-Agent": _USER_AGENT}, proxy=proxy
         ) as response:
             if response.status != 200:
+                print(
+                    "Xray Decky Plugin: subscription server answered "
+                    f"HTTP {response.status}"
+                )
                 return SubscriptionResponse(None, None)
-            body = await response.content.read(_MAX_BODY_BYTES + 1)
+            body = await _read_capped(response.content, _MAX_BODY_BYTES)
             if len(body) > _MAX_BODY_BYTES:
                 return SubscriptionResponse(None, None)
             charset = response.charset or "utf-8"
@@ -131,7 +171,9 @@ def _split_curl_output(
     return status, headers, raw
 
 
-async def _fetch_via_curl(url: str, timeout: float) -> SubscriptionResponse:
+async def _fetch_via_curl(
+    url: str, timeout: float, interface: Optional[str] = None
+) -> SubscriptionResponse:
     """
     Fetch with the system curl binary (no shell — argv vector via
     create_subprocess_exec, URL isolated behind ``--``).
@@ -139,12 +181,16 @@ async def _fetch_via_curl(url: str, timeout: float) -> SubscriptionResponse:
     Python's TLS ClientHello gets stalled by DPI middleboxes on some
     networks where curl's passes, so this is the last-resort path for the
     exact environments this plugin exists for. SteamOS always ships curl.
+
+    ``interface`` binds the socket to a device (SO_BINDTODEVICE on Linux),
+    which overrides the routing table's choice and is how a fetch escapes the
+    TUN default route — curl is used for this rather than aiohttp because
+    aiohttp's connector exposes no per-socket option hook.
     """
     curl = shutil.which("curl")
     if not curl:
         return SubscriptionResponse(None, None)
-    proc = await asyncio.create_subprocess_exec(
-        curl,
+    args = [
         "-sS",
         "-L",
         "--max-time",
@@ -155,10 +201,23 @@ async def _fetch_via_curl(url: str, timeout: float) -> SubscriptionResponse:
         _USER_AGENT,
         "-D",
         "-",
+    ]
+    if interface:
+        args += ["--interface", interface]
+    # Same trust-store pinning as the aiohttp path, plus a scrubbed environment:
+    # under the sandbox's LD_LIBRARY_PATH curl loads the bundle's older
+    # libssl.so.3 and dies before it opens a socket. See net_env.
+    bundle = system_ca_bundle()
+    if bundle:
+        args += ["--cacert", bundle]
+    proc = await asyncio.create_subprocess_exec(
+        curl,
+        *args,
         "--",
         url,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.DEVNULL,
+        env=clean_subprocess_env(),
     )
     try:
         raw, _ = await asyncio.wait_for(proc.communicate(), timeout + 5)
@@ -168,7 +227,10 @@ async def _fetch_via_curl(url: str, timeout: float) -> SubscriptionResponse:
     if proc.returncode != 0:
         return SubscriptionResponse(None, None)
     status, headers, body = _split_curl_output(raw)
-    if status != 200 or not body or len(body) > _MAX_BODY_BYTES:
+    if status != 200:
+        print(f"Xray Decky Plugin: subscription server answered HTTP {status}")
+        return SubscriptionResponse(None, None)
+    if not body or len(body) > _MAX_BODY_BYTES:
         return SubscriptionResponse(None, None)
     text = body.decode("utf-8", errors="replace")
     userinfo = parse_subscription_userinfo(headers.get(_USERINFO_HEADER.lower()))
@@ -187,18 +249,48 @@ async def fetch_subscription(
     with subscription support. The response is never echoed back; it is
     only parsed for share links, size-capped, and restricted to http(s).
 
-    Three paths are tried in order, because censored networks break each in
-    a different way: a plain aiohttp GET (works everywhere else), the same
-    GET through xray's local HTTP proxy (encrypted past DPI when the tunnel
-    is up; fails instantly when it isn't), then the system curl binary
-    (its TLS fingerprint passes DPI that stalls Python's). Failures are
-    logged by attempt name only — never the URL, which is a credential.
+    Several paths are tried in order, because networks break each in a
+    different way:
+
+    1. ``direct`` — a plain aiohttp GET; works everywhere else.
+    2. ``interface bypass`` — curl bound to the physical NIC, attempted only
+       while TUN mode holds the default route. Without it every other attempt
+       (including ``curl`` below) is pulled into the tunnel, so a tunnel that
+       cannot carry the request makes them all fail together and instantly —
+       and the subscription looks broken when it is merely unreachable
+       *through itself*.
+    3. ``local proxy`` — the same GET through xray's local HTTP proxy;
+       encrypted past DPI when the tunnel is up, fails instantly when it isn't.
+       Deliberately kept after the bypass: it is the path that works when the
+       ISP blocks the subscription host but the tunnel is healthy.
+    4. ``curl`` — the system binary, whose TLS fingerprint passes DPI that
+       stalls Python's.
+
+    Failures are logged by attempt name only — never the URL, a credential.
     """
     if not url.lower().startswith(("http://", "https://")):
         return SubscriptionResponse(None, None)
     attempt_timeout = min(timeout, _ATTEMPT_TIMEOUT)
-    attempts = (
-        ("direct", lambda: _fetch_via_aiohttp(url, attempt_timeout)),
+    try:
+        bypass_interface = await _tunnel_bypass_interface()
+    except Exception as e:
+        # Route inspection is an optimization; never let it fail the import.
+        print(
+            "Xray Decky Plugin: tunnel bypass detection failed: "
+            f"{type(e).__name__}"
+        )
+        bypass_interface = None
+    attempts = [("direct", lambda: _fetch_via_aiohttp(url, attempt_timeout))]
+    if bypass_interface:
+        attempts.append(
+            (
+                f"interface bypass ({bypass_interface})",
+                lambda: _fetch_via_curl(
+                    url, attempt_timeout, interface=bypass_interface
+                ),
+            )
+        )
+    attempts += [
         (
             "local proxy",
             lambda: _fetch_via_aiohttp(
@@ -206,7 +298,7 @@ async def fetch_subscription(
             ),
         ),
         ("curl", lambda: _fetch_via_curl(url, attempt_timeout)),
-    )
+    ]
     for label, attempt in attempts:
         try:
             response = await attempt()
@@ -245,9 +337,8 @@ async def import_link(store: ProfileStore, link: str) -> Dict[str, Any]:
             return {
                 "success": False,
                 "error": "Failed to fetch subscription URL (tried directly, "
-                "through the proxy tunnel and via curl). Check the address; "
-                "if the VPN is connected, the subscription server may be "
-                "unreachable through itself — disconnect and retry.",
+                "outside the tunnel, through the proxy tunnel and via curl). "
+                "Check the address and that the Deck has network access.",
             }
         nodes = parse_subscription_content(response.body)
         if not nodes:
