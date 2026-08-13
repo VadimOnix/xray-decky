@@ -14,7 +14,7 @@ export const zh = {
   seo: {
     title: 'Xray Decky — Steam Deck 的 VPN 与代理客户端',
     description:
-      '免费开源的 Steam Deck VPN 与代理客户端（Decky Loader 插件）。支持 VLESS、VMess、Trojan、Shadowsocks、Hysteria2、TUIC——面向游戏模式的 TUN 模式、订阅、断线阻断（kill switch）、Web 管理面板。',
+      '免费开源的 Steam Deck VPN 与代理客户端（Decky Loader 插件）。支持 VLESS、VMess、Trojan、Shadowsocks、SOCKS5、Hysteria2、TUIC——面向游戏模式的 TUN 模式、订阅、断线阻断（kill switch）、Web 管理面板。',
   },
 
   nav: {
@@ -34,7 +34,7 @@ export const zh = {
     badgeContext: 'Steam Deck · Decky Loader · 开源',
     titleHtml: '真正的代理客户端。<br>就在你的 <span class="grad">Steam&nbsp;Deck</span> 上。',
     purpose:
-      'VLESS · VMess · Trojan · Shadowsocks · Hysteria2 · TUIC——支持 REALITY 与现代传输方式。带托管服务器列表的订阅、TUN 模式、断线阻断（kill switch）、实时流量统计——以及可在手机上打开的完整 Web 管理面板。',
+      'VLESS · VMess · Trojan · Shadowsocks · SOCKS5 · Hysteria2 · TUIC——支持 REALITY 与现代传输方式。带托管服务器列表的订阅、TUN 模式、断线阻断（kill switch）、实时流量统计——以及可在手机上打开的完整 Web 管理面板。',
     ctaInstall: '安装插件',
     ctaGithub: '在 GitHub 上查看',
     statsAriaLabel: '项目数据',
@@ -57,7 +57,7 @@ export const zh = {
 
   protocols: {
     ariaLabel: '支持的协议',
-    chips: ['VLESS + REALITY', 'VMess', 'Trojan', 'Shadowsocks', 'Hysteria2', 'TUIC'],
+    chips: ['VLESS + REALITY', 'VMess', 'Trojan', 'Shadowsocks', 'SOCKS5', 'Hysteria2', 'TUIC'],
     note: 'Hysteria2 / TUIC 运行在 sing-box 内核上，按需下载',
   },
 

@@ -14,7 +14,7 @@ export const en = {
   seo: {
     title: 'Xray Decky — VPN & Proxy Client for Steam Deck',
     description:
-      'Free open-source VPN & proxy client for Steam Deck (Decky Loader plugin). VLESS, VMess, Trojan, Shadowsocks, Hysteria2, TUIC — TUN mode for Gaming Mode, subscriptions, kill switch, web admin panel.',
+      'Free open-source VPN & proxy client for Steam Deck (Decky Loader plugin). VLESS, VMess, Trojan, Shadowsocks, SOCKS5, Hysteria2, TUIC — TUN mode for Gaming Mode, subscriptions, kill switch, web admin panel.',
   },
 
   nav: {
@@ -34,7 +34,7 @@ export const en = {
     badgeContext: 'Steam Deck · Decky Loader · Open source',
     titleHtml: 'A real proxy client.<br>On your <span class="grad">Steam&nbsp;Deck</span>.',
     purpose:
-      "VLESS · VMess · Trojan · Shadowsocks · Hysteria2 · TUIC — with REALITY and modern transports. Subscriptions with a managed server list, TUN mode, kill switch, live traffic stats — and a full web admin panel you open from your phone.",
+      "VLESS · VMess · Trojan · Shadowsocks · SOCKS5 · Hysteria2 · TUIC — with REALITY and modern transports. Subscriptions with a managed server list, TUN mode, kill switch, live traffic stats — and a full web admin panel you open from your phone.",
     ctaInstall: 'Install plugin',
     ctaGithub: 'View on GitHub',
     statsAriaLabel: 'Project facts',
@@ -58,7 +58,7 @@ export const en = {
 
   protocols: {
     ariaLabel: 'Supported protocols',
-    chips: ['VLESS + REALITY', 'VMess', 'Trojan', 'Shadowsocks', 'Hysteria2', 'TUIC'],
+    chips: ['VLESS + REALITY', 'VMess', 'Trojan', 'Shadowsocks', 'SOCKS5', 'Hysteria2', 'TUIC'],
     note: 'Hysteria2 / TUIC run on the sing-box core, downloaded on demand',
   },
 
