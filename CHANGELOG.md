@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.2] - 2026-08-13
+
+### Added
+
+- `THIRD_PARTY_NOTICES.md` documenting the license (and download source) of
+  the two proxy cores fetched at runtime: Xray-core (MPL-2.0) and sing-box
+  (GPL-3.0-or-later). Neither is bundled or modified in this repository.
+
 ## [2.3.1] - 2026-08-13
 
 ### Changed
