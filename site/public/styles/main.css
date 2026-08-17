@@ -442,6 +442,9 @@ section { max-width: 1080px; margin: 0 auto; padding: 3.5rem 1.25rem; }
 .install-method h3 { font-size: 1rem; }
 .install-method ol { margin: 0.6rem 0 0; padding-left: 1.2rem; }
 .install-method li { margin-bottom: 0.35rem; font-size: 0.92rem; }
+/* The install one-liner is longer than the card — break it instead of overflowing. */
+.install-method code { overflow-wrap: anywhere; }
+.install-note { margin: 1rem 0 0; font-size: 0.92rem; color: var(--muted); }
 .tun-setup {
   margin-top: 1.6rem; border: 1px solid rgba(232, 179, 57, 0.3); border-radius: var(--radius);
   background: rgba(232, 179, 57, 0.05); padding: 1.2rem 1.4rem;

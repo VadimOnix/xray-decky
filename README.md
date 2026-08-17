@@ -54,9 +54,11 @@ the system proxy.
 
 **Prerequisites:** Steam Deck with [Decky Loader](https://wiki.deckbrew.xyz/) installed.
 
-- **Plugin Store (recommended):** Decky Loader → Plugin Store → search "Xray Decky" → Install.
-- **Desktop Mode (one-click):** Download [Install-Xray-Decky.desktop](https://raw.githubusercontent.com/VadimOnix/xray-decky/master/scripts/Install-Xray-Decky.desktop), set executable (Properties → Permissions), double-click to run. See [scripts/README.md](scripts/README.md).
-- **Manual:** Download [latest release](https://github.com/VadimOnix/xray-decky/releases/latest) zip → Decky Loader → Settings → Developer → Install Plugin from URL → paste zip URL.
+- **Desktop Mode (one-click, recommended):** Download [Install-Xray-Decky.desktop](https://raw.githubusercontent.com/VadimOnix/xray-decky/master/scripts/Install-Xray-Decky.desktop), set executable (Properties → Permissions), double-click to run. See [scripts/README.md](scripts/README.md).
+- **Konsole (install script):** `curl -sSL https://raw.githubusercontent.com/VadimOnix/xray-decky/master/scripts/install-xray-decky.sh | bash`
+- **Archive (zip):** Download [latest release](https://github.com/VadimOnix/xray-decky/releases/latest) zip → Decky Loader → Settings → Developer → Install Plugin from URL → paste zip URL.
+
+The plugin is not published in the Decky Plugin Store — install it with the script or the release zip above.
 
 **TUN mode (recommended):** In Gaming Mode, Steam does not respect system SOCKS proxy settings — games and most system services ignore it. TUN mode creates a virtual network interface that routes **all** system traffic through the proxy, making it the only reliable way to proxy traffic in Gaming Mode. Enable TUN in the plugin settings; no extra setup is required.
 

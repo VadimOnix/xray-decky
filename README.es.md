@@ -67,9 +67,11 @@ rutas TUN obsoletas y el proxy del sistema.
 
 **Requisitos previos:** Steam Deck con [Decky Loader](https://wiki.deckbrew.xyz/) instalado.
 
-- **Plugin Store (recomendado):** Decky Loader → Plugin Store → busca "Xray Decky" → Install.
-- **Modo Desktop (un clic):** Descarga [Install-Xray-Decky.desktop](https://raw.githubusercontent.com/VadimOnix/xray-decky/master/scripts/Install-Xray-Decky.desktop), márcalo como ejecutable (Properties → Permissions) y haz doble clic para ejecutarlo. Consulta [scripts/README.md](scripts/README.md).
-- **Manual:** Descarga el zip de la [última versión](https://github.com/VadimOnix/xray-decky/releases/latest) → Decky Loader → Settings → Developer → Install Plugin from URL → pega la URL del zip.
+- **Modo Desktop (un clic, recomendado):** Descarga [Install-Xray-Decky.desktop](https://raw.githubusercontent.com/VadimOnix/xray-decky/master/scripts/Install-Xray-Decky.desktop), márcalo como ejecutable (Properties → Permissions) y haz doble clic para ejecutarlo. Consulta [scripts/README.md](scripts/README.md).
+- **Konsole (script de instalación):** `curl -sSL https://raw.githubusercontent.com/VadimOnix/xray-decky/master/scripts/install-xray-decky.sh | bash`
+- **Archivo (zip):** Descarga el zip de la [última versión](https://github.com/VadimOnix/xray-decky/releases/latest) → Decky Loader → Settings → Developer → Install Plugin from URL → pega la URL del zip.
+
+El plugin no se publica en la Decky Plugin Store: instálalo con el script o con el zip de la versión publicada.
 
 **Modo TUN (recomendado):** En el modo Gaming, Steam no respeta la
 configuración del proxy SOCKS del sistema: los juegos y la mayoría de los

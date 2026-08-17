@@ -60,9 +60,11 @@ TUN آن **تمام** ترافیک سیستم را از طریق یک تونل �
 
 **پیش‌نیازها:** یک Steam Deck که [Decky Loader](https://wiki.deckbrew.xyz/) روی آن نصب باشد.
 
-- **فروشگاه افزونه (توصیه‌شده):** Decky Loader → Plugin Store → جست‌وجوی «Xray Decky» → Install.
-- **حالت دسکتاپ (نصب یک‌کلیکی):** فایل [Install-Xray-Decky.desktop](https://raw.githubusercontent.com/VadimOnix/xray-decky/master/scripts/Install-Xray-Decky.desktop) را دانلود کنید، آن را قابل اجرا کنید (Properties → Permissions) و دوبار کلیک کنید تا اجرا شود. به [scripts/README.md](scripts/README.md) مراجعه کنید.
-- **نصب دستی:** فایل zip [آخرین نسخه منتشرشده](https://github.com/VadimOnix/xray-decky/releases/latest) را دانلود کنید → Decky Loader → Settings → Developer → Install Plugin from URL → لینک zip را وارد کنید.
+- **حالت دسکتاپ (نصب یک‌کلیکی، توصیه‌شده):** فایل [Install-Xray-Decky.desktop](https://raw.githubusercontent.com/VadimOnix/xray-decky/master/scripts/Install-Xray-Decky.desktop) را دانلود کنید، آن را قابل اجرا کنید (Properties → Permissions) و دوبار کلیک کنید تا اجرا شود. به [scripts/README.md](scripts/README.md) مراجعه کنید.
+- **Konsole (اسکریپت نصب):** `curl -sSL https://raw.githubusercontent.com/VadimOnix/xray-decky/master/scripts/install-xray-decky.sh | bash`
+- **آرشیو (zip):** فایل zip [آخرین نسخه منتشرشده](https://github.com/VadimOnix/xray-decky/releases/latest) را دانلود کنید → Decky Loader → Settings → Developer → Install Plugin from URL → لینک zip را وارد کنید.
+
+این افزونه در Decky Plugin Store منتشر نمی‌شود — آن را با اسکریپت نصب یا فایل zip نسخهٔ منتشرشده نصب کنید.
 
 **حالت TUN (توصیه‌شده):** در حالت گیمینگ، Steam تنظیمات پروکسی SOCKS سیستم
 را رعایت نمی‌کند — بازی‌ها و اکثر سرویس‌های سیستمی آن را نادیده می‌گیرند.

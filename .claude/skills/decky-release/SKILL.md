@@ -1,6 +1,6 @@
 ---
 name: decky-release
-description: Release flow for this plugin — prepare-release.sh, CHANGELOG rules, auto-release on version bump, v-prefixed tags, zip packaging, Decky store submission. Use when cutting a release, bumping the version, editing CHANGELOG.md, fixing a broken/wrong tag, or preparing the plugin for the Decky Plugin Store.
+description: Release flow for this plugin — prepare-release.sh, CHANGELOG rules, auto-release on version bump, v-prefixed tags, zip packaging, and the two supported install channels (installer script + release zip; the Decky Plugin Store is not one). Use when cutting a release, bumping the version, editing CHANGELOG.md, fixing a broken/wrong tag, or writing install instructions.
 ---
 
 # Releasing xray-decky
@@ -36,6 +36,8 @@ Tag format `v*` is mandatory — `1.0.0` without prefix silently does nothing. W
 
 Zip staged by `scripts/stage-plugin.sh`: `dist/`, `package.json`, `plugin.json`, `main.py`, `py_modules/`, `static/` (web panel), `LICENSE`, `README.md`, plus xray-core binary + geo data under `bin/` (version pinned in `py_modules/backend/src/xray_version.json` — update the pin before release if a new core is out).
 
-## Decky Plugin Store
+## Decky Plugin Store — not a distribution channel
 
-Submission = PR adding the plugin as a submodule to [decky-plugin-database](https://github.com/SteamDeckHomebrew/decky-plugin-database). Requirements: LICENSE in repo root, PNG store image in `plugin.json` → `publish`, version bumped, `remote_binary` (name/url/sha256hash in package.json) for binaries >10MB instead of bundling.
+The Decky Loader maintainers declined to list this plugin over GPL licensing concerns around the bundled/downloaded proxy cores. **Do not add store-install instructions to the READMEs, the site or release notes.** The two supported channels are the installer script (`scripts/install-xray-decky.sh`, plus the `.desktop` one-click wrapper) and the release zip via Decky → Settings → Developer → Install Plugin from URL.
+
+`plugin.json` → `publish` is kept as plain plugin metadata; it no longer feeds a store listing.

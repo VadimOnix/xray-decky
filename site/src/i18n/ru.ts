@@ -123,16 +123,7 @@ export const ru = {
     ],
     methods: [
       {
-        title: 'Способ 1 · Магазин плагинов',
-        stepsHtml: [
-          'Откройте настройки <strong>Decky Loader</strong> (Quick Access → ⋯)',
-          'Перейдите в <strong>Plugin Store</strong>',
-          'Найдите <strong>«Xray Decky»</strong>',
-          'Нажмите <strong>Install</strong>',
-        ],
-      },
-      {
-        title: 'Способ 2 · Desktop Mode',
+        title: 'Способ 1 · Desktop Mode',
         stepsHtml: [
           'Переключитесь в Desktop Mode',
           'Скачайте <a href="https://raw.githubusercontent.com/VadimOnix/xray-decky/master/scripts/Install-Xray-Decky.desktop" target="_blank" rel="noopener">Install‑Xray‑Decky.desktop</a>',
@@ -141,7 +132,15 @@ export const ru = {
         ],
       },
       {
-        title: 'Способ 3 · Вручную',
+        title: 'Способ 2 · Скрипт в Konsole',
+        stepsHtml: [
+          'Переключитесь в Desktop Mode и откройте Konsole',
+          'Выполните <code>curl -sSL https://raw.githubusercontent.com/VadimOnix/xray-decky/master/scripts/install-xray-decky.sh | bash</code>',
+          'Скрипт проверит Decky Loader, скачает последний релиз и установит его',
+        ],
+      },
+      {
+        title: 'Способ 3 · Архив (zip)',
         stepsHtml: [
           'Скачайте zip-архив <a href="https://github.com/VadimOnix/xray-decky/releases/latest" target="_blank" rel="noopener">последнего релиза</a>',
           'Decky → Settings → Developer → Install Plugin from URL',
@@ -149,6 +148,8 @@ export const ru = {
         ],
       },
     ],
+    noteHtml:
+      'Xray Decky <b>не публикуется в Decky Plugin Store</b> — устанавливайте его скриптом или zip-архивом релиза, как описано выше.',
     tunTitle: 'Зачем нужен режим TUN?',
     tunHtml:
       'В игровом режиме (Gaming Mode) Steam игнорирует системные настройки SOCKS — игры и системные службы обходят прокси стороной. <b>TUN создаёт виртуальный сетевой интерфейс, который маршрутизирует всё</b> — именно этот режим вам и нужен. Просто включите переключатель — маршруты и их очистку плагин берёт на себя.',
@@ -247,7 +248,7 @@ export const ru = {
     stepsTitle: 'Пять шагов до работающего VPN',
     stepsHtml: [
       '<b>Установите Decky Loader</b> — следуйте инструкциям на <a href="https://wiki.deckbrew.xyz/" target="_blank" rel="noopener">deckbrew.xyz wiki</a>; пропустите шаг, если он уже установлен.',
-      '<b>Установите Xray Decky</b> — Quick Access (⋯) → Plugin Store → найдите «Xray Decky» → Install.',
+      '<b>Установите Xray Decky</b> — в Desktop Mode запустите скрипт установки (<code>curl -sSL https://raw.githubusercontent.com/VadimOnix/xray-decky/master/scripts/install-xray-decky.sh | bash</code>) или поставьте zip-архив релиза через Decky → Settings → Developer → Install Plugin from URL. В Decky Plugin Store плагина нет.',
       '<b>Импортируйте сервер</b> — откройте карточку плагина в Quick Access и вставьте ссылку или URL подписки; либо отсканируйте QR-код и вставьте её с телефона.',
       '<b>Включите режим TUN</b> — один переключатель в настройках плагина; маршруты и их очистка выполняются автоматически. По желанию включите kill switch для строгой защиты от утечек.',
       '<b>Подключитесь и проверьте</b> — включите переключатель подключения и следите за скоростью в реальном времени в карточке; откройте в браузере Deck любую страницу магазина с гео-ограничением или сайт определения IP, чтобы убедиться в новом выходном IP.',

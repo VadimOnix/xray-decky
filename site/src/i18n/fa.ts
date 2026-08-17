@@ -122,16 +122,7 @@ export const fa = {
     ],
     methods: [
       {
-        title: 'گزینه اول · فروشگاه افزونه',
-        stepsHtml: [
-          'تنظیمات <strong>Decky Loader</strong> را باز کنید (Quick Access → ⋯)',
-          'به <strong>Plugin Store</strong> بروید',
-          '<strong>«Xray Decky»</strong> را جست‌وجو کنید',
-          'روی <strong>Install</strong> کلیک کنید',
-        ],
-      },
-      {
-        title: 'گزینه دوم · حالت دسکتاپ (Desktop Mode)',
+        title: 'گزینه اول · حالت دسکتاپ (Desktop Mode)',
         stepsHtml: [
           'به حالت دسکتاپ بروید',
           'فایل <a href="https://raw.githubusercontent.com/VadimOnix/xray-decky/master/scripts/Install-Xray-Decky.desktop" target="_blank" rel="noopener">Install‑Xray‑Decky.desktop</a> را دانلود کنید',
@@ -140,7 +131,15 @@ export const fa = {
         ],
       },
       {
-        title: 'گزینه سوم · دستی',
+        title: 'گزینه دوم · اسکریپت در Konsole',
+        stepsHtml: [
+          'به حالت دسکتاپ بروید و Konsole را باز کنید',
+          'دستور <code>curl -sSL https://raw.githubusercontent.com/VadimOnix/xray-decky/master/scripts/install-xray-decky.sh | bash</code> را اجرا کنید',
+          'اسکریپت Decky Loader را بررسی می‌کند، آخرین نسخه را دانلود و نصب می‌کند',
+        ],
+      },
+      {
+        title: 'گزینه سوم · آرشیو (zip)',
         stepsHtml: [
           'فایل zip <a href="https://github.com/VadimOnix/xray-decky/releases/latest" target="_blank" rel="noopener">آخرین نسخه منتشرشده</a> را دریافت کنید',
           'Decky → Settings → Developer → Install Plugin from URL',
@@ -148,6 +147,8 @@ export const fa = {
         ],
       },
     ],
+    noteHtml:
+      'افزونهٔ Xray Decky <b>در Decky Plugin Store منتشر نمی‌شود</b> — آن را با اسکریپت نصب یا فایل zip نسخهٔ منتشرشده که در بالا آمده نصب کنید.',
     tunTitle: 'چرا حالت TUN؟',
     tunHtml:
       'در حالت گیمینگ، Steam تنظیمات سیستمی SOCKS را نادیده می‌گیرد — بازی‌ها و سرویس‌های سیستمی از کنار پروکسی رد می‌شوند. <b>TUN یک اینترفیس شبکه مجازی می‌سازد که همه‌چیز را مسیریابی می‌کند</b>، پس همان حالتی است که واقعاً می‌خواهید. فقط کلید را بزنید؛ مسیرها و پاک‌سازی آن‌ها را خود افزونه انجام می‌دهد.',
@@ -246,7 +247,7 @@ export const fa = {
     stepsTitle: 'پنج گام تا یک VPN کارآمد',
     stepsHtml: [
       '<b>نصب Decky Loader</b> — طبق <a href="https://wiki.deckbrew.xyz/" target="_blank" rel="noopener">ویکی deckbrew.xyz</a> عمل کنید؛ اگر از قبل نصب دارید این مرحله را رد کنید.',
-      '<b>نصب Xray Decky</b> — به Quick Access (⋯) → Plugin Store بروید؛ «Xray Decky» را جست‌وجو و Install را انتخاب کنید.',
+      '<b>نصب Xray Decky</b> — در حالت دسکتاپ اسکریپت نصب را اجرا کنید (<code>curl -sSL https://raw.githubusercontent.com/VadimOnix/xray-decky/master/scripts/install-xray-decky.sh | bash</code>)، یا فایل zip نسخهٔ منتشرشده را از مسیر Decky → Settings → Developer → Install Plugin from URL نصب کنید. این افزونه در Decky Plugin Store نیست.',
       '<b>وارد کردن سرور</b> — کارت افزونه را در Quick Access باز کنید و لینک اشتراک‌گذاری یا URL اشتراک را پیست کنید؛ یا کد QR را اسکن کرده و از گوشی خود پیست کنید.',
       '<b>فعال‌سازی حالت TUN</b> — فقط یک کلید در تنظیمات افزونه؛ مسیرها و پاک‌سازی آن‌ها خودکار است. در صورت تمایل، برای محافظت سخت‌گیرانه در برابر نشت، کیل سوییچ را هم فعال کنید.',
       '<b>اتصال و تأیید</b> — کلید اتصال را بزنید و سرعت زنده را در کارت تماشا کنید؛ یک صفحه فروشگاه با محدودیت جغرافیایی یا یک سایت نمایش IP را در مرورگر Deck باز کنید تا از IP خروجی جدید مطمئن شوید.',

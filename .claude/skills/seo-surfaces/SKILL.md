@@ -28,7 +28,8 @@ structure blocks are mirrored verbatim.
 | "Steam Deck" | everywhere | two words, never "SteamDeck" (search tokenization) |
 | README×5 | repo root | section-parity; switcher row; hero banner; same links |
 | Repo description/topics | live via `gh api` | changes need maintainer sign-off |
-| plugin.json `publish.description` | Decky Store listing | keep in sync with README positioning |
+| plugin.json `publish.description` | plugin metadata (no store listing — see decky-release) | keep in sync with README positioning |
+| Install instructions | README×5, `site/src/i18n/*.ts` | installer script + release zip ONLY — never the Decky Plugin Store |
 | Site copy | `site/src/i18n/*.ts` | see the site-astro skill for URL/SEO contract |
 | Donation addresses | `site/src/lib/donations.ts` ONLY | never retype an address in a README or dict — copy from donations.ts |
 | Terminology | README translations | they ARE the approved glossary (kill switch glosses, подписка/订阅/اشتراک/suscripción) |
