@@ -122,16 +122,7 @@ export const zh = {
     ],
     methods: [
       {
-        title: '方式一 · 插件商店',
-        stepsHtml: [
-          '打开 <strong>Decky Loader</strong> 设置（Quick Access → ⋯）',
-          '进入 <strong>Plugin Store</strong>',
-          '搜索 <strong>“Xray Decky”</strong>',
-          '点击 <strong>Install</strong>',
-        ],
-      },
-      {
-        title: '方式二 · 桌面模式',
+        title: '方式一 · 桌面模式',
         stepsHtml: [
           '切换到桌面模式（Desktop Mode）',
           '下载 <a href="https://raw.githubusercontent.com/VadimOnix/xray-decky/master/scripts/Install-Xray-Decky.desktop" target="_blank" rel="noopener">Install‑Xray‑Decky.desktop</a>',
@@ -140,7 +131,15 @@ export const zh = {
         ],
       },
       {
-        title: '方式三 · 手动安装',
+        title: '方式二 · Konsole 安装脚本',
+        stepsHtml: [
+          '切换到桌面模式并打开 Konsole',
+          '运行 <code>curl -sSL https://raw.githubusercontent.com/VadimOnix/xray-decky/master/scripts/install-xray-decky.sh | bash</code>',
+          '脚本会检查 Decky Loader、下载最新版本并完成安装',
+        ],
+      },
+      {
+        title: '方式三 · 压缩包（zip）',
         stepsHtml: [
           '下载 <a href="https://github.com/VadimOnix/xray-decky/releases/latest" target="_blank" rel="noopener">最新版本</a>的 zip 压缩包',
           'Decky → Settings → Developer → Install Plugin from URL',
@@ -148,6 +147,8 @@ export const zh = {
         ],
       },
     ],
+    noteHtml:
+      'Xray Decky <b>未上架 Decky Plugin Store</b>——请使用上面的安装脚本或发布版 zip 压缩包安装。',
     tunTitle: '为什么需要 TUN 模式？',
     tunHtml:
       '在游戏模式下，Steam 会忽略系统的 SOCKS 设置——游戏和系统服务都会绕过代理。<b>TUN 会创建一个转发全部流量的虚拟网络接口</b>，这正是你真正需要的模式。只需打开开关，路由和清理都由插件自动处理。',
@@ -246,7 +247,7 @@ export const zh = {
     stepsTitle: '五步搭建可用的 VPN',
     stepsHtml: [
       '<b>安装 Decky Loader</b>——按照 <a href="https://wiki.deckbrew.xyz/" target="_blank" rel="noopener">deckbrew.xyz wiki</a> 操作；如果已经安装可跳过此步。',
-      '<b>安装 Xray Decky</b>——Quick Access（⋯）→ Plugin Store → 搜索“Xray Decky” → Install。',
+      '<b>安装 Xray Decky</b>——在桌面模式下运行安装脚本（<code>curl -sSL https://raw.githubusercontent.com/VadimOnix/xray-decky/master/scripts/install-xray-decky.sh | bash</code>），或通过 Decky → Settings → Developer → Install Plugin from URL 安装发布版 zip 压缩包。本插件未上架 Decky Plugin Store。',
       '<b>导入服务器</b>——在 Quick Access 中打开插件卡片，粘贴分享链接或订阅 URL；也可以扫描二维码后在手机上粘贴。',
       '<b>启用 TUN 模式</b>——在插件选项中打开一个开关即可；路由和清理均自动完成。如需严格防止泄漏，可选择启用断线阻断（kill switch）。',
       '<b>连接并验证</b>——打开连接开关，在卡片中查看实时速度；在 Deck 浏览器中打开任意有地区限制的商店页面或 IP 查询网站，确认出口 IP 已更改。',

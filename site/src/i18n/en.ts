@@ -123,16 +123,7 @@ export const en = {
     ],
     methods: [
       {
-        title: 'Option 1 · Plugin Store',
-        stepsHtml: [
-          'Open <strong>Decky Loader</strong> settings (Quick Access → ⋯)',
-          'Navigate to <strong>Plugin Store</strong>',
-          'Search for <strong>“Xray Decky”</strong>',
-          'Click <strong>Install</strong>',
-        ],
-      },
-      {
-        title: 'Option 2 · Desktop Mode',
+        title: 'Option 1 · Desktop Mode',
         stepsHtml: [
           'Switch to Desktop Mode',
           'Download <a href="https://raw.githubusercontent.com/VadimOnix/xray-decky/master/scripts/Install-Xray-Decky.desktop" target="_blank" rel="noopener">Install‑Xray‑Decky.desktop</a>',
@@ -141,7 +132,15 @@ export const en = {
         ],
       },
       {
-        title: 'Option 3 · Manual',
+        title: 'Option 2 · Konsole script',
+        stepsHtml: [
+          'Switch to Desktop Mode and open Konsole',
+          'Run <code>curl -sSL https://raw.githubusercontent.com/VadimOnix/xray-decky/master/scripts/install-xray-decky.sh | bash</code>',
+          'The script checks Decky Loader, downloads the latest release and installs it',
+        ],
+      },
+      {
+        title: 'Option 3 · Archive (zip)',
         stepsHtml: [
           'Grab the <a href="https://github.com/VadimOnix/xray-decky/releases/latest" target="_blank" rel="noopener">latest release</a> zip',
           'Decky → Settings → Developer → Install Plugin from URL',
@@ -149,6 +148,8 @@ export const en = {
         ],
       },
     ],
+    noteHtml:
+      'Xray Decky is <b>not published in the Decky Plugin Store</b> — install it with the script or the release zip above.',
     tunTitle: 'Why TUN mode?',
     tunHtml:
       "In Gaming Mode Steam ignores system SOCKS settings — games and system services bypass the proxy. <b>TUN creates a virtual network interface that routes everything</b>, so it's the mode you actually want. Just flip the toggle; the plugin handles routes and cleanup itself.",
@@ -247,7 +248,7 @@ export const en = {
     stepsTitle: 'Five steps to a working VPN',
     stepsHtml: [
       '<b>Install Decky Loader</b> — follow the <a href="https://wiki.deckbrew.xyz/" target="_blank" rel="noopener">deckbrew.xyz wiki</a>; skip if you already have it.',
-      '<b>Install Xray Decky</b> — Quick Access (⋯) → Plugin Store → search “Xray Decky” → Install.',
+      '<b>Install Xray Decky</b> — in Desktop Mode run the installer script (<code>curl -sSL https://raw.githubusercontent.com/VadimOnix/xray-decky/master/scripts/install-xray-decky.sh | bash</code>), or install the release zip via Decky → Settings → Developer → Install Plugin from URL. The plugin is not in the Decky Plugin Store.',
       '<b>Import your server</b> — open the plugin card in Quick Access and paste a share link or subscription URL; or scan the QR code and paste it from your phone.',
       '<b>Enable TUN mode</b> — one toggle in the plugin options; routes and cleanup are automatic. Optionally arm the kill switch for strict leak protection.',
       '<b>Connect and verify</b> — flip the connection toggle and watch the live speed in the card; open any geo-restricted store page or a what-is-my-ip site in the Deck browser to confirm the new exit IP.',

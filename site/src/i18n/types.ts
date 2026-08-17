@@ -109,6 +109,8 @@ export interface Dict {
     prereqTitle: string;
     prereqHtml: string[];
     methods: InstallMethod[];
+    /** Why the Plugin Store is not one of the methods. Rendered under them. */
+    noteHtml: string;
     tunTitle: string;
     tunHtml: string;
   };

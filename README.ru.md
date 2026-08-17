@@ -63,9 +63,11 @@ Mode). Xray Decky — это плагин для [Decky Loader](https://wiki.dec
 
 **Требования:** Steam Deck с установленным [Decky Loader](https://wiki.deckbrew.xyz/).
 
-- **Plugin Store (рекомендуется):** Decky Loader → Plugin Store → найдите «Xray Decky» → Install.
-- **Desktop Mode (в один клик):** Скачайте [Install-Xray-Decky.desktop](https://raw.githubusercontent.com/VadimOnix/xray-decky/master/scripts/Install-Xray-Decky.desktop), сделайте файл исполняемым (Properties → Permissions), запустите двойным щелчком. См. [scripts/README.md](scripts/README.md).
-- **Вручную:** Скачайте zip-архив [последнего релиза](https://github.com/VadimOnix/xray-decky/releases/latest) → Decky Loader → Settings → Developer → Install Plugin from URL → вставьте URL zip-архива.
+- **Desktop Mode (в один клик, рекомендуется):** Скачайте [Install-Xray-Decky.desktop](https://raw.githubusercontent.com/VadimOnix/xray-decky/master/scripts/Install-Xray-Decky.desktop), сделайте файл исполняемым (Properties → Permissions), запустите двойным щелчком. См. [scripts/README.md](scripts/README.md).
+- **Konsole (скрипт установки):** `curl -sSL https://raw.githubusercontent.com/VadimOnix/xray-decky/master/scripts/install-xray-decky.sh | bash`
+- **Архив (zip):** Скачайте zip-архив [последнего релиза](https://github.com/VadimOnix/xray-decky/releases/latest) → Decky Loader → Settings → Developer → Install Plugin from URL → вставьте URL zip-архива.
+
+Плагин не публикуется в Decky Plugin Store — устанавливайте его скриптом или zip-архивом релиза.
 
 **Режим TUN (рекомендуется):** В игровом режиме (Gaming Mode) Steam не
 учитывает системные настройки SOCKS-прокси — игры и большинство системных

@@ -50,9 +50,11 @@ switch 防火墙链、残留的 TUN 路由以及系统代理设置。
 
 **前置条件：** 已安装 [Decky Loader](https://wiki.deckbrew.xyz/) 的 Steam Deck。
 
-- **插件商店（推荐）：** Decky Loader → Plugin Store → 搜索 “Xray Decky” → Install。
-- **桌面模式（一键安装）：** 下载 [Install-Xray-Decky.desktop](https://raw.githubusercontent.com/VadimOnix/xray-decky/master/scripts/Install-Xray-Decky.desktop)，将其设置为可执行（Properties → Permissions），双击运行。详见 [scripts/README.md](scripts/README.md)。
-- **手动安装：** 下载 [最新版本](https://github.com/VadimOnix/xray-decky/releases/latest) 的 zip 压缩包 → Decky Loader → Settings → Developer → Install Plugin from URL → 粘贴 zip 的下载链接。
+- **桌面模式（一键安装，推荐）：** 下载 [Install-Xray-Decky.desktop](https://raw.githubusercontent.com/VadimOnix/xray-decky/master/scripts/Install-Xray-Decky.desktop)，将其设置为可执行（Properties → Permissions），双击运行。详见 [scripts/README.md](scripts/README.md)。
+- **Konsole（安装脚本）：** `curl -sSL https://raw.githubusercontent.com/VadimOnix/xray-decky/master/scripts/install-xray-decky.sh | bash`
+- **压缩包（zip）：** 下载 [最新版本](https://github.com/VadimOnix/xray-decky/releases/latest) 的 zip 压缩包 → Decky Loader → Settings → Developer → Install Plugin from URL → 粘贴 zip 的下载链接。
+
+本插件未上架 Decky Plugin Store——请使用上面的安装脚本或发布版 zip 压缩包安装。
 
 **TUN 模式（推荐）：** 在游戏模式下，Steam 不会遵循系统的 SOCKS 代理设置——
 游戏和大多数系统服务都会忽略它。TUN 模式会创建一个虚拟网络接口，将**全部**

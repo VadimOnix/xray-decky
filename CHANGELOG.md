@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Documentation and site now list only two installation channels: the
+  installer script (`scripts/install-xray-decky.sh` and the one-click
+  `.desktop` wrapper) and the release zip installed through Decky →
+  Settings → Developer → Install Plugin from URL. The Decky Plugin Store
+  instructions were removed from the five READMEs and the landing/guide
+  pages in all five locales — the Decky Loader maintainers declined to list
+  the plugin over GPL licensing concerns about the proxy cores.
+
 ## [2.3.2] - 2026-08-13
 
 ### Added
