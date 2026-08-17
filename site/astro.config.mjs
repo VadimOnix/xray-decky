@@ -41,6 +41,12 @@ export default defineConfig({
         item.url = fix(item.url);
         if (item.links) {
           item.links = item.links.map((link) => ({ ...link, url: fix(link.url) }));
+          // Every page's <head> also declares hreflang="x-default" (Base.astro),
+          // but the integration only emits the configured locales. Google wants
+          // the annotation sets from both delivery methods to agree — a sitemap
+          // set that is missing x-default is a conflicting set, not a subset.
+          const en = item.links.find((link) => link.lang === 'en');
+          if (en) item.links.push({ lang: 'x-default', url: en.url });
         }
         return item;
       },
