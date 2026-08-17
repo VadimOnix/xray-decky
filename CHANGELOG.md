@@ -16,6 +16,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   instructions were removed from the five READMEs and the landing/guide
   pages in all five locales — the Decky Loader maintainers declined to list
   the plugin over GPL licensing concerns about the proxy cores.
+- `scripts/seo-check.mjs --site` additionally asserts that `sitemap-index.xml`
+  exists and lists the absolute `sitemap-0.xml` URL, and that per-URL hreflang
+  alternates in the sitemap equal the page's own `<link rel="alternate">` set.
+- `site/public/robots.txt` documents that it deploys under `/xray-decky/` and is
+  therefore ignored by crawlers, which only read robots.txt at the host root.
+
+### Fixed
+
+- Site sitemap now carries `hreflang="x-default"` on every localized URL, so the
+  sitemap's hreflang set matches the one each page declares in `<head>`. The two
+  sets disagreeing made the annotations conflicting rather than complementary.
 
 ## [2.3.2] - 2026-08-13
 

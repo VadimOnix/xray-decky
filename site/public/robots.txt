@@ -1,3 +1,9 @@
+# NOTE: this file deploys to https://vadimonix.github.io/xray-decky/robots.txt.
+# Crawlers only read robots.txt from the HOST ROOT (RFC 9309), i.e.
+# https://vadimonix.github.io/robots.txt — which is a 404 (no user-site repo).
+# So the Sitemap: line below is NOT how Google finds the sitemap: submission in
+# Search Console is. Keep the file anyway — it becomes effective the moment the
+# site moves to a custom domain or a vadimonix.github.io user-site repo exists.
 User-agent: *
 Allow: /
 

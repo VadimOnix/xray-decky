@@ -92,6 +92,8 @@ function checkSite() {
   const version = JSON.parse(read('package.json')).version;
   const addrs = donationAddresses();
   const canonicals = new Set();
+  /** canonical URL -> "hreflang=href" pairs declared in that page's <head>. */
+  const pageAlternates = new Map();
 
   for (const page of PAGES) {
     const path = `${DIST}/${page}`;
@@ -108,6 +110,9 @@ function checkSite() {
     const canonical = s.match(/<link rel="canonical" href="([^"]+)"/)?.[1];
     if (!canonical) fail(`${page}: canonical missing`);
     else canonicals.add(canonical);
+
+    const alternates = [...s.matchAll(/<link rel="alternate" hreflang="([^"]+)" href="([^"]+)"/g)];
+    if (canonical) pageAlternates.set(canonical, alternates.map((m) => `${m[1]}=${m[2]}`).sort());
 
     const hreflangs = (s.match(/hreflang=/g) ?? []).length;
     const expected = page === 'changelog.html' ? 0 : 6;
@@ -153,15 +158,48 @@ function checkSite() {
   const robots = existsSync(resolve(ROOT, `${DIST}/robots.txt`)) ? read(`${DIST}/robots.txt`) : '';
   if (!robots.includes('sitemap-index.xml')) fail('robots.txt: missing or does not reference sitemap-index.xml');
 
+  // Search Console is pointed at the index, so the index must exist and name
+  // the child sitemap by absolute URL — a relative <loc> there is unfetchable.
+  const indexPath = `${DIST}/sitemap-index.xml`;
+  if (!existsSync(resolve(ROOT, indexPath))) {
+    fail(`${indexPath}: missing — Search Console submission points at it`);
+  } else {
+    const children = [...read(indexPath).matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
+    if (!children.includes('https://vadimonix.github.io/xray-decky/sitemap-0.xml')) {
+      fail(`sitemap-index.xml: does not list the absolute sitemap-0.xml URL, got ${JSON.stringify(children)}`);
+    }
+  }
+
   const sitemapPath = `${DIST}/sitemap-0.xml`;
   if (!existsSync(resolve(ROOT, sitemapPath))) {
     fail(`${sitemapPath}: missing`);
   } else {
-    const locs = [...read(sitemapPath).matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
-    const sitemapSet = new Set(locs);
+    const xml = read(sitemapPath);
+    const entries = [...xml.matchAll(/<url>(.*?)<\/url>/gs)].map((m) => m[1]);
+    const sitemapSet = new Set();
+    for (const entry of entries) {
+      const loc = entry.match(/<loc>([^<]+)<\/loc>/)?.[1];
+      if (!loc) {
+        fail('sitemap: <url> entry without <loc>');
+        continue;
+      }
+      sitemapSet.add(loc);
+      // Google requires the hreflang annotations to agree across delivery
+      // methods; a set that differs from the page's own <link rel="alternate">
+      // (historically: no x-default in the sitemap) makes it discard them.
+      const alts = [...entry.matchAll(/<xhtml:link rel="alternate" hreflang="([^"]+)" href="([^"]+)"\/>/g)]
+        .map((m) => `${m[1]}=${m[2]}`)
+        .sort();
+      const pageAlts = pageAlternates.get(loc);
+      if (pageAlts && JSON.stringify(alts) !== JSON.stringify(pageAlts)) {
+        fail(`sitemap: hreflang alternates for ${loc} differ from the page's <head>\n  sitemap: ${alts.join(' ')}\n  page:    ${pageAlts.join(' ')}`);
+      }
+    }
     for (const c of canonicals) if (!sitemapSet.has(c)) fail(`sitemap: canonical not listed: ${c}`);
     for (const l of sitemapSet) if (!canonicals.has(l)) fail(`sitemap: URL has no page with that canonical: ${l}`);
-    if (failures === 0) ok(`site: ${PAGES.length} pages, canonicals == sitemap (${sitemapSet.size} URLs), JSON-LD v${version}`);
+    if (failures === 0) {
+      ok(`site: ${PAGES.length} pages, canonicals == sitemap (${sitemapSet.size} URLs), hreflang sets match, JSON-LD v${version}`);
+    }
   }
 }
 
