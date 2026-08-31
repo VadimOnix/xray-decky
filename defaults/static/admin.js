@@ -8,12 +8,13 @@
   // 40 samples at 3s each ≈ the last two minutes of traffic.
   var SPEED_HISTORY_MAX = 40
 
-  // ----- i18n (EN / RU) -----
+  // ----- i18n (EN / RU / ZH) -----
 
   var I18N = {
     en: {
       'lang.self': 'EN',
-      'lang.switch': 'Switch to Russian',
+      'lang.switch': 'Switch language',
+      'meta.title': 'Xray Decky – Admin Panel',
       'lock.title': 'Pairing required',
       'lock.desc':
         'This panel is protected by a per-install token. Open the plugin on ' +
@@ -40,9 +41,16 @@
       'hero.unblock': 'Unblock traffic',
       'hero.upFor': 'Up for {t}',
       'stat.total': 'total',
+      'stat.download': 'Download speed',
+      'stat.upload': 'Upload speed',
+      'stat.session': 'Session traffic',
       'graph.download': 'Download',
       'graph.upload': 'Upload',
       'graph.window': 'peak · last 2 min',
+      'graph.aria': 'Live download and upload speed over the last two minutes',
+      'time.hours': 'h',
+      'time.minutes': 'm',
+      'time.seconds': 's',
       'servers.title': 'Servers',
       'servers.pingAll': 'Ping all',
       'servers.pinging': 'Pinging…',
@@ -164,6 +172,7 @@
       'routes.action.direct': 'Direct',
       'routes.action.reject': 'Reject',
       'routes.enabled': 'Enabled',
+      'routes.valueRequired': 'value required',
       'routes.cancel': 'Cancel',
       'routes.save': 'Save',
       'routes.edit': 'Edit rule',
@@ -177,7 +186,8 @@
     },
     ru: {
       'lang.self': 'RU',
-      'lang.switch': 'Переключить на английский',
+      'lang.switch': 'Переключить язык',
+      'meta.title': 'Xray Decky – Панель администратора',
       'lock.title': 'Требуется сопряжение',
       'lock.desc':
         'Панель защищена персональным токеном. Откройте плагин на Steam Deck ' +
@@ -204,9 +214,16 @@
       'hero.unblock': 'Разблокировать трафик',
       'hero.upFor': 'В сети {t}',
       'stat.total': 'всего',
+      'stat.download': 'Скорость загрузки',
+      'stat.upload': 'Скорость отдачи',
+      'stat.session': 'Трафик сессии',
       'graph.download': 'Загрузка',
       'graph.upload': 'Отдача',
       'graph.window': 'пик · за 2 мин',
+      'graph.aria': 'Скорость загрузки и отдачи за последние две минуты',
+      'time.hours': 'ч',
+      'time.minutes': 'мин',
+      'time.seconds': 'с',
       'servers.title': 'Серверы',
       'servers.pingAll': 'Пинг всех',
       'servers.pinging': 'Пинг…',
@@ -327,12 +344,13 @@
       'routes.action.direct': 'Напрямую',
       'routes.action.reject': 'Отклонить',
       'routes.enabled': 'Включено',
+      'routes.valueRequired': 'необходимо указать значение',
       'routes.cancel': 'Отмена',
       'routes.save': 'Сохранить',
       'routes.edit': 'Изменить правило',
       'routes.delete': 'Удалить правило',
       'routes.drag': 'Перетащить',
-      'routes.dragHint': 'Перетащитю для изменения порядка',
+      'routes.dragHint': 'Перетащите для изменения порядка',
       'routes.saved': 'Маршруты сохранены',
       'routes.deleted': 'Правило удалено',
       'routes.invalid': 'Некорректное правило: {msg}',
@@ -340,7 +358,8 @@
     },
     zh: {
       'lang.self': '中文',
-      'lang.switch': '切换到简体中文',
+      'lang.switch': '切换语言',
+      'meta.title': 'Xray Decky – 管理面板',
       'lock.title': '需要配对',
       'lock.desc': '此面板受每个安装独立的令牌保护。请在 Steam Deck 上打开插件并扫描「选项」选项卡中的「管理面板」二维码,或在下方粘贴令牌。',
       'lock.ph': '管理令牌',
@@ -364,9 +383,16 @@
       'hero.unblock': '解除拦截',
       'hero.upFor': '已运行 {t}',
       'stat.total': '总计',
+      'stat.download': '下载速度',
+      'stat.upload': '上传速度',
+      'stat.session': '会话流量',
       'graph.download': '下载',
       'graph.upload': '上传',
       'graph.window': '近 2 分钟峰值',
+      'graph.aria': '最近两分钟的实时下载和上传速度',
+      'time.hours': '小时',
+      'time.minutes': '分钟',
+      'time.seconds': '秒',
       'servers.title': '服务器',
       'servers.pingAll': '全部测速',
       'servers.pinging': '测速中…',
@@ -414,14 +440,14 @@
       'updates.checking': '检查中…',
       'updates.hint': '检查是否有新的核心版本可用。',
       'updates.upToDate': '已是最新版本',
-      'updates.available': '{name} 有更新:{current} → {latest}',
+      'updates.available': '{v} 有更新',
       'updates.failed': '检查更新失败',
       'export.title': '导出服务器',
       'export.reveal': '显示',
       'export.hide': '隐藏',
       'export.hint': '显示所有已保存服务器的分享链接。链接包含凭据,请妥善保管。',
       'export.aria': '已导出服务器',
-      'export.count': '{count} 个服务器',
+      'export.count': '{n} 个服务器',
       'export.empty': '未导出任何服务器。',
       'export.copyLinks': '复制链接',
       'export.copySub': '复制订阅',
@@ -432,12 +458,12 @@
       'toast.netErr': '网络错误',
       'toast.removed': '服务器已移除',
       'toast.removeFail': '移除失败',
-      'toast.switched': '已切换到 {name}',
-      'toast.activated': '{name} 已激活',
-      'toast.switchFail': '切换失败:{name}',
+      'toast.switched': '已切换并重新连接',
+      'toast.activated': '服务器已激活',
+      'toast.switchFail': '切换服务器失败',
       'toast.subRefreshed': '订阅已刷新',
       'toast.refreshFail': '刷新失败',
-      'toast.latency': '测速:{name} {ms}ms',
+      'toast.latency': '测速完成',
       'toast.pingFail': '测速失败',
       'toast.connected': '已连接',
       'toast.disconnected': '已断开',
@@ -463,6 +489,7 @@
       'routes.action.direct': '直连',
       'routes.action.reject': '拒绝',
       'routes.enabled': '已启用',
+      'routes.valueRequired': '请输入值',
       'routes.cancel': '取消',
       'routes.save': '保存',
       'routes.edit': '编辑规则',
@@ -860,9 +887,9 @@
     var h = Math.floor(seconds / 3600)
     var m = Math.floor((seconds % 3600) / 60)
     var s = Math.floor(seconds % 60)
-    if (h > 0) return h + 'h ' + m + 'm'
-    if (m > 0) return m + 'm ' + s + 's'
-    return s + 's'
+    if (h > 0) return h + t('time.hours') + ' ' + m + t('time.minutes')
+    if (m > 0) return m + t('time.minutes') + ' ' + s + t('time.seconds')
+    return s + t('time.seconds')
   }
 
   function render(data) {
@@ -955,7 +982,9 @@
       row.className = 'server-row' + (profile.id === activeId ? ' active' : '')
       row.setAttribute(
         'aria-label',
-        t('servers.activate', { name: profile.name || profile.address || 'server' })
+        t('servers.activate', {
+          name: profile.name || profile.address || t('servers.unnamed'),
+        })
       )
 
       var chips = document.createElement('span')
@@ -1707,7 +1736,9 @@
     var enabled = els.ruleEnabled ? els.ruleEnabled.checked : true
     if (!value) {
       if (els.ruleDialogError) {
-        els.ruleDialogError.textContent = t('routes.invalid', { msg: 'value required' })
+        els.ruleDialogError.textContent = t('routes.invalid', {
+          msg: t('routes.valueRequired'),
+        })
         els.ruleDialogError.hidden = false
       }
       return

@@ -76,6 +76,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   suffixes (`steamcontent.com`, `steampipe.akamaized.net`, and
   `steamcdn-a.akamaihd.net`) without making the Store or Community domains
   direct.
+- The WebAdmin now translates its page title, accessibility labels, loading
+  state, uptime units, and dynamic update/export messages consistently in
+  English, Russian, and Simplified Chinese.
 - Site sitemap now carries `hreflang="x-default"` on every localized URL, so the
   sitemap's hreflang set matches the one each page declares in `<head>`. The two
   sets disagreeing made the annotations conflicting rather than complementary.
