@@ -1,6 +1,7 @@
 """Tests for backend.src.singbox_manager (config generation + lifecycle)."""
 
 import asyncio
+import json
 import os
 
 import pytest
@@ -107,6 +108,14 @@ def test_tun_mode_adds_inbound_and_binds_interface():
     assert _proxy(config)["bind_interface"] == "wlan0"
 
 
+def test_tun_mode_binds_direct_outbound_to_physical_interface():
+    config = build_singbox_config(
+        _hysteria2(), tun_mode=True, outbound_interface="wlan0"
+    )
+    direct = next(outbound for outbound in config["outbounds"] if outbound["tag"] == "direct")
+    assert direct["bind_interface"] == "wlan0"
+
+
 def test_unsupported_protocol_raises():
     with pytest.raises(ValueError):
         build_singbox_config({"protocol": "vless", "address": "h.io", "port": 443})
@@ -164,3 +173,117 @@ def test_stop_without_process():
     manager = SingBoxManager(binary_path="/nonexistent/sing-box")
     result = asyncio.run(manager.stop())
     assert result["success"] is True
+
+
+# ----- User-editable routing rules -----
+
+
+def _rr(**overrides):
+    rule = {
+        "id": "r1",
+        "enabled": True,
+        "action": "proxy",
+        "match": {"type": "domain", "value": "example.com"},
+    }
+    rule.update(overrides)
+    return rule
+
+
+def test_route_rules_default_empty_leaves_only_lan_bypass():
+    config = build_singbox_config(_hysteria2())
+    rules = config["route"]["rules"]
+    assert len(rules) == 1
+    assert rules[0]["ip_is_private"] is True
+
+
+def test_route_rules_domain_inserts_after_lan_bypass():
+    config = build_singbox_config(_hysteria2(), route_rules=[_rr()])
+    rules = config["route"]["rules"]
+    assert rules[0]["ip_is_private"] is True
+    assert rules[1]["domain"] == ["example.com"]
+    assert rules[1]["outbound"] == "proxy"
+    assert config["route"]["final"] == "proxy"
+
+
+def test_route_rules_geoip_strips_prefix():
+    config = build_singbox_config(
+        _hysteria2(),
+        route_rules=[_rr(action="direct", match={"type": "geoip", "value": "geoip:cn"})],
+    )
+    rules = config["route"]["rules"]
+    user = next(r for r in rules if r.get("rule_set") == ["geoip-cn"])
+    assert user["outbound"] == "direct"
+
+
+def test_route_rules_use_local_rule_set_tags(tmp_path):
+    config = build_singbox_config(
+        _hysteria2(),
+        rule_set_dir=str(tmp_path),
+        route_rules=[
+            _rr(
+                action="direct",
+                match={"type": "geosite", "value": "geosite:category-games@cn"},
+            ),
+            _rr(
+                action="proxy",
+                match={"type": "geoip", "value": "geoip:private"},
+            ),
+        ],
+    )
+    definitions = config["route"]["rule_set"]
+    assert len(definitions) == 19
+    assert all(item["type"] == "local" for item in definitions)
+    assert all(item["format"] == "binary" for item in definitions)
+    assert all(item["path"].startswith(str(tmp_path)) for item in definitions)
+
+    game_rule = next(
+        r
+        for r in config["route"]["rules"]
+        if r.get("rule_set") == ["geosite-category-games@cn"]
+    )
+    assert game_rule["outbound"] == "direct"
+    private_rule = next(
+        r
+        for r in config["route"]["rules"]
+        if r.get("rule_set") == ["geoip-private"]
+    )
+    assert private_rule["outbound"] == "proxy"
+    assert not any("geosite" in r or "geoip" in r for r in config["route"]["rules"])
+
+
+def test_route_rules_reject_uses_builtin_block():
+    config = build_singbox_config(
+        _hysteria2(),
+        route_rules=[_rr(action="reject", match={"type": "ip", "value": "1.2.3.0/24"})],
+    )
+    user = next(r for r in config["route"]["rules"] if r.get("ip_cidr"))
+    assert user["outbound"] == "block"
+
+
+def test_route_rules_disabled_skipped():
+    config = build_singbox_config(
+        _hysteria2(),
+        route_rules=[_rr(enabled=False, match={"type": "domain", "value": "x.com"})],
+    )
+    assert not any("domain" in r for r in config["route"]["rules"])
+
+
+def test_manager_generate_config_persists_rule_set_directory(tmp_path):
+    manager = SingBoxManager(binary_path=str(tmp_path / "sing-box"))
+    config_path = manager.generate_config(
+        _hysteria2(),
+        rule_set_dir=tmp_path,
+        route_rules=[
+            _rr(
+                match={"type": "geosite", "value": "geosite:cn"},
+            )
+        ],
+    )
+    with open(config_path, encoding="utf-8") as stream:
+        config = json.load(stream)
+    assert manager.rule_set_dir == str(tmp_path.resolve())
+    assert all(
+        item["path"].startswith(str(tmp_path.resolve()))
+        for item in config["route"]["rule_set"]
+    )
+    os.remove(config_path)

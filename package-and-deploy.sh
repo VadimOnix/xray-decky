@@ -31,6 +31,9 @@ ZIP_NAME="${PLUGIN_NAME}-v${PLUGIN_VERSION}.zip"
 echo -e "${BLUE}🔨 Building ${PLUGIN_NAME} v${PLUGIN_VERSION}...${NC}"
 pnpm run build
 
+echo -e "${BLUE}📥 Fetching sing-box rule sets...${NC}"
+scripts/fetch-singbox-rules.sh bin/srss
+
 echo -e "${BLUE}📦 Creating plugin package...${NC}"
 TEMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TEMP_DIR"' EXIT

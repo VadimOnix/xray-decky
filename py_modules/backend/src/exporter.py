@@ -78,6 +78,12 @@ def _tls_query(profile: Dict[str, Any]) -> Dict[str, str]:
         query["fp"] = str(tls["fingerprint"])
     if tls.get("allowInsecure"):
         query["allowInsecure"] = "1"
+    if tls.get("pinnedPeerCertSha256"):
+        query["pinSHA256"] = str(tls["pinnedPeerCertSha256"])
+    if tls.get("verifyPeerCertByName"):
+        query["vcn"] = str(tls["verifyPeerCertByName"])
+    if tls.get("echConfigList"):
+        query["ech"] = str(tls["echConfigList"])
     return query
 
 
@@ -225,8 +231,22 @@ def _hysteria2_link(profile: Dict[str, Any]) -> Optional[str]:
     if isinstance(tls, dict):
         if tls.get("serverName"):
             query["sni"] = str(tls["serverName"])
+        alpn = tls.get("alpn")
+        if isinstance(alpn, list) and alpn:
+            query["alpn"] = ",".join(str(a) for a in alpn)
         if tls.get("allowInsecure"):
             query["insecure"] = "1"
+        if tls.get("pinnedPeerCertSha256"):
+            query["pinSHA256"] = str(tls["pinnedPeerCertSha256"])
+        if tls.get("verifyPeerCertByName"):
+            query["vcn"] = str(tls["verifyPeerCertByName"])
+        if tls.get("echConfigList"):
+            query["ech"] = str(tls["echConfigList"])
+    port_hopping = profile.get("portHopping") or {}
+    if isinstance(port_hopping, dict) and port_hopping.get("ports"):
+        query["mport"] = str(port_hopping["ports"])
+        if port_hopping.get("interval"):
+            query["hop_interval"] = str(port_hopping["interval"])
     if profile.get("obfs"):
         query["obfs"] = str(profile["obfs"])
         if profile.get("obfsPassword"):

@@ -123,6 +123,21 @@ def _make_handlers(overrides=None):
                 "subscription": "dHJvamFuOi8v",
             },
         ),
+        "get_route_rules": handler(
+            "get_route_rules",
+            {
+                "success": True,
+                "rules": [],
+                "presets": [
+                    {"type": "geosite", "value": "geosite:google"},
+                    {"type": "geoip", "value": "geoip:cn"},
+                ],
+            },
+        ),
+        "set_route_rules": handler(
+            "set_route_rules",
+            {"success": True, "ruleCount": 1, "reconnected": False},
+        ),
         "check_updates": handler(
             "check_updates",
             {
@@ -729,3 +744,125 @@ def test_admin_page_served_without_token(tmp_path: Path):
             await client.close()
 
     _run(scenario())
+
+
+
+
+
+
+async def _route_rules_client(handlers_overrides=None):
+    app = web.Application()
+    handlers, _ = _make_handlers(handlers_overrides)
+    register_admin_routes(
+        app,
+        settings=_FakeSettings(),
+        static_dir=Path("/tmp/nonexistent-for-tests"),
+        handlers=handlers,
+        token=TOKEN,
+    )
+    client = TestClient(TestServer(app))
+    await client.start_server()
+    return client
+
+
+def test_route_rules_get_requires_token():
+    async def go():
+        client = await _route_rules_client()
+        try:
+            resp = await client.get("/api/v1/route-rules")
+            assert resp.status == 401
+        finally:
+            await client.close()
+    asyncio.run(go())
+
+
+def test_route_rules_get_returns_rules_and_presets():
+    async def go():
+        client = await _route_rules_client()
+        try:
+            resp = await client.get(
+                "/api/v1/route-rules",
+                headers={"X-Admin-Token": TOKEN},
+            )
+            assert resp.status == 200
+            body = await resp.json()
+            assert body["success"] is True
+            assert body["rules"] == []
+            assert any(p["value"] == "geosite:google" for p in body["presets"])
+        finally:
+            await client.close()
+    asyncio.run(go())
+
+
+def test_route_rules_put_validates_payload_shape():
+    async def go():
+        client = await _route_rules_client()
+        try:
+            resp = await client.put(
+                "/api/v1/route-rules",
+                json={"wrong": "shape"},
+                headers={"X-Admin-Token": TOKEN},
+            )
+            assert resp.status == 400
+        finally:
+            await client.close()
+    asyncio.run(go())
+
+
+def test_route_rules_put_propagates_validation_error():
+    async def go():
+        async def err_handler(*_args, **_kwargs):
+            return {
+                "success": False,
+                "error": "ip value must be a CIDR or single address: 'bad'",
+                "errorCode": "VALIDATION_ERROR",
+            }
+
+        client = await _route_rules_client(
+            {"set_route_rules": err_handler}
+        )
+        try:
+            resp = await client.put(
+                "/api/v1/route-rules",
+                json={"rules": [{"id": "x", "enabled": True, "action": "proxy",
+                                 "match": {"type": "ip", "value": "bad"}}]},
+                headers={"X-Admin-Token": TOKEN},
+            )
+            assert resp.status == 400
+            body = await resp.json()
+            assert body["success"] is False
+            assert body["errorCode"] == "VALIDATION_ERROR"
+        finally:
+            await client.close()
+    asyncio.run(go())
+
+
+def test_route_rules_put_happy_path():
+    captured = []
+
+    async def capturing_set(rules):
+        captured.append(rules)
+        return {"success": True, "ruleCount": len(rules), "reconnected": False}
+
+    async def go():
+        client = await _route_rules_client(
+            {"set_route_rules": capturing_set}
+        )
+        try:
+            payload = {"rules": [
+                {"id": "a", "enabled": True, "action": "direct",
+                 "match": {"type": "geosite", "value": "geosite:cn"}}
+            ]}
+            resp = await client.put(
+                "/api/v1/route-rules",
+                json=payload,
+                headers={"X-Admin-Token": TOKEN},
+            )
+            assert resp.status == 200
+            body = await resp.json()
+            assert body["success"] is True
+            assert body["ruleCount"] == 1
+            assert captured[0] == payload["rules"]
+        finally:
+            await client.close()
+    asyncio.run(go())

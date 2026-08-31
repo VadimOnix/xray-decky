@@ -473,11 +473,12 @@ def test_import_invalid_link():
     assert result["success"] is False
 
 
-def test_import_hysteria2_stores_singbox_profile():
+def test_import_hysteria2_stores_xray_profile():
+    # Hysteria2 moved to xray-core in v26.7.28 (PR #6198).
     store = _store()
     result = _run(importer.import_link(store, "hysteria2://pw@h2.example.com:443"))
     assert result["success"] is True
-    assert store.get_active()["core"] == "sing-box"
+    assert store.get_active()["core"] == "xray-core"
 
 
 def test_import_socks_stores_xray_profile():

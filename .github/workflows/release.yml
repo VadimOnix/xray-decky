@@ -90,6 +90,10 @@ jobs:
           VERSION="${GITHUB_REF#refs/tags/v}"
           PLUGIN_DIR="release/${PLUGIN_NAME}"
 
+          # Keep the local sing-box catalog beside the two Xray geo data files;
+          # stage-plugin.sh then carries it into the same bin/ tree.
+          scripts/fetch-singbox-rules.sh bin/srss
+
           # Single source of truth for the on-device layout (dist/, py_modules/,
           # defaults/static -> static/, metadata files, and the bin/ binaries
           # staged above) — kept in lockstep with local packaging/deploy via
@@ -102,6 +106,7 @@ jobs:
           # a core-less zip.
           test -x "$PLUGIN_DIR/bin/xray-core" || (echo "::error::$PLUGIN_DIR/bin/xray-core missing or not executable after staging" && exit 1)
           test -f "$PLUGIN_DIR/bin/geoip.dat" || (echo "::error::$PLUGIN_DIR/bin/geoip.dat missing after staging" && exit 1)
+          test "$(find "$PLUGIN_DIR/bin/srss" -maxdepth 1 -type f -name '*.srs' | wc -l)" -eq 19 || (echo "::error::sing-box rule-set catalog incomplete after staging" && exit 1)
 
           # Create ZIP with xray-decky/ as root
           cd release

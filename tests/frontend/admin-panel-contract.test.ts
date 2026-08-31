@@ -17,12 +17,13 @@ const read = (name: string) =>
 
 const adminJs = read('admin.js');
 const adminHtml = read('admin.html');
+const adminCss = read('admin.css');
 
 const matchAll = (source: string, pattern: RegExp) =>
   [...source.matchAll(pattern)].map((m) => m[1]);
 
-/** Keys defined in one of admin.js's two inline dictionaries. */
-function dictionaryKeys(lang: 'en' | 'ru'): string[] {
+/** Keys defined in one of admin.js's inline dictionaries. */
+function dictionaryKeys(lang: 'en' | 'ru' | 'zh'): string[] {
   const start = adminJs.indexOf(`    ${lang}: {`);
   expect(start, `dictionary "${lang}" not found — did admin.js change shape?`).toBeGreaterThan(-1);
   const end = adminJs.indexOf('\n    },', start);
@@ -59,17 +60,36 @@ describe('i18n contract', () => {
     expect([...used].filter((key) => !en.has(key))).toEqual([]);
   });
 
-  it('defines exactly the same keys in EN and RU', () => {
+  it('defines exactly the same keys in EN, RU, and ZH', () => {
     const en = dictionaryKeys('en');
     const ru = dictionaryKeys('ru');
+    const zh = dictionaryKeys('zh');
 
     expect(en.length).toBeGreaterThan(50);
     expect(new Set(en).size, 'duplicate keys in the EN dictionary').toBe(en.length);
     expect(new Set(ru).size, 'duplicate keys in the RU dictionary').toBe(ru.length);
+    expect(new Set(zh).size, 'duplicate keys in the ZH dictionary').toBe(zh.length);
     // t() falls back to EN for a missing key, so drift shows up as stray
     // English text in the Russian panel rather than as an error.
     expect(en.filter((key) => !ru.includes(key))).toEqual([]);
     expect(ru.filter((key) => !en.includes(key))).toEqual([]);
+    expect(en.filter((key) => !zh.includes(key))).toEqual([]);
+    expect(zh.filter((key) => !en.includes(key))).toEqual([]);
+  });
+});
+
+describe('routing row layout contract', () => {
+  it('places the routing card on its own full-width grid row', () => {
+    expect(adminHtml).toMatch(/<section class="card card-routes"/);
+    expect(adminCss).toMatch(/\.card-routes\s*\{[\s\S]*?grid-column:\s*1\s*\/\s*-1/);
+  });
+
+  it('allows a narrow card to wrap the rule value and controls', () => {
+    expect(adminCss).toMatch(/\.rule-item\s*\{[\s\S]*?flex-wrap:\s*wrap/);
+    expect(adminCss).toMatch(/\.rule-value\s*\{[\s\S]*?flex-basis:\s*100%/);
+    expect(adminCss).toMatch(
+      /\.rule-item \.btn-small\s*\{[\s\S]*?max-width:\s*100%[\s\S]*?white-space:\s*normal/
+    );
   });
 });
 

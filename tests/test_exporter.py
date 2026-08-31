@@ -93,6 +93,16 @@ def test_roundtrip_hysteria2():
     )
 
 
+def test_roundtrip_hysteria2_xray_options():
+    _roundtrip(
+        "hysteria2://hy2pw@h.example.com"
+        "?sni=h.example.com&alpn=h3&insecure=1"
+        "&pinSHA256=" + "AA" * 32
+        + "&mport=21000-22000&hop_interval=15"
+        "&obfs=salamander&obfs-password=obfspw#Hy2"
+    )
+
+
 def test_roundtrip_tuic():
     _roundtrip(
         f"tuic://{UUID}:tuicpw@u.example.com:443?congestion_control=bbr"

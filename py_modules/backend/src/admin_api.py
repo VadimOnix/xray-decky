@@ -215,7 +215,8 @@ def register_admin_routes(
             deactivate_kill_switch, get_profiles, set_active_profile,
             remove_profile, test_profiles_latency, refresh_subscription,
             rename_subscription, set_subscription_refresh_interval,
-            get_traffic_stats, check_updates, export_profiles.
+            get_traffic_stats, check_updates, export_profiles,
+            get_route_rules, set_route_rules.
         token: The admin token (see ensure_admin_token).
         rate_limiter: Failed-auth limiter; a fresh per-install one is created
             when omitted (state is per app, never shared across installs).
@@ -453,6 +454,36 @@ def register_admin_routes(
         status = 200 if result.get("success", False) else 502
         return web.json_response(result, status=status)
 
+    async def api_route_rules_get(request: web.Request) -> web.Response:
+        denied = _guard(request)
+        if denied is not None:
+            return denied
+        result = await handlers["get_route_rules"]()
+        status = 200 if result.get("success", False) else 502
+        return web.json_response(result, status=status)
+
+    async def api_route_rules_put(request: web.Request) -> web.Response:
+        denied = _guard(request)
+        if denied is not None:
+            return denied
+        body = await _body_json(request)
+        if body is None or not isinstance(body.get("rules"), list):
+            return web.json_response(
+                {
+                    "success": False,
+                    "error": 'Expected JSON body {"rules": [...]}',
+                },
+                status=400,
+            )
+        result = await handlers["set_route_rules"](body["rules"])
+        # Validation failures land here with 400 (so the panel shows the reason);
+        # everything else follows the standard success-or-bad-gateway rule.
+        if not result.get("success", False):
+            err_code = result.get("errorCode", "")
+            http_status = 400 if err_code == "VALIDATION_ERROR" else 502
+            return web.json_response(result, status=http_status)
+        return web.json_response(result, status=200)
+
     async def api_import(request: web.Request) -> web.Response:
         denied = _guard(request)
         if denied is not None:
@@ -487,3 +518,5 @@ def register_admin_routes(
     app.router.add_get("/api/v1/stats", api_stats)
     app.router.add_get("/api/v1/updates", api_updates)
     app.router.add_get("/api/v1/export", api_export)
+    app.router.add_get("/api/v1/route-rules", api_route_rules_get)
+    app.router.add_put("/api/v1/route-rules", api_route_rules_put)

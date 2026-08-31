@@ -222,6 +222,33 @@
             <p id="options-note" class="option-note" hidden></p>
           </section>
 
+          <!-- Routing rules card -->
+          <section class="card card-routes" aria-labelledby="routes-title">
+            <div class="card-head">
+              <h2 id="routes-title" class="card-title" data-i18n="routes.title">
+                Routing rules
+              </h2>
+              <button
+                id="routes-add-btn"
+                class="btn btn-ghost btn-small"
+                type="button"
+                data-i18n="routes.add"
+              >
+                Add rule
+              </button>
+            </div>
+            <p class="card-sub" data-i18n="routes.sub">
+              Domain / IP / geosite / geoip → proxy or direct. Rules are tried in
+              order; LAN traffic is always bypassed first. Drag rows to reorder.
+            </p>
+            <ul id="rules-list" class="rules-list" hidden></ul>
+            <p id="rules-empty" class="empty-note" data-i18n="routes.empty">
+              No routing rules yet. Click "Add rule" to direct specific
+              domains or IPs through the proxy (or directly, bypassing it).
+            </p>
+            <p id="rules-msg" class="form-error" role="alert" hidden></p>
+          </section>
+
           <!-- Import card -->
           <section class="card" aria-labelledby="import-title">
             <div class="card-head">
@@ -326,6 +353,54 @@
     </main>
 
     <div id="toast" class="toast" role="status" hidden></div>
+
+    <dialog id="rule-dialog" class="rule-dialog">
+      <form id="rule-form" method="dialog">
+        <h3 id="rule-dialog-title" data-i18n="routes.add">Add rule</h3>
+        <label class="rule-field">
+          <span data-i18n="routes.matchType">Match type</span>
+          <select id="rule-type" name="type">
+            <option value="domain" data-i18n="routes.type.domain">Domain</option>
+            <option value="ip" data-i18n="routes.type.ip">IP CIDR</option>
+            <option value="geosite" data-i18n="routes.type.geosite">Geosite</option>
+            <option value="geoip" data-i18n="routes.type.geoip">Geoip</option>
+          </select>
+        </label>
+        <label class="rule-field">
+          <span data-i18n="routes.value">Value</span>
+          <input
+            id="rule-value"
+            type="text"
+            list="rule-presets"
+            autocomplete="off"
+            placeholder="example.com"
+            data-i18n-ph="routes.presetPh"
+          />
+          <datalist id="rule-presets"></datalist>
+        </label>
+        <label class="rule-field">
+          <span data-i18n="routes.action">Action</span>
+          <select id="rule-action" name="action">
+            <option value="proxy" data-i18n="routes.action.proxy">Proxy</option>
+            <option value="direct" data-i18n="routes.action.direct">Direct</option>
+            <option value="reject" data-i18n="routes.action.reject">Reject</option>
+          </select>
+        </label>
+        <label class="rule-field rule-toggle">
+          <input id="rule-enabled" type="checkbox" checked />
+          <span data-i18n="routes.enabled">Enabled</span>
+        </label>
+        <p id="rule-dialog-error" class="form-error" role="alert" hidden></p>
+        <div class="rule-dialog-actions">
+          <button type="button" id="rule-cancel" class="btn btn-ghost" data-i18n="routes.cancel">
+            Cancel
+          </button>
+          <button type="submit" id="rule-save" class="btn btn-primary" data-i18n="routes.save">
+            Save
+          </button>
+        </div>
+      </form>
+    </dialog>
 
     <script src="/admin/static/admin.js"></script>
   </body>

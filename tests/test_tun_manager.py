@@ -155,3 +155,20 @@ def test_physical_interface_still_skips_tun_device():
     recorder = _route_recorder(_TUN_HIJACKED)
     with patch("asyncio.create_subprocess_exec", recorder):
         assert asyncio.run(TUNManager().get_physical_interface()) == "wlan0"
+
+
+def test_privilege_check_does_not_accept_read_only_fallbacks():
+    manager = TUNManager()
+    with patch.object(
+        manager,
+        "_test_tun_creation",
+        return_value={"success": False, "error": "operation not permitted"},
+    ):
+        with patch.object(
+            manager, "_test_ip_command", return_value={"success": True}
+        ):
+            with patch.object(
+                manager, "_test_tun_device_access", return_value={"success": True}
+            ):
+                result = asyncio.run(manager.check_privileges())
+    assert result["hasPrivileges"] is False

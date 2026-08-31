@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- xray-core bumped from `v26.3.27` to `v26.7.28` and gains a native Hysteria2
+  client path, including Gecko obfuscation (Hysteria v2.9.2 protocol, expressed
+  in xray-core as the Salamander finalmask with a `packetSize` range — upstream
+  PR #6198). The previous sing-box Hysteria2 path is still honored for
+  backward compatibility; TUIC remains sing-box-only.
+- WebAdmin "Routing rules" card: add / edit / delete / drag-reorder rules of
+  the form `match {domain | ip | geosite | geoip} → action {proxy | direct |
+  reject}`. Rules are persisted under the `routeRules` settings key (schema
+  v1) and emitted into both xray-core (`routing.rules`) and sing-box
+  (`route.rules`) configs. sing-box uses the v2rayN-compatible local binary
+  `.srs` catalog (the requested geoip/geosite sets plus `geolocation-!cn`) and
+  emits `route.rule_set` tags instead of deprecated inline geo fields. LAN
+  traffic (`geoip:private`) is always bypassed ahead of user rules so they can
+  never wedge LAN traffic into the tunnel.
+  `reject` rules add a `blackhole` outbound to the xray-core config and use
+  sing-box's built-in `block` outbound. The card includes a `<datalist>`
+  typeahead sourced from the 19-entry manifest-backed preset list (`google`,
+  `cn`, `netflix`, `private`, `category-ads-all`, …).
+- Admin API: `GET /api/v1/route-rules` and `PUT /api/v1/route-rules`
+  (PUT validates the full payload up front and only persists if every rule
+  parses — bad input returns 400 with the reason).
+- Simplified Chinese (zh-CN) translations added to the admin panel's inline
+  i18n dictionaries. The language toggle now cycles EN → RU → ZH.
+
 ### Changed
 
 - Documentation and site now list only two installation channels: the
@@ -24,6 +50,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Native Xray Hysteria2 links now retain ALPN, certificate pinning, ECH,
+  v2rayN `mport` port hopping, and Gecko settings. Xray 26.7.28 no longer
+  receives the removed `allowInsecure` or unsupported uTLS fingerprint fields;
+  the generated transport defaults to HTTP/3 (`h3`).
+- TUN mode now names the interface `xray0` consistently and verifies actual
+  TUN creation privileges before starting the core, instead of treating
+  read-only interface checks as sufficient.
+- The WebAdmin routing card translates dynamic rule labels in Chinese and
+  wraps long rule values/actions inside narrow cards instead of rendering one
+  character per line or overflowing the edit controls.
+- The WebAdmin routing card now occupies a full-width grid row on larger
+  screens, while retaining responsive wrapping on narrow screens.
+- TUN routing now places the catch-all proxy rule after user rules, so rules
+  such as `geosite:steam@cn` → `direct` can match Steam traffic before the
+  proxy fallback.
+- TUN mode now hijacks DNS through Xray and uses FakeDNS for enabled direct
+  domain/geosite rules, preserving domains when Steam connects by IP. Toggling
+  TUN while connected now restarts the core so the selected mode actually takes
+  effect.
+- TUN direct (`freedom`/`direct`) traffic now binds to the physical network
+  interface, just like proxy traffic, so a direct Steam download cannot loop
+  back through the `xray0` default route and stall.
+- A direct `geosite:steam@cn` rule now also covers Steam's Linux download CDN
+  suffixes (`steamcontent.com`, `steampipe.akamaized.net`, and
+  `steamcdn-a.akamaihd.net`) without making the Store or Community domains
+  direct.
 - Site sitemap now carries `hreflang="x-default"` on every localized URL, so the
   sitemap's hreflang set matches the one each page declares in `<head>`. The two
   sets disagreeing made the annotations conflicting rather than complementary.

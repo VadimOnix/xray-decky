@@ -37,34 +37,25 @@ class TUNManager:
             Dictionary with privilege status
         """
         try:
-            # Method 1: Try to create a test TUN interface
-            # This requires CAP_NET_ADMIN or root privileges
+            # This is the only reliable check for the capability Xray needs.
+            # `ip link show` and opening /dev/net/tun are read-only operations
+            # and can succeed in a Decky sandbox that cannot create xray0.
             test_result = await self._test_tun_creation()
 
             if test_result["success"]:
                 self.has_privileges = True
                 return {"hasPrivileges": True, "method": "tun_creation_test"}
 
-            # Method 2: Check if we can use ip command (requires CAP_NET_ADMIN)
-            ip_result = await self._test_ip_command()
-
-            if ip_result["success"]:
-                self.has_privileges = True
-                return {"hasPrivileges": True, "method": "ip_command_test"}
-
-            # Method 3: Check if running with elevated privileges
-            # Check if we can access /dev/net/tun
-            tun_device_result = await self._test_tun_device_access()
-
-            if tun_device_result["success"]:
-                self.has_privileges = True
-                return {"hasPrivileges": True, "method": "tun_device_access"}
-
-            # No privileges detected
+            # Do not fall back to checks that only prove the device exists or
+            # that `ip` can inspect interfaces; Xray would still start without
+            # an interface and the later route step would fail confusingly.
             self.has_privileges = False
             return {
                 "hasPrivileges": False,
-                "error": "Insufficient privileges. TUN mode requires CAP_NET_ADMIN or root privileges.",
+                "error": (
+                    "Insufficient privileges. TUN mode requires CAP_NET_ADMIN "
+                    "or root privileges to create a TUN interface."
+                ),
                 "errorCode": "PRIVILEGES_INSUFFICIENT",
             }
 

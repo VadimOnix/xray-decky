@@ -116,6 +116,8 @@ from backend.src.admin_api import (
 from backend.src.supervisor import XraySupervisor
 from backend.src.profile_store import ProfileStore
 from backend.src.latency import test_profiles
+from backend.src.route_rules import RouteRulesStore
+from backend.src.singbox_rules import all_rule_sets_present, ensure_rule_sets
 from backend.src.stats import TrafficStats
 from backend.src.cert_utils import ensure_cert_key
 from aiohttp import web
@@ -127,6 +129,7 @@ if not settings_dir:
 
 settings = SettingsManager(name="settings", settings_directory=settings_dir)
 profile_store = ProfileStore(settings)
+route_rules_store = RouteRulesStore(settings)
 settings.read()
 
 
@@ -172,6 +175,14 @@ def _resolve_singbox_path(plugin_dir: Path) -> str:
         if candidate.exists():
             return str(candidate)
     return str(_persistent_xray_dir(plugin_dir) / "sing-box")
+
+
+def _resolve_singbox_rules_dir(plugin_dir: Path) -> Path:
+    """Prefer packaged .srs files, otherwise use the writable runtime cache."""
+    packaged = plugin_dir / "bin" / "srss"
+    if all_rule_sets_present(packaged):
+        return packaged.resolve()
+    return (_persistent_xray_dir(plugin_dir) / "srss").resolve()
 
 
 # Initialize XrayManager, TUNManager, KillSwitch, and SystemProxyManager
@@ -309,6 +320,8 @@ class Plugin:
                             "get_traffic_stats": self.get_traffic_stats,
                             "check_updates": self.check_updates,
                             "export_profiles": self.export_profiles,
+                            "get_route_rules": self.get_route_rules,
+                            "set_route_rules": self.set_route_rules,
                         },
                         token=ensure_admin_token(settings),
                     )
@@ -494,6 +507,38 @@ class Plugin:
                 "success": False,
                 "error": str(e),
                 "errorCode": "ENSURE_BINARY_ERROR",
+            }
+
+    async def _ensure_singbox_rules(self) -> Dict[str, Any]:
+        """Ensure every local sing-box .srs rule set is readable before start."""
+        try:
+            target_dir = _resolve_singbox_rules_dir(PLUGIN_DIR)
+            if all_rule_sets_present(target_dir):
+                singbox_manager.rule_set_dir = str(target_dir)
+                return {
+                    "success": True,
+                    "path": str(target_dir),
+                    "alreadyPresent": True,
+                }
+
+            loop = asyncio.get_running_loop()
+            result = await loop.run_in_executor(
+                None, ensure_rule_sets, target_dir
+            )
+            if result.get("success"):
+                singbox_manager.rule_set_dir = result.get("path", str(target_dir))
+            else:
+                print(
+                    "Xray Decky Plugin: sing-box rule sets not available: "
+                    f"{result.get('error')}"
+                )
+            return result
+        except Exception as e:
+            print(f"Xray Decky Plugin: Failed to ensure sing-box rule sets: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "errorCode": "RULESET_DOWNLOAD_FAILED",
             }
 
     async def _unload(self):
@@ -768,6 +813,70 @@ class Plugin:
         except Exception as e:
             return create_error_response(
                 ErrorCode.UNKNOWN_ERROR, f"Failed to list profiles: {str(e)}"
+            )
+
+    async def get_route_rules(self) -> Dict[str, Any]:
+        """
+        Return the user-editable routing ruleset plus the typeahead presets.
+
+        Safe to call any time — does not touch the running core.
+
+        Returns:
+            { 'success': True, 'rules': [...], 'presets': [...] }
+        """
+        try:
+            return create_success_response(
+                {
+                    "rules": route_rules_store.list_rules(),
+                    "presets": route_rules_store.get_presets(),
+                }
+            )
+        except Exception as e:
+            return create_error_response(
+                ErrorCode.UNKNOWN_ERROR, f"Failed to read route rules: {str(e)}"
+            )
+
+    async def set_route_rules(self, rules) -> Dict[str, Any]:
+        """
+        Replace the routing ruleset. Validates every rule up front; a bad
+        payload leaves the on-disk rules unchanged. If the connection is live,
+        reconnects so the new rules take effect on the next running core.
+
+        Args:
+            rules: List of rule objects (see backend.src.route_rules).
+
+        Returns:
+            { 'success': bool, 'reconnected': bool, 'ruleCount': int }
+        """
+        try:
+            if not isinstance(rules, list):
+                return create_error_response(
+                    ErrorCode.VALIDATION_ERROR, "rules must be a list"
+                )
+            # Validate before touching the connection — a bad payload must
+            # never leave the running proxy using half-applied rules.
+            route_rules_store.set_rules(rules)
+
+            was_connected = (
+                get_connection_state().status == ConnectionStatus.CONNECTED
+            )
+            reconnected = False
+            if was_connected:
+                await self.toggle_connection(False)
+                result = await self.toggle_connection(True)
+                reconnected = bool(result.get("success", False))
+
+            return create_success_response(
+                {
+                    "ruleCount": len(rules),
+                    "reconnected": reconnected,
+                }
+            )
+        except ValueError as exc:
+            return create_error_response(ErrorCode.VALIDATION_ERROR, str(exc))
+        except Exception as e:
+            return create_error_response(
+                ErrorCode.UNKNOWN_ERROR, f"Failed to save route rules: {str(e)}"
             )
 
     async def export_profiles(self) -> Dict[str, Any]:
@@ -1154,8 +1263,25 @@ class Plugin:
                     "TUN mode requires elevated privileges. Please complete installation steps.",
                 )
 
-            # Update preference
             tun_pref = settings.getSetting("tunMode", {})
+            was_connected = get_connection_state().status == ConnectionStatus.CONNECTED
+            previous_enabled = bool(tun_pref.get("enabled", False))
+
+            # A live core has already been generated with the old TUN setting.
+            # Stop it before changing the preference so disconnect cleanup still
+            # sees the old value, then reconnect with the new configuration.
+            reconnected = False
+            if was_connected and previous_enabled != enabled:
+                disconnect_result = await self.toggle_connection(False)
+                if not disconnect_result.get("success", False):
+                    return create_error_response(
+                        ErrorCode.PROCESS_FAILED,
+                        disconnect_result.get(
+                            "error", "Failed to stop the active connection"
+                        ),
+                    )
+
+            # Update preference after disconnect cleanup has completed.
             tun_pref["enabled"] = enabled
             tun_pref["hasPrivileges"] = has_privileges
             if enabled:
@@ -1165,8 +1291,23 @@ class Plugin:
             settings.setSetting("tunMode", tun_pref)
             settings.commit()
 
+            if was_connected and previous_enabled != enabled:
+                connect_result = await self.toggle_connection(True)
+                if not connect_result.get("success", False):
+                    return create_error_response(
+                        connect_result.get("errorCode", ErrorCode.PROCESS_FAILED),
+                        connect_result.get(
+                            "error", "Failed to reconnect with the new TUN setting"
+                        ),
+                    )
+                reconnected = True
+
             return create_success_response(
-                {"enabled": enabled, "hasPrivileges": has_privileges}
+                {
+                    "enabled": enabled,
+                    "hasPrivileges": has_privileges,
+                    "reconnected": reconnected,
+                }
             )
 
         except Exception as e:
@@ -1239,8 +1380,13 @@ class Plugin:
                 )
                 if tun_mode and not outbound_if:
                     return False
+                generate_kwargs = {
+                    "route_rules": route_rules_store.list_rules(),
+                }
+                if isinstance(manager, SingBoxManager):
+                    generate_kwargs["rule_set_dir"] = manager.rule_set_dir
                 config_file = manager.generate_config(
-                    config, tun_mode, outbound_if
+                    config, tun_mode, outbound_if, **generate_kwargs
                 )
             result = await manager.start(config_file)
             if not result.get("success", False):
@@ -1359,8 +1505,9 @@ class Plugin:
                     )
                     return create_error_response(ErrorCode.INVALID_CONFIG)
 
-                # Dispatch by core: hysteria2/tuic run on the sing-box second
-                # core (downloaded on first use), everything else on xray-core.
+                # Dispatch by core: TUIC runs on the sing-box second core
+                # (downloaded on first use); native Xray Hysteria2 and the
+                # remaining protocols run on xray-core.
                 required_core = config.get("core") or core_for_protocol(
                     config.get("protocol", "vless")
                 )
@@ -1372,6 +1519,15 @@ class Plugin:
                             f"{protocol} needs the sing-box core, which could "
                             "not be downloaded: "
                             f"{ensure_result.get('error', 'unknown error')}. "
+                            "Check the network connection and try again."
+                        )
+                        connection_state.set_error(msg, ErrorCode.PROCESS_FAILED)
+                        return create_error_response(ErrorCode.PROCESS_FAILED, msg)
+                    rules_result = await self._ensure_singbox_rules()
+                    if not rules_result.get("success"):
+                        msg = (
+                            "sing-box rule sets could not be prepared: "
+                            f"{rules_result.get('error', 'unknown error')}. "
                             "Check the network connection and try again."
                         )
                         connection_state.set_error(msg, ErrorCode.PROCESS_FAILED)
@@ -1390,21 +1546,23 @@ class Plugin:
 
                 # If TUN mode is enabled, check privileges
                 if tun_mode:
-                    has_privileges = tun_pref.get("hasPrivileges", False)
-                    if not has_privileges:
-                        # Re-check privileges
-                        privilege_result = await tun_manager.check_privileges()
-                        has_privileges = privilege_result.get("hasPrivileges", False)
+                    # The cached flag may have been written by the old
+                    # read-only privilege probe. Re-test actual TUN creation
+                    # on every connect before starting Xray; otherwise the
+                    # route step only reports xray0 missing after a misleading
+                    # "connected" transition.
+                    privilege_result = await self.check_tun_privileges()
+                    has_privileges = privilege_result.get("hasPrivileges", False)
 
-                        if not has_privileges:
-                            connection_state.set_error(
-                                "TUN mode requires elevated privileges",
-                                ErrorCode.PRIVILEGES_INSUFFICIENT,
-                            )
-                            return create_error_response(
-                                ErrorCode.PRIVILEGES_INSUFFICIENT,
-                                "TUN mode requires elevated privileges. Please complete installation steps.",
-                            )
+                    if not has_privileges:
+                        connection_state.set_error(
+                            "TUN mode requires elevated privileges",
+                            ErrorCode.PRIVILEGES_INSUFFICIENT,
+                        )
+                        return create_error_response(
+                            ErrorCode.PRIVILEGES_INSUFFICIENT,
+                            "TUN mode requires elevated privileges. Please complete installation steps.",
+                        )
 
                     # Track the interface name; xray-core itself creates
                     # xray0 from its TUN inbound config (native since v26.1.23).
@@ -1424,8 +1582,13 @@ class Plugin:
                         "TUN mode: could not get default route interface. Check network.",
                     )
 
+                generate_kwargs = {
+                    "route_rules": route_rules_store.list_rules(),
+                }
+                if isinstance(manager, SingBoxManager):
+                    generate_kwargs["rule_set_dir"] = manager.rule_set_dir
                 config_file = manager.generate_config(
-                    config, tun_mode, outbound_if
+                    config, tun_mode, outbound_if, **generate_kwargs
                 )
 
                 # Start the proxy core the profile needs
