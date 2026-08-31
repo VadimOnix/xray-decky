@@ -8,12 +8,13 @@
   // 40 samples at 3s each ≈ the last two minutes of traffic.
   var SPEED_HISTORY_MAX = 40
 
-  // ----- i18n (EN / RU) -----
+  // ----- i18n (EN / RU / ZH) -----
 
   var I18N = {
     en: {
       'lang.self': 'EN',
-      'lang.switch': 'Switch to Russian',
+      'lang.switch': 'Switch language',
+      'meta.title': 'Xray Decky – Admin Panel',
       'lock.title': 'Pairing required',
       'lock.desc':
         'This panel is protected by a per-install token. Open the plugin on ' +
@@ -40,9 +41,16 @@
       'hero.unblock': 'Unblock traffic',
       'hero.upFor': 'Up for {t}',
       'stat.total': 'total',
+      'stat.download': 'Download speed',
+      'stat.upload': 'Upload speed',
+      'stat.session': 'Session traffic',
       'graph.download': 'Download',
       'graph.upload': 'Upload',
       'graph.window': 'peak · last 2 min',
+      'graph.aria': 'Live download and upload speed over the last two minutes',
+      'time.hours': 'h',
+      'time.minutes': 'm',
+      'time.seconds': 's',
       'servers.title': 'Servers',
       'servers.pingAll': 'Ping all',
       'servers.pinging': 'Pinging…',
@@ -148,10 +156,38 @@
       'toast.toggleOn': '{label} enabled',
       'toast.toggleOff': '{label} disabled',
       'toast.toggleFail': 'Failed to toggle {label}',
+      'routes.title': 'Routing rules',
+      'routes.add': 'Add rule',
+      'routes.sub': 'Domain / IP / geosite / geoip \u2192 proxy or direct. Rules are tried in order; LAN traffic is always bypassed first. Drag rows to reorder.',
+      'routes.empty': 'No routing rules yet. Click "Add rule" to direct specific domains or IPs through the proxy (or directly, bypassing it).',
+      'routes.matchType': 'Match type',
+      'routes.type.domain': 'Domain',
+      'routes.type.ip': 'IP CIDR',
+      'routes.type.geosite': 'Geosite',
+      'routes.type.geoip': 'GeoIP',
+      'routes.value': 'Value',
+      'routes.presetPh': 'e.g. example.com / 10.0.0.0/8 / geosite:google',
+      'routes.action': 'Action',
+      'routes.action.proxy': 'Proxy',
+      'routes.action.direct': 'Direct',
+      'routes.action.reject': 'Reject',
+      'routes.enabled': 'Enabled',
+      'routes.valueRequired': 'value required',
+      'routes.cancel': 'Cancel',
+      'routes.save': 'Save',
+      'routes.edit': 'Edit rule',
+      'routes.delete': 'Delete rule',
+      'routes.drag': 'Drag',
+      'routes.dragHint': 'Drag to reorder',
+      'routes.saved': 'Routing rules saved',
+      'routes.deleted': 'Rule deleted',
+      'routes.invalid': 'Invalid rule: {msg}',
+      'routes.reorderFail': 'Failed to save new order',
     },
     ru: {
       'lang.self': 'RU',
-      'lang.switch': 'Переключить на английский',
+      'lang.switch': 'Переключить язык',
+      'meta.title': 'Xray Decky – Панель администратора',
       'lock.title': 'Требуется сопряжение',
       'lock.desc':
         'Панель защищена персональным токеном. Откройте плагин на Steam Deck ' +
@@ -178,9 +214,16 @@
       'hero.unblock': 'Разблокировать трафик',
       'hero.upFor': 'В сети {t}',
       'stat.total': 'всего',
+      'stat.download': 'Скорость загрузки',
+      'stat.upload': 'Скорость отдачи',
+      'stat.session': 'Трафик сессии',
       'graph.download': 'Загрузка',
       'graph.upload': 'Отдача',
       'graph.window': 'пик · за 2 мин',
+      'graph.aria': 'Скорость загрузки и отдачи за последние две минуты',
+      'time.hours': 'ч',
+      'time.minutes': 'мин',
+      'time.seconds': 'с',
       'servers.title': 'Серверы',
       'servers.pingAll': 'Пинг всех',
       'servers.pinging': 'Пинг…',
@@ -285,13 +328,187 @@
       'toast.toggleOn': '{label} включён',
       'toast.toggleOff': '{label} выключен',
       'toast.toggleFail': 'Не удалось переключить: {label}',
+      'routes.title': 'Маршруты',
+      'routes.add': 'Добавить правило',
+      'routes.sub': 'Домен / IP / geosite / geoip \u2192 прокси или напрямую. Правила применяются по порядку; LAN-трафик всегда идёт в обход. Перетащите строки мышью для изменения порядка.',
+      'routes.empty': 'Правил маршрутизации пока нет. Нажмите «Добавить правило», чтобы направить отдельные домены или IP через прокси или напрямую.',
+      'routes.matchType': 'Тип совпадения',
+      'routes.type.domain': 'Домен',
+      'routes.type.ip': 'IP CIDR',
+      'routes.type.geosite': 'Geosite',
+      'routes.type.geoip': 'GeoIP',
+      'routes.value': 'Значение',
+      'routes.presetPh': 'например example.com / 10.0.0.0/8 / geosite:google',
+      'routes.action': 'Действие',
+      'routes.action.proxy': 'Прокси',
+      'routes.action.direct': 'Напрямую',
+      'routes.action.reject': 'Отклонить',
+      'routes.enabled': 'Включено',
+      'routes.valueRequired': 'необходимо указать значение',
+      'routes.cancel': 'Отмена',
+      'routes.save': 'Сохранить',
+      'routes.edit': 'Изменить правило',
+      'routes.delete': 'Удалить правило',
+      'routes.drag': 'Перетащить',
+      'routes.dragHint': 'Перетащите для изменения порядка',
+      'routes.saved': 'Маршруты сохранены',
+      'routes.deleted': 'Правило удалено',
+      'routes.invalid': 'Некорректное правило: {msg}',
+      'routes.reorderFail': 'Не удалось сохранить порядок',
+    },
+    zh: {
+      'lang.self': '中文',
+      'lang.switch': '切换语言',
+      'meta.title': 'Xray Decky – 管理面板',
+      'lock.title': '需要配对',
+      'lock.desc': '此面板受每个安装独立的令牌保护。请在 Steam Deck 上打开插件并扫描「选项」选项卡中的「管理面板」二维码,或在下方粘贴令牌。',
+      'lock.ph': '管理令牌',
+      'lock.unlock': '解锁',
+      'lock.rejected': '令牌被拒绝,请检查插件中的二维码。',
+      'lock.expired': '会话已过期或令牌无效,请重新配对。',
+      'st.connected.t': '已连接',
+      'st.connected.s': '流量已通过代理转发',
+      'st.connecting.t': '正在连接…',
+      'st.connecting.s': '正在启动 xray-core',
+      'st.disconnected.t': '已断开',
+      'st.disconnected.s': '代理处于空闲状态',
+      'st.error.t': '错误',
+      'st.error.s': '出现了一些问题',
+      'st.blocked.t': '已拦截',
+      'st.blocked.s': 'Kill Switch 已启用 — 流量已被阻止',
+      'st.unknown.t': '加载中…',
+      'st.unknown.s': '正在获取当前状态',
+      'hero.connect': '连接',
+      'hero.disconnect': '断开',
+      'hero.unblock': '解除拦截',
+      'hero.upFor': '已运行 {t}',
+      'stat.total': '总计',
+      'stat.download': '下载速度',
+      'stat.upload': '上传速度',
+      'stat.session': '会话流量',
+      'graph.download': '下载',
+      'graph.upload': '上传',
+      'graph.window': '近 2 分钟峰值',
+      'graph.aria': '最近两分钟的实时下载和上传速度',
+      'time.hours': '小时',
+      'time.minutes': '分钟',
+      'time.seconds': '秒',
+      'servers.title': '服务器',
+      'servers.pingAll': '全部测速',
+      'servers.pinging': '测速中…',
+      'servers.empty': '尚无服务器。请使用导入表单添加。',
+      'servers.footnote': '点击服务器即可设为活动服务器 — 如已连接,将自动切换。',
+      'servers.offline': '离线',
+      'servers.unnamed': '未命名服务器',
+      'servers.activate': '启用 {name}',
+      'servers.remove': '移除服务器',
+      'servers.singboxCore': '使用 sing-box 内核',
+      'sub.info': '{name} · {n} 台服务器 · 更新于 {date}',
+      'sub.default': '订阅',
+      'sub.expires': '{date} 过期',
+      'sub.refresh': '刷新',
+      'sub.refreshing': '刷新中…',
+      'sub.rename': '重命名',
+      'sub.renamePrompt': '订阅名称:',
+      'sub.renamed': '订阅已重命名',
+      'sub.renameFail': '重命名失败',
+      'sub.auto': '自动刷新',
+      'sub.autoAria': '自动刷新间隔',
+      'sub.intervalOff': '关闭',
+      'sub.interval6': '每 6 小时',
+      'sub.interval12': '每 12 小时',
+      'sub.interval24': '每天',
+      'sub.interval48': '每 2 天',
+      'sub.intervalSet': '自动刷新已设置',
+      'sub.intervalOffSet': '自动刷新已关闭',
+      'sub.intervalFail': '无法设置自动刷新',
+      'options.title': '选项',
+      'options.tun': 'TUN 模式',
+      'options.tunDesc': '将所有系统流量通过代理转发',
+      'options.ks': 'Kill Switch',
+      'options.ksDesc': '若代理意外中断则阻断所有流量',
+      'options.tunNote': 'TUN 模式已启用但缺少权限 — 请参阅 Deck 上的 INSTALLATION.md。',
+      'import.title': '导入配置',
+      'import.ph': 'vless:// / vmess:// / trojan:// / ss:// / socks:// / hysteria2:// / tuic://',
+      'import.aria': '分享链接',
+      'import.save': '保存',
+      'import.saved': '已导入',
+      'import.enter': '请粘贴分享链接或订阅 URL',
+      'import.failed': '导入失败',
+      'updates.title': '更新',
+      'updates.check': '检查',
+      'updates.checking': '检查中…',
+      'updates.hint': '检查是否有新的核心版本可用。',
+      'updates.upToDate': '已是最新版本',
+      'updates.available': '{v} 有更新',
+      'updates.failed': '检查更新失败',
+      'export.title': '导出服务器',
+      'export.reveal': '显示',
+      'export.hide': '隐藏',
+      'export.hint': '显示所有已保存服务器的分享链接。链接包含凭据,请妥善保管。',
+      'export.aria': '已导出服务器',
+      'export.count': '{n} 个服务器',
+      'export.empty': '未导出任何服务器。',
+      'export.copyLinks': '复制链接',
+      'export.copySub': '复制订阅',
+      'export.copied': '已复制',
+      'export.copyFail': '复制失败',
+      'toast.exportFail': '导出失败',
+      'toast.updatesFail': '检查更新失败',
+      'toast.netErr': '网络错误',
+      'toast.removed': '服务器已移除',
+      'toast.removeFail': '移除失败',
+      'toast.switched': '已切换并重新连接',
+      'toast.activated': '服务器已激活',
+      'toast.switchFail': '切换服务器失败',
+      'toast.subRefreshed': '订阅已刷新',
+      'toast.refreshFail': '刷新失败',
+      'toast.latency': '测速完成',
+      'toast.pingFail': '测速失败',
+      'toast.connected': '已连接',
+      'toast.disconnected': '已断开',
+      'toast.actionFail': '操作失败',
+      'toast.unblocked': '流量已解除拦截',
+      'toast.unblockFail': '解除拦截失败',
+      'toast.toggleOn': '{label} 已启用',
+      'toast.toggleOff': '{label} 已关闭',
+      'toast.toggleFail': '切换失败:{label}',
+      'routes.title': '路由规则',
+      'routes.add': '添加规则',
+      'routes.sub': '域名 / IP / geosite / geoip → 代理或直连。规则按顺序匹配；局域网流量始终绕过代理。拖动规则行调整顺序。',
+      'routes.empty': '暂无路由规则。点击“添加规则”，将指定域名或 IP 通过代理或直连。',
+      'routes.matchType': '匹配类型',
+      'routes.type.domain': '域名',
+      'routes.type.ip': 'IP CIDR',
+      'routes.type.geosite': '域名集合',
+      'routes.type.geoip': 'IP 集合',
+      'routes.value': '值',
+      'routes.presetPh': '例如 example.com / 10.0.0.0/8 / geosite:google',
+      'routes.action': '操作',
+      'routes.action.proxy': '代理',
+      'routes.action.direct': '直连',
+      'routes.action.reject': '拒绝',
+      'routes.enabled': '已启用',
+      'routes.valueRequired': '请输入值',
+      'routes.cancel': '取消',
+      'routes.save': '保存',
+      'routes.edit': '编辑规则',
+      'routes.delete': '删除规则',
+      'routes.drag': '拖动',
+      'routes.dragHint': '拖动以调整顺序',
+      'routes.saved': '路由规则已保存',
+      'routes.deleted': '规则已删除',
+      'routes.invalid': '无效规则：{msg}',
+      'routes.reorderFail': '保存新顺序失败',
+      'import.seg': ["粘贴 ", {mono: "vless://"}, "、", {mono: "vmess://"}, "、", {mono: "trojan://"}, "、", {mono: "ss://"}, "、", {mono: "socks://"}, "、", {mono: "hysteria2://"}, " 或 ", {mono: "tuic://"}, " 分享链接,或订阅 URL (", {mono: "https://…"}, ") 及其 base64 内容。"],
     },
   }
 
   function detectLang() {
     var saved = window.localStorage.getItem(LANG_KEY)
-    if (saved === 'en' || saved === 'ru') return saved
+    if (saved === 'en' || saved === 'ru' || saved === 'zh') return saved
     var nav = (window.navigator.language || 'en').toLowerCase()
+    if (nav.indexOf('zh') === 0) return 'zh'
     return nav.indexOf('ru') === 0 ? 'ru' : 'en'
   }
 
@@ -362,6 +579,7 @@
       renderSubscription(state.lastProfiles.subscription)
     }
     if (state.lastUpdates) renderUpdates(state.lastUpdates)
+    if (state.lastRules) renderRules(state.lastRules)
   }
 
   var els = {
@@ -414,6 +632,21 @@
     exportCopySub: document.getElementById('export-copy-sub'),
     toast: document.getElementById('toast'),
     langToggle: document.getElementById('lang-toggle'),
+    // Routing rules
+    rulesList: document.getElementById('rules-list'),
+    rulesEmpty: document.getElementById('rules-empty'),
+    rulesAddBtn: document.getElementById('routes-add-btn'),
+    rulesMsg: document.getElementById('rules-msg'),
+    ruleDialog: document.getElementById('rule-dialog'),
+    ruleForm: document.getElementById('rule-form'),
+    ruleType: document.getElementById('rule-type'),
+    ruleValue: document.getElementById('rule-value'),
+    ruleAction: document.getElementById('rule-action'),
+    ruleEnabled: document.getElementById('rule-enabled'),
+    ruleDialogError: document.getElementById('rule-dialog-error'),
+    rulePresets: document.getElementById('rule-presets'),
+    ruleSave: document.getElementById('rule-save'),
+    ruleCancel: document.getElementById('rule-cancel'),
   }
 
   var state = {
@@ -429,6 +662,11 @@
     lastUpdates: null,
     lastExport: null,
     exportShown: false,
+    // Routing rules
+    lastRules: null,
+    ruleEditingId: null,
+    rulePresetsList: [],
+    draggedRuleId: null,
   }
 
   // ----- token handling -----
@@ -649,9 +887,9 @@
     var h = Math.floor(seconds / 3600)
     var m = Math.floor((seconds % 3600) / 60)
     var s = Math.floor(seconds % 60)
-    if (h > 0) return h + 'h ' + m + 'm'
-    if (m > 0) return m + 'm ' + s + 's'
-    return s + 's'
+    if (h > 0) return h + t('time.hours') + ' ' + m + t('time.minutes')
+    if (m > 0) return m + t('time.minutes') + ' ' + s + t('time.seconds')
+    return s + t('time.seconds')
   }
 
   function render(data) {
@@ -744,7 +982,9 @@
       row.className = 'server-row' + (profile.id === activeId ? ' active' : '')
       row.setAttribute(
         'aria-label',
-        t('servers.activate', { name: profile.name || profile.address || 'server' })
+        t('servers.activate', {
+          name: profile.name || profile.address || t('servers.unnamed'),
+        })
       )
 
       var chips = document.createElement('span')
@@ -1285,10 +1525,12 @@
     })
   })
 
-  // Language toggle: flip EN ↔ RU, persist, re-render.
+  // Language toggle: cycle EN → RU → ZH, persist, re-render.
   if (els.langToggle) {
     els.langToggle.addEventListener('click', function () {
-      setLang(state.lang === 'ru' ? 'en' : 'ru')
+      var order = ['en', 'ru', 'zh']
+      var idx = order.indexOf(state.lang)
+      setLang(order[(idx + 1) % order.length])
     })
   }
 
@@ -1296,6 +1538,251 @@
   window.addEventListener('resize', function () {
     if (!els.heroGraph.hidden) drawGraph()
   })
+
+  // ----- routing rules -----
+
+  function fetchRouteRules() {
+    return api('/api/v1/route-rules', { method: 'GET' }).then(function (res) {
+      if (res.status === 200 && res.data && res.data.success) {
+        state.lastRules = res.data.rules || []
+        state.rulePresetsList = res.data.presets || []
+        renderRules(state.lastRules)
+        populatePresets()
+      }
+    })
+  }
+
+  function populatePresets() {
+    if (!els.rulePresets) return
+    els.rulePresets.textContent = ''
+    state.rulePresetsList.forEach(function (p) {
+      var opt = document.createElement('option')
+      opt.value = p.value
+      opt.dataset.type = p.type
+      els.rulePresets.appendChild(opt)
+    })
+  }
+
+  function renderRules(rules) {
+    if (!els.rulesList) return
+    els.rulesList.textContent = ''
+    var list = (rules || []).slice()
+    var hasRules = list.length > 0
+    els.rulesList.hidden = !hasRules
+    if (els.rulesEmpty) els.rulesEmpty.hidden = hasRules
+    list.forEach(function (rule) {
+      var li = document.createElement('li')
+      li.className = 'rule-item'
+      li.dataset.ruleId = rule.id || ''
+      li.draggable = true
+
+      var handle = document.createElement('span')
+      handle.className = 'rule-handle'
+      handle.textContent = '⋮⋮'
+      handle.title = t('routes.dragHint')
+      handle.setAttribute('aria-label', t('routes.drag'))
+      li.appendChild(handle)
+
+      var enabled = document.createElement('input')
+      enabled.type = 'checkbox'
+      enabled.checked = !!rule.enabled
+      enabled.title = t('routes.enabled')
+      enabled.addEventListener('change', function () {
+        rule.enabled = enabled.checked
+        putRouteRules(toast)
+      })
+      li.appendChild(enabled)
+
+      var typeBadge = document.createElement('span')
+      typeBadge.className = 'rule-badge rule-badge-type'
+      typeBadge.textContent = rule.match ? t('routes.type.' + rule.match.type) : ''
+      li.appendChild(typeBadge)
+
+      var valueCell = document.createElement('span')
+      valueCell.className = 'rule-value mono'
+      valueCell.textContent = rule.match ? rule.match.value : ''
+      li.appendChild(valueCell)
+
+      var arrow = document.createElement('span')
+      arrow.className = 'rule-arrow'
+      arrow.textContent = '→'
+      li.appendChild(arrow)
+
+      var actionBadge = document.createElement('span')
+      actionBadge.className =
+        'rule-badge rule-badge-action rule-action-' + (rule.action || 'proxy')
+      actionBadge.textContent = rule.action ? t('routes.action.' + rule.action) : ''
+      li.appendChild(actionBadge)
+
+      var edit = document.createElement('button')
+      edit.type = 'button'
+      edit.className = 'btn btn-ghost btn-small'
+      edit.textContent = t('routes.edit')
+      edit.addEventListener('click', function () {
+        openRuleDialog(rule)
+      })
+      li.appendChild(edit)
+
+      var del = document.createElement('button')
+      del.type = 'button'
+      del.className = 'btn btn-ghost btn-small'
+      del.textContent = t('routes.delete')
+      del.addEventListener('click', function () {
+        if (!window.confirm(t('routes.delete') + '?')) return
+        var newList = state.lastRules.filter(function (r) {
+          return r.id !== rule.id
+        })
+        putRouteRules(function (ok, msg) {
+          if (ok) {
+            toast(t('routes.deleted'))
+          } else if (msg) {
+            toast(msg, true)
+          }
+        }, newList)
+      })
+      li.appendChild(del)
+
+      // Drag and drop reordering
+      li.addEventListener('dragstart', function (e) {
+        state.draggedRuleId = rule.id
+        e.dataTransfer.effectAllowed = 'move'
+        e.dataTransfer.setData('text/plain', rule.id)
+      })
+      li.addEventListener('dragover', function (e) {
+        e.preventDefault()
+        e.dataTransfer.dropEffect = 'move'
+      })
+      li.addEventListener('drop', function (e) {
+        e.preventDefault()
+        var draggedId = state.draggedRuleId
+        state.draggedRuleId = null
+        if (!draggedId || draggedId === rule.id) return
+        var order = state.lastRules.map(function (r) {
+          return r.id
+        })
+        var fromPos = order.indexOf(draggedId)
+        var toPos = order.indexOf(rule.id)
+        if (fromPos === -1 || toPos === -1) return
+        order.splice(fromPos, 1)
+        order.splice(toPos, 0, draggedId)
+        // Reorder state.lastRules accordingly and PUT.
+        var byId = {}
+        state.lastRules.forEach(function (r) {
+          byId[r.id] = r
+        })
+        state.lastRules = order.map(function (id) {
+          return byId[id]
+        })
+        renderRules(state.lastRules)
+        putRouteRules(function (ok, msg) {
+          if (!ok && msg) toast(msg, true)
+        })
+      })
+
+      els.rulesList.appendChild(li)
+    })
+  }
+
+  function putRouteRules(done, newList) {
+    var payload = { rules: newList || state.lastRules || [] }
+    api('/api/v1/route-rules', {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }).then(function (res) {
+      var ok = res.status === 200 && res.data && res.data.success
+      var msg =
+        res.data && res.data.error
+          ? t('routes.invalid', { msg: res.data.error })
+          : ''
+      if (ok) {
+        state.lastRules = payload.rules
+        renderRules(state.lastRules)
+      }
+      if (typeof done === 'function') done(ok, msg)
+    })
+  }
+
+  function openRuleDialog(rule) {
+    if (!els.ruleDialog) return
+    state.ruleEditingId = rule && rule.id ? rule.id : null
+    var title = els.ruleDialog.querySelector('#rule-dialog-title')
+    if (title) title.textContent = rule ? t('routes.edit') : t('routes.add')
+    if (els.ruleType) els.ruleType.value = rule && rule.match ? rule.match.type : 'domain'
+    if (els.ruleValue) els.ruleValue.value = rule && rule.match ? rule.match.value : ''
+    if (els.ruleAction) els.ruleAction.value = rule ? rule.action : 'proxy'
+    if (els.ruleEnabled) els.ruleEnabled.checked = rule ? !!rule.enabled : true
+    if (els.ruleDialogError) {
+      els.ruleDialogError.hidden = true
+      els.ruleDialogError.textContent = ''
+    }
+    if (typeof els.ruleDialog.showModal === 'function') {
+      els.ruleDialog.showModal()
+    }
+  }
+
+  function closeRuleDialog() {
+    if (els.ruleDialog && typeof els.ruleDialog.close === 'function') {
+      els.ruleDialog.close()
+    }
+    state.ruleEditingId = null
+  }
+
+  function handleRuleFormSubmit(e) {
+    e.preventDefault()
+    if (!els.ruleType || !els.ruleValue || !els.ruleAction) return
+    var mType = els.ruleType.value
+    var value = els.ruleValue.value.trim()
+    var action = els.ruleAction.value
+    var enabled = els.ruleEnabled ? els.ruleEnabled.checked : true
+    if (!value) {
+      if (els.ruleDialogError) {
+        els.ruleDialogError.textContent = t('routes.invalid', {
+          msg: t('routes.valueRequired'),
+        })
+        els.ruleDialogError.hidden = false
+      }
+      return
+    }
+    var rule = {
+      enabled: enabled,
+      action: action,
+      match: { type: mType, value: value },
+    }
+    var list = state.lastRules.slice()
+    if (state.ruleEditingId) {
+      list = list.map(function (r) {
+        if (r.id !== state.ruleEditingId) return r
+        var merged = Object.assign({}, r, rule)
+        return merged
+      })
+    } else {
+      rule.id = 'tmp_' + Date.now()
+      list.push(rule)
+    }
+    putRouteRules(function (ok, msg) {
+      if (ok) {
+        toast(t('routes.saved'))
+        closeRuleDialog()
+      } else if (msg && els.ruleDialogError) {
+        els.ruleDialogError.textContent = msg
+        els.ruleDialogError.hidden = false
+      }
+    }, list)
+  }
+
+  if (els.rulesAddBtn) {
+    els.rulesAddBtn.addEventListener('click', function () {
+      openRuleDialog(null)
+    })
+  }
+  if (els.ruleForm) {
+    els.ruleForm.addEventListener('submit', handleRuleFormSubmit)
+  }
+  if (els.ruleCancel) {
+    els.ruleCancel.addEventListener('click', function () {
+      closeRuleDialog()
+    })
+  }
 
   // ----- init -----
 
@@ -1305,6 +1792,7 @@
   if (state.token) {
     startPolling()
     fetchProfiles()
+    fetchRouteRules()
   } else {
     showLocked(null)
   }

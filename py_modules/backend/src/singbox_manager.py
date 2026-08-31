@@ -15,7 +15,10 @@ import asyncio
 import json
 import os
 import tempfile
-from typing import Any, Dict, Optional
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+from .singbox_rules import rule_set_definitions, rule_set_tag
 
 SOCKS_PORT = 10808
 HTTP_PORT = 10809
@@ -81,6 +84,8 @@ def build_singbox_config(
     profile: Dict[str, Any],
     tun_mode: bool = False,
     outbound_interface: Optional[str] = None,
+    route_rules: Optional[List[Dict[str, Any]]] = None,
+    rule_set_dir: Optional[Path | str] = None,
 ) -> Dict[str, Any]:
     """
     Build a sing-box JSON configuration for a hysteria2/tuic profile.
@@ -90,10 +95,17 @@ def build_singbox_config(
         tun_mode: Whether to add the TUN inbound (system-wide routing).
         outbound_interface: Physical interface to bind the proxy outbound to
             in TUN mode, so proxy traffic bypasses the tunnel (avoids a loop).
+        route_rules: User-editable routing rules (see backend.src.route_rules).
+            Applied between the LAN bypass and the catch-all ``final``.
+        rule_set_dir: Directory containing the local binary ``.srs`` files.
+            When omitted, use the package-local ``srss`` directory; the main
+            runtime passes the packaged or repaired absolute directory.
 
     Returns:
         sing-box configuration dictionary.
     """
+    if route_rules is None:
+        route_rules = []
     proxy = _proxy_outbound(profile)
     if tun_mode and outbound_interface:
         proxy["bind_interface"] = outbound_interface
@@ -129,16 +141,54 @@ def build_singbox_config(
             }
         )
 
+    # Build route.rules in the right order. Order matters in sing-box:
+    # first-match wins, so the LAN safety bypass MUST sit ahead of user rules.
+    rules: List[Dict[str, Any]] = [
+        {"ip_is_private": True, "outbound": "direct"},
+    ]
+    for rule in route_rules:
+        if not rule.get("enabled", True):
+            continue
+        action = rule.get("action")
+        target = {
+            "proxy": "proxy",
+            "direct": "direct",
+            "reject": "block",
+        }.get(action)
+        if target is None:
+            continue
+        match = rule.get("match") or {}
+        m_type = match.get("type")
+        value = match.get("value", "")
+        if m_type == "domain":
+            rules.append({"domain": [value], "outbound": target})
+        elif m_type == "ip":
+            rules.append({"ip_cidr": [value], "outbound": target})
+        elif m_type == "geosite":
+            rules.append({"rule_set": [rule_set_tag(value)], "outbound": target})
+        elif m_type == "geoip":
+            rules.append({"rule_set": [rule_set_tag(value)], "outbound": target})
+
+    # Outbound "block" is built-in in sing-box, so we don't need to add one.
+    direct: Dict[str, Any] = {"type": "direct", "tag": "direct"}
+    if tun_mode and outbound_interface:
+        # The TUN manager installs xray0 as the preferred default route. A
+        # direct connection must bind to the physical interface or it loops
+        # back into the sing-box TUN inbound instead of reaching the network.
+        direct["bind_interface"] = outbound_interface
+
+    outbounds: List[Dict[str, Any]] = [proxy, direct]
+
     config: Dict[str, Any] = {
         "log": {"level": "warn"},
         "inbounds": inbounds,
-        "outbounds": [
-            proxy,
-            {"type": "direct", "tag": "direct"},
-        ],
+        "outbounds": outbounds,
         "route": {
-            # Private/LAN IPs bypass the proxy; everything else goes to proxy.
-            "rules": [{"ip_is_private": True, "outbound": "direct"}],
+            "rules": rules,
+            "rule_set": rule_set_definitions(
+                rule_set_dir
+                or Path(__file__).resolve().parent / "srss"
+            ),
             "final": "proxy",
         },
     }
@@ -155,8 +205,13 @@ class SingBoxManager:
     create_subprocess_exec — no shell is ever involved.
     """
 
-    def __init__(self, binary_path: str = "backend/out/sing-box") -> None:
+    def __init__(
+        self,
+        binary_path: str = "backend/out/sing-box",
+        rule_set_dir: Optional[Path | str] = None,
+    ) -> None:
         self.binary_path = binary_path
+        self.rule_set_dir = str(Path(rule_set_dir).expanduser().resolve()) if rule_set_dir else None
         self.config_file: Optional[str] = None
         self.process: Optional[asyncio.subprocess.Process] = None
         self.process_id: Optional[int] = None
@@ -166,14 +221,31 @@ class SingBoxManager:
         profile: Dict[str, Any],
         tun_mode: bool = False,
         outbound_interface: Optional[str] = None,
+        route_rules: Optional[List[Dict[str, Any]]] = None,
+        rule_set_dir: Optional[Path | str] = None,
     ) -> str:
-        """Write a sing-box config to a temp file and return its path."""
+        """Write a sing-box config to a temp file and return its path.
+
+        ``route_rules`` is threaded through to :func:`build_singbox_config` so
+        a PUT to the admin API is reflected on the next generated config.
+        """
         config_dir = tempfile.gettempdir()
         config_file = os.path.join(config_dir, f"singbox-config-{os.getpid()}.json")
-        config = build_singbox_config(profile, tun_mode, outbound_interface)
+        selected_rule_set_dir = rule_set_dir or self.rule_set_dir
+        config = build_singbox_config(
+            profile,
+            tun_mode,
+            outbound_interface,
+            route_rules=route_rules,
+            rule_set_dir=selected_rule_set_dir,
+        )
         with open(config_file, "w", encoding="utf-8") as f:
             json.dump(config, f, indent=2)
         self.config_file = config_file
+        if selected_rule_set_dir:
+            self.rule_set_dir = str(
+                Path(selected_rule_set_dir).expanduser().resolve()
+            )
         return config_file
 
     async def start(self, config_file: str) -> Dict[str, Any]:

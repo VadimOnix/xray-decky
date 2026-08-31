@@ -9,9 +9,20 @@ import asyncio
 import json
 import os
 import tempfile
-from typing import Dict, Any, Optional
+from typing import Any, Dict, List, Optional
 
 from .stats import API_PORT
+
+
+# Steam's Linux client selects CDN endpoints dynamically.  The published
+# geosite:steam@cn set does not cover all of the download hosts it returns,
+# while store/community must remain on the proxy.  These are download-only
+# suffixes observed in Steam's content client logs.
+_STEAM_DOWNLOAD_DOMAIN_RULES = (
+    "domain:steamcontent.com",
+    "domain:steampipe.akamaized.net",
+    "domain:steamcdn-a.akamaihd.net",
+)
 
 
 class XrayManager:
@@ -42,6 +53,7 @@ class XrayManager:
         vless_config: Dict[str, Any],
         tun_mode: bool = False,
         outbound_interface: Optional[str] = None,
+        route_rules: Optional[List[Dict[str, Any]]] = None,
     ) -> str:
         """
         Generate xray-core JSON configuration from VLESSConfig.
@@ -50,6 +62,9 @@ class XrayManager:
             vless_config: VLESSConfig dictionary
             tun_mode: Whether to enable TUN mode
             outbound_interface: For TUN mode, bind proxy to this interface (e.g. wlan0)
+            route_rules: User-editable routing rules (see backend.src.route_rules).
+                Read on every call so an updated ruleset is reflected on the
+                next generated config without restarting the proxy.
 
         Returns:
             Path to generated config file
@@ -60,7 +75,7 @@ class XrayManager:
 
         # Generate xray-core config
         xray_config = self._build_xray_config(
-            vless_config, tun_mode, outbound_interface
+            vless_config, tun_mode, outbound_interface, route_rules=route_rules
         )
 
         # Write config file
@@ -75,6 +90,7 @@ class XrayManager:
         vless_config: Dict[str, Any],
         tun_mode: bool,
         outbound_interface: Optional[str] = None,
+        route_rules: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         """
         Build xray-core JSON configuration structure.
@@ -84,10 +100,16 @@ class XrayManager:
                 profiles imported before multi-protocol support lack the
                 "protocol" key and default to VLESS.
             tun_mode: Whether to enable TUN mode
+            route_rules: User-editable routing rules (see route_rules.py).
+                Inserted after the LAN bypass so user rules can never wedge
+                LAN traffic into the tunnel. Each rule is
+                ``{"id", "enabled", "action", "match": {"type", "value"}}``.
 
         Returns:
             xray-core configuration dictionary
         """
+        if route_rules is None:
+            route_rules = []
         protocol = vless_config.get("protocol", "vless")
         address = vless_config.get("address")
         port = vless_config.get("port")
@@ -131,6 +153,38 @@ class XrayManager:
                     }
                 ]
             }
+        elif protocol == "hysteria2":
+            # xray-core >= v26.7.28 supports the Hysteria2 client natively
+            # (upstream PR #6198). The JSON config has two pieces:
+            #   - outbound.settings  = {version, address, port}        (HysteriaClientConfig)
+            #   - streamSettings.hysteriaSettings = {version, auth, ...} (HysteriaConfig in transport_method.go)
+            # The auth (password) lives in the transport-level config — without
+            # that block the hysteria client refuses to start with
+            # "not hysteria transport" because its config comes from the
+            # stream's ProtocolSettings, not from the outbound's settings.
+            settings = {
+                "version": 2,
+                "address": address,
+                "port": port,
+            }
+            # Marked for the post-stream splice below (see _attach_hysteria_stream).
+            settings["_hysteria_auth"] = vless_config.get("password", "")
+            # Hysteria2 mandates udp+tls; the share-link parser already sets
+            # network="udp" and security="tls".
+            obfs_type = vless_config.get("obfs")
+            if obfs_type:
+                salamander: Dict[str, Any] = {"password": vless_config.get("obfsPassword") or ""}
+                if vless_config.get("geckoEnabled") or str(obfs_type).lower() == "gecko":
+                    # Gecko (Hysteria v2.9.2): random-length UDP packet padding
+                    # via the salamander finalmask's packetSize range. xray-core's
+                    # Int32Range type accepts either a plain int or a "min-max"
+                    # string (e.g. "1000-1500"); it does NOT accept a {from, to}
+                    # object — see infra/conf/transport_finalmask.go Salamander.
+                    salamander["packetSize"] = "1000-1500"
+                # Will be spliced into streamSettings below — see _attach_finalmask.
+                settings["_finalmask"] = {
+                    "udp": [{"type": "salamander", "settings": salamander}]
+                }
         elif protocol == "socks":
             server: Dict[str, Any] = {"address": address, "port": port}
             username = vless_config.get("username")
@@ -200,10 +254,26 @@ class XrayManager:
             }
             if tls_config.get("alpn"):
                 tls_settings["alpn"] = tls_config["alpn"]
-            if tls_config.get("fingerprint"):
+            elif protocol == "hysteria2":
+                # Native Hysteria is HTTP/3 over QUIC; without h3 in the TLS
+                # ALPN list the process can stay alive while every request
+                # fails during the upstream handshake.
+                tls_settings["alpn"] = ["h3"]
+            if tls_config.get("fingerprint") and protocol != "hysteria2":
                 tls_settings["fingerprint"] = tls_config["fingerprint"]
-            if tls_config.get("allowInsecure"):
-                tls_settings["allowInsecure"] = True
+            # Xray v26.7.28 removed allowInsecure from TLSConfig. Keep the
+            # legacy profile flag for sing-box/export compatibility, but never
+            # put it in an Xray config: the core rejects it before startup.
+            if tls_config.get("pinnedPeerCertSha256"):
+                tls_settings["pinnedPeerCertSha256"] = tls_config[
+                    "pinnedPeerCertSha256"
+                ]
+            if tls_config.get("verifyPeerCertByName"):
+                tls_settings["verifyPeerCertByName"] = tls_config[
+                    "verifyPeerCertByName"
+                ]
+            if tls_config.get("echConfigList"):
+                tls_settings["echConfigList"] = tls_config["echConfigList"]
             stream["tlsSettings"] = tls_settings
         elif security == "reality" and reality_config:
             # CLIENT configuration only: publicKey, serverName, shortId,
@@ -218,13 +288,49 @@ class XrayManager:
                 reality_settings["spiderX"] = reality_config["spiderX"]
             stream["realitySettings"] = reality_settings
 
+        # Hysteria2-specific hooks (see _parse_hysteria2 branch above):
+        # - Hysteria2 runs over QUIC/UDP, but its Xray stream transport is the
+        #   dedicated `hysteria` protocol. `udp` is not a valid value for
+        #   streamSettings.network in Xray v26.7.28 and produces:
+        #     "infra/conf: Config: unknown transport protocol: udp".
+        # - The salamander / gecko finalmask is opt-in via obfs and stays in
+        #   streamSettings.finalmask, where it is documented as the right home.
+        if protocol == "hysteria2":
+            # The native Xray Hysteria client expects the dedicated transport
+            # name here; omitting it leaves the stream on tcp, while using udp
+            # is rejected by TransportProtocol.Build().
+            stream["network"] = "hysteria"
+            # The Hysteria auth lives in the stream transport block. Without
+            # this, the proxy/hysteria client aborts with "not hysteria
+            # transport" because it looks up its config from the stream's
+            # ProtocolSettings (a *hysteria.Config), not from the outbound.
+            auth = settings.pop("_hysteria_auth", None)
+            if auth is not None:
+                stream["hysteriaSettings"] = {"version": 2, "auth": auth}
+            finalmask = settings.pop("_finalmask", None)
+            port_hopping = vless_config.get("portHopping")
+            if isinstance(port_hopping, dict) and port_hopping.get("ports"):
+                if finalmask is None:
+                    finalmask = {}
+                finalmask["quicParams"] = {
+                    "udpHop": {
+                        "ports": str(port_hopping["ports"]),
+                        "interval": str(port_hopping.get("interval") or "30"),
+                    }
+                }
+            if finalmask is not None:
+                stream["finalmask"] = finalmask
+
         # TUN mode: bind proxy outbound to physical interface to bypass routing (avoid loop)
         if tun_mode and outbound_interface:
             stream["sockopt"] = {"interface": outbound_interface}
 
-        # Build outbound configuration (tag "proxy" for routing)
+        # Build outbound configuration (tag "proxy" for routing).
+        # xray-core registers the Hysteria v1+v2 client under the outbound id
+        # "hysteria" (v1/v2 is distinguished by settings.version, not by name).
+        outbound_protocol = "hysteria" if protocol == "hysteria2" else protocol
         outbound = {
-            "protocol": protocol,
+            "protocol": outbound_protocol,
             "tag": "proxy",
             "settings": settings,
             "streamSettings": stream,
@@ -236,6 +342,13 @@ class XrayManager:
             "settings": {"domainStrategy": "UseIP"},
             "tag": "direct",
         }
+        if tun_mode and outbound_interface:
+            # The system default route points at xray0 in TUN mode. Direct
+            # traffic must leave through the physical interface as well, or
+            # freedom follows the TUN route and loops back into this core.
+            direct_outbound["streamSettings"] = {
+                "sockopt": {"interface": outbound_interface}
+            }
 
         # Sniffing restores the destination domain so domain-based routing
         # rules work for transparently redirected traffic.
@@ -255,19 +368,107 @@ class XrayManager:
             # Stats API traffic must be matched before the private-IP bypass
             # (its destination is 127.0.0.1).
             {"type": "field", "inboundTag": ["api"], "outboundTag": "api"},
-            # Bypass private/LAN IPs (127.x, 10.x, 192.168.x, etc.)
+            # Bypass private/LAN IPs (127.x, 10.x, 192.168.x, etc.) — MUST stay
+            # ahead of any user rule that could otherwise funnel LAN traffic
+            # into the tunnel.
             {"type": "field", "ip": ["geoip:private"], "outboundTag": "direct"},
-            # SOCKS/HTTP inbound traffic goes through proxy
-            {
-                "type": "field",
-                "inboundTag": ["socks", "http"],
-                "outboundTag": "proxy",
-            },
         ]
+        direct_dns_domains: List[str] = []
+        # User-editable rules (configurable via the admin panel). Disabled
+        # rules are skipped here but kept on disk so users can re-enable them.
+        for rule in route_rules:
+            if not rule.get("enabled", True):
+                continue
+            action = rule.get("action")
+            target = {
+                "proxy": "proxy",
+                "direct": "direct",
+                "reject": "block",
+            }.get(action)
+            if target is None:
+                continue
+            match = rule.get("match") or {}
+            m_type = match.get("type")
+            value = match.get("value", "")
+            domains = [value]
+            if (
+                target == "direct"
+                and m_type == "geosite"
+                and value.lower() == "geosite:steam@cn"
+            ):
+                # Keep the fallback in the same first-match rule as the
+                # user's geosite rule. This preserves the rule's position and
+                # does not make store.steampowered.com or
+                # steamcommunity.com direct.
+                domains.extend(_STEAM_DOWNLOAD_DOMAIN_RULES)
+            if target == "direct" and m_type in ("domain", "geosite") and value:
+                direct_dns_domains.extend(domains)
+            if m_type == "domain":
+                routing_rules.append({"type": "field", "domain": domains, "outboundTag": target})
+            elif m_type == "ip":
+                routing_rules.append({"type": "field", "ip": [value], "outboundTag": target})
+            elif m_type == "geosite":
+                routing_rules.append({"type": "field", "domain": domains, "outboundTag": target})
+            elif m_type == "geoip":
+                routing_rules.append({"type": "field", "ip": [value], "outboundTag": target})
+
+        if tun_mode:
+            # Native Xray TUN does not otherwise see the DNS query that Steam
+            # sends to the system resolver. Hijack port 53 into Xray's DNS
+            # outbound so transparent connections can retain a routeable
+            # domain instead of becoming an IP-only connection.
+            routing_rules.insert(
+                1,
+                {
+                    "type": "field",
+                    "inboundTag": ["tun"],
+                    "port": 53,
+                    "outboundTag": "dns-out",
+                },
+            )
+            config["outbounds"].append({"protocol": "dns", "tag": "dns-out"})
+            config["dns"] = {
+                "servers": ["localhost"],
+                "queryStrategy": "UseIPv4",
+            }
+
+            # FakeDNS is deliberately limited to user-selected direct domain
+            # rules. It preserves the domain across an IP-only TUN connection
+            # (Steam downloads are the main example) without changing the
+            # normal proxy treatment of store/community domains.
+            if direct_dns_domains:
+                config["dns"]["servers"].insert(
+                    0,
+                    {"address": "fakedns", "domains": direct_dns_domains},
+                )
+                config["fakedns"] = {
+                    "ipPool": "198.18.0.0/15",
+                    "poolSize": 65535,
+                }
+                sniffing["destOverride"].append("fakedns")
+
+        # Built-in inbound-to-outbound fall-through rules.
+        routing_rules.extend(
+            [
+                # SOCKS/HTTP inbound traffic goes through proxy
+                {
+                    "type": "field",
+                    "inboundTag": ["socks", "http"],
+                    "outboundTag": "proxy",
+                },
+            ]
+        )
         config["routing"] = {
             "domainStrategy": "IPIfNonMatch",
             "rules": routing_rules,
         }
+
+        # Blackhole outbound is only added when at least one user rule asks for
+        # reject; avoids an unused outbound in the common case.
+        if any(r.get("enabled", True) and r.get("action") == "reject" for r in route_rules):
+            config["outbounds"].append(
+                {"protocol": "blackhole", "tag": "block"}
+            )
 
         # Traffic statistics: StatsService on a localhost-only API inbound,
         # queried with `xray api statsquery`.
@@ -315,23 +516,24 @@ class XrayManager:
 
         # Add TUN mode configuration if enabled
         if tun_mode:
-            # TUN traffic goes through the proxy — but only AFTER the
-            # private-IP bypass above. Rules are first-match: with the TUN
-            # rule in front of it, LAN traffic and DNS queries to the home
-            # router would be sent into the tunnel and die, killing all
-            # connectivity while connected (the original v1 TUN bug,
-            # reintroduced when the stats API rule bumped this insert index).
-            routing_rules.insert(
-                2,
-                {"type": "field", "inboundTag": ["tun"], "outboundTag": "proxy"},
+            # TUN traffic falls through to the proxy only after user rules.
+            # Rules are first-match: putting this catch-all before a user
+            # geosite/domain rule makes direct or reject rules ineffective
+            # for every TUN connection (Steam downloads included).
+            routing_rules.append(
+                {"type": "field", "inboundTag": ["tun"], "outboundTag": "proxy"}
             )
 
-            # TUN inbound — supported since xray-core v26.1.23.
-            # xray-core creates the TUN interface; no settings required.
+            # TUN inbound — supported since xray-core v26.1.23. Explicitly
+            # name the interface because tun_manager waits for xray0 before
+            # adding the system route. Without this, Xray chooses its own
+            # platform-dependent name (for example utunN), so route setup
+            # races against an interface that will never appear.
             # System routing must still be set up externally (tun_manager).
             config["inbounds"].append(
                 {
                     "protocol": "tun",
+                    "settings": {"name": "xray0", "mtu": 1500},
                     "sniffing": sniffing,
                     "tag": "tun",
                 }

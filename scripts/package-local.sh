@@ -12,6 +12,9 @@ ZIP_NAME="${PLUGIN_NAME}-v${PLUGIN_VERSION}.zip"
 echo "🔨 Building ${PLUGIN_NAME} v${PLUGIN_VERSION}..."
 pnpm run build
 
+echo "📥 Fetching sing-box rule sets..."
+scripts/fetch-singbox-rules.sh bin/srss
+
 TEMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TEMP_DIR"' EXIT
 PLUGIN_DIR="$TEMP_DIR/$PLUGIN_NAME"

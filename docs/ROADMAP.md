@@ -313,6 +313,16 @@ the adapter refactor in Phase 4 is cheap insurance worth doing early.
 Each phase should ship as its own spec under `specs/00X-…` following the existing
 Spec-Kit workflow, with the phase's exit criteria as acceptance scenarios.
 
+## Shipped since v2.3.2
+
+- **WebAdmin routing rules** (Phase 3 stretch): domain / IP / geosite / geoip →
+  proxy | direct | reject, configurable via the admin panel with typeahead
+  presets and drag-to-reorder. Persisted in the `routeRules` settings key.
+- **Hysteria2 via xray-core** (Phase 4 Option A is now viable): bumped to
+  `v26.7.28` so Hysteria2 is served natively, including Gecko obfuscation
+  (PR #6198). The sing-box path is retained only for TUIC and for any
+  pre-existing profiles tagged `core: "sing-box"`.
+
 ## Sources
 
 - Xray-core releases & v26.3.27 changelog (Hysteria 2 inbound & transport, finalmask):

@@ -195,7 +195,10 @@ def test_hysteria2_and_tuic_map_to_singbox_core():
     by_addr = _by_address(parse_singbox_config(json.dumps(config)))
     hy2 = by_addr["h.example.com"]
     assert hy2["protocol"] == "hysteria2"
-    assert hy2["core"] == "sing-box"
+    # Backward-compat: sing-box JSON config used to mean "sing-box core";
+    # since v26.7.28 hysteria2 runs on xray-core, so the importer maps it
+    # there regardless. TUIC still uses sing-box.
+    assert hy2["core"] == "xray-core"
     assert hy2["obfs"] == "salamander"
     tuic = by_addr["u.example.com"]
     assert tuic["protocol"] == "tuic"

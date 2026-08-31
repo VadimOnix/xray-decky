@@ -130,6 +130,45 @@ describe('boot without a token', () => {
     expect(booted.doc.documentElement.lang).toBe('ru');
     expect(booted.el('lang-toggle').textContent).toBe('RU');
   });
+
+  it('translates metadata, accessibility labels, and loading state in Russian', () => {
+    booted = boot('', 'ru-RU');
+
+    expect(booted.doc.title).toBe('Xray Decky – Панель администратора');
+    expect(booted.el('lang-toggle').getAttribute('aria-label')).toBe('Переключить язык');
+    expect(booted.el('status-pill-text').textContent).toBe('Загрузка…');
+    expect(booted.el('hero-title').textContent).toBe('Загрузка…');
+    expect(booted.el('hero-sub').textContent).toBe('Получение статуса');
+    expect(booted.el('connect-btn-label').textContent).toBe('Подключить');
+    expect(booted.el('speed-canvas').getAttribute('aria-label')).toBe(
+      'Скорость загрузки и отдачи за последние две минуты'
+    );
+    expect(booted.doc.querySelector('.stat-down')?.getAttribute('aria-label')).toBe(
+      'Скорость загрузки'
+    );
+    expect(booted.doc.querySelector('.stat-up')?.getAttribute('aria-label')).toBe(
+      'Скорость отдачи'
+    );
+    expect(booted.doc.querySelector('.stat-total')?.getAttribute('aria-label')).toBe(
+      'Трафик сессии'
+    );
+  });
+
+  it('localizes dynamic uptime units in Russian', async () => {
+    booted = boot('?token=s3cret-token', 'ru-RU', {
+      status: 200,
+      body: {
+        success: true,
+        connection: { status: 'connected', uptime: 3661 },
+        config: { protocol: 'vless' },
+        tun: {},
+        killSwitch: {},
+      },
+    });
+    await flush();
+
+    expect(booted.el('hero-sub').textContent).toBe('В сети 1ч 1мин');
+  });
 });
 
 describe('pairing via the QR token', () => {

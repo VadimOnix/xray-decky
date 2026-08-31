@@ -292,7 +292,7 @@ def test_vmess_rejects_garbage():
     assert parse_share_link(f"vmess://{_b64('[1,2]')}") is None
 
 
-# --- Hysteria2 / TUIC (sing-box core) ---
+# --- Hysteria2 (xray-core) / TUIC (sing-box) ---
 
 
 def test_hysteria2_link():
@@ -302,7 +302,8 @@ def test_hysteria2_link():
     )
     assert profile is not None
     assert profile["protocol"] == "hysteria2"
-    assert profile["core"] == "sing-box"
+    # Hysteria2 now runs on xray-core (>= v26.7.28); sing-box handles TUIC only.
+    assert profile["core"] == "xray-core"
     assert profile["password"] == "p@ss"
     assert profile["address"] == "h2.example.com"
     assert profile["port"] == 443
@@ -312,13 +313,46 @@ def test_hysteria2_link():
     }
     assert profile["obfs"] == "salamander"
     assert profile["obfsPassword"] == "xyz"
+    assert profile["geckoEnabled"] is False
     assert profile["name"] == "HY2"
+
+
+def test_hysteria2_gecko_obfs_marks_gecko_enabled():
+    profile = parse_share_link(
+        "hysteria2://pw@h2.example.com:443?obfs=gecko&obfs-password=secret"
+    )
+    assert profile["protocol"] == "hysteria2"
+    assert profile["core"] == "xray-core"
+    assert profile["obfs"] == "gecko"
+    assert profile["obfsPassword"] == "secret"
+    assert profile["geckoEnabled"] is True
+
+
+def test_hysteria2_preserves_xray_tls_and_port_hopping_options():
+    profile = parse_share_link(
+        "hysteria2://pw@h2.example.com"
+        "?sni=cdn.example.com&alpn=h3&insecure=1"
+        "&pinSHA256=" + "AA" * 32
+        + "&vcn=cdn.example.com&ech=ZWNoLWNvbmZpZw=="
+        "&mport=21000-22000&hop_interval=15"
+    )
+    assert profile is not None
+    assert profile["port"] == 443
+    assert profile["tlsConfig"] == {
+        "serverName": "cdn.example.com",
+        "alpn": ["h3"],
+        "allowInsecure": True,
+        "pinnedPeerCertSha256": "AA" * 32,
+        "verifyPeerCertByName": "cdn.example.com",
+        "echConfigList": "ZWNoLWNvbmZpZw==",
+    }
+    assert profile["portHopping"] == {"ports": "21000-22000", "interval": "15"}
 
 
 def test_hy2_alias():
     profile = parse_share_link("hy2://pw@h2.example.com:8443?sni=a.example.com")
     assert profile["protocol"] == "hysteria2"
-    assert profile["core"] == "sing-box"
+    assert profile["core"] == "xray-core"
 
 
 def test_tuic_link():
@@ -347,7 +381,8 @@ def test_xray_protocols_tagged_with_core():
 def test_core_for_protocol():
     assert core_for_protocol("vless") == "xray"
     assert core_for_protocol("shadowsocks") == "xray"
-    assert core_for_protocol("hysteria2") == "sing-box"
+    # hysteria2 moved to xray-core in v26.7.28 (PR #6198).
+    assert core_for_protocol("hysteria2") == "xray"
     assert core_for_protocol("tuic") == "sing-box"
 
 
@@ -360,7 +395,7 @@ def test_subscription_keeps_mixed_cores():
         ]
     )
     profiles = parse_subscription(_b64(links))
-    assert [p["core"] for p in profiles] == ["xray", "sing-box", "sing-box"]
+    assert [p["core"] for p in profiles] == ["xray", "xray-core", "sing-box"]
 
 
 # --- Subscriptions ---

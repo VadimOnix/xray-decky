@@ -28,10 +28,11 @@ SUPPORTED_SCHEMES = (
     "tuic",
 )
 
-# Which core each protocol runs on. xray-core handles the classic protocols;
-# hysteria2/tuic need the sing-box second core.
-_XRAY_PROTOCOLS = ("vless", "vmess", "trojan", "shadowsocks", "socks")
-_SINGBOX_PROTOCOLS = ("hysteria2", "tuic")
+# Which core each protocol runs on. xray-core handles the classic protocols
+# and (since v26.7.28, PR #6198) Hysteria2 — including Gecko obfuscation via
+# salamander+packetSize. Only TUIC is still sing-box-only.
+_XRAY_PROTOCOLS = ("vless", "vmess", "trojan", "shadowsocks", "socks", "hysteria2")
+_SINGBOX_PROTOCOLS = ("tuic",)
 
 
 def core_for_protocol(protocol: str) -> str:
@@ -174,6 +175,15 @@ def _tls_from_params(params: Dict[str, str]) -> Dict[str, Any]:
         tls["fingerprint"] = params["fp"]
     if _is_truthy(params.get("allowInsecure")) or _is_truthy(params.get("insecure")):
         tls["allowInsecure"] = True
+    pinned_cert = params.get("pinSHA256") or params.get("pcs")
+    if pinned_cert:
+        tls["pinnedPeerCertSha256"] = pinned_cert
+    verify_cert_name = params.get("verifyPeerCertByName") or params.get("vcn")
+    if verify_cert_name:
+        tls["verifyPeerCertByName"] = verify_cert_name
+    ech_config = params.get("ech") or params.get("echConfigList")
+    if ech_config:
+        tls["echConfigList"] = ech_config
     return tls
 
 
@@ -210,6 +220,84 @@ def _split_url(url: str):
     if not validate_hostname(host) or not validate_port(port):
         return None
     return parts, host, port
+
+
+def _parse_hysteria_port_spec(value: str) -> Optional[Tuple[int, str]]:
+    """Validate a Hysteria single/multi-port spec and return its first port."""
+    normalized = value.strip().replace(":", "-")
+    if not normalized or not re.fullmatch(
+        r"\d+(?:-\d+)?(?:,\d+(?:-\d+)?)*", normalized
+    ):
+        return None
+
+    first_port: Optional[int] = None
+    for segment in normalized.split(","):
+        bounds = segment.split("-")
+        try:
+            start = int(bounds[0])
+            end = int(bounds[-1])
+        except ValueError:
+            return None
+        if not validate_port(start) or not validate_port(end) or start > end:
+            return None
+        if first_port is None:
+            first_port = start
+
+    if first_port is None:
+        return None
+    return first_port, normalized
+
+
+def _split_hysteria2_url(url: str):
+    """Parse a Hysteria2 endpoint, including omitted and multi-port forms."""
+    try:
+        parts = urllib.parse.urlsplit(url)
+        host = parts.hostname
+    except ValueError:
+        return None
+    if not host or not validate_hostname(host):
+        return None
+
+    # urllib.parse.urlsplit().port rejects the comma/range syntax supported by
+    # Hysteria2 URIs, so extract only the port text from the authority.
+    authority = parts.netloc.rsplit("@", 1)[-1]
+    if authority.startswith("["):
+        closing = authority.find("]")
+        if closing < 0:
+            return None
+        suffix = authority[closing + 1 :]
+        if suffix and not suffix.startswith(":"):
+            return None
+        raw_port = suffix[1:] if suffix else "443"
+    else:
+        if authority.count(":") > 1:
+            return None
+        _, separator, raw_port = authority.rpartition(":")
+        if not separator:
+            raw_port = "443"
+
+    parsed_port = _parse_hysteria_port_spec(raw_port or "443")
+    if parsed_port is None:
+        return None
+    port, port_spec = parsed_port
+    return parts, host, port, port_spec
+
+
+def _hysteria_hop_interval(params: Dict[str, str]) -> str:
+    """Return a valid Xray UDP-hop interval, defaulting to 30 seconds."""
+    raw = (
+        params.get("hop_interval")
+        or params.get("hopInterval")
+        or params.get("hop-interval")
+        or "30"
+    ).strip().lower()
+    if raw.endswith("s"):
+        raw = raw[:-1]
+    if re.fullmatch(r"\d+(?:-\d+)?", raw):
+        bounds = [int(value) for value in raw.split("-", 1)]
+        if bounds[0] >= 5 and bounds[-1] >= bounds[0]:
+            return raw
+    return "30"
 
 
 def _parse_vless(url: str) -> Optional[Dict[str, Any]]:
@@ -500,10 +588,10 @@ def _parse_vmess(url: str) -> Optional[Dict[str, Any]]:
 
 
 def _parse_hysteria2(url: str) -> Optional[Dict[str, Any]]:
-    split = _split_url(url)
+    split = _split_hysteria2_url(url)
     if not split:
         return None
-    parts, host, port = split
+    parts, host, port, port_spec = split
 
     # Auth is the userinfo (password) — optional in some panels.
     auth = urllib.parse.unquote(parts.username or "")
@@ -513,24 +601,41 @@ def _parse_hysteria2(url: str) -> Optional[Dict[str, Any]]:
     params = _parse_query(parts.query)
     profile: Dict[str, Any] = {
         "protocol": "hysteria2",
-        "core": "sing-box",
+        # xray-core >= v26.7.28 supports hysteria2 client natively (PR #6198),
+        # including Gecko obfuscation (salamander finalmask + packetSize).
+        "core": "xray-core",
         "password": auth,
         "address": host,
         "port": port,
         "network": "udp",
         "security": "tls",
     }
-    tls: Dict[str, Any] = {}
-    if params.get("sni"):
-        tls["serverName"] = params["sni"]
-    if _is_truthy(params.get("insecure")) or _is_truthy(params.get("allowInsecure")):
-        tls["allowInsecure"] = True
+    # Native Xray Hysteria uses HTTP/3 and does not support uTLS fingerprints;
+    # retain the certificate-related fields but drop fp rather than generating
+    # a config that fails at the first request with an unsupported uTLS mode.
+    tls = _tls_from_params(params)
+    tls.pop("fingerprint", None)
     if tls:
         profile["tlsConfig"] = tls
-    if params.get("obfs"):
-        profile["obfs"] = params["obfs"]
+    hop_ports = params.get("mport") or (
+        port_spec if "," in port_spec or "-" in port_spec else ""
+    )
+    if hop_ports:
+        parsed_hop_ports = _parse_hysteria_port_spec(hop_ports)
+        if parsed_hop_ports is not None:
+            profile["portHopping"] = {
+                "ports": parsed_hop_ports[1],
+                "interval": _hysteria_hop_interval(params),
+            }
+    obfs_type = params.get("obfs")
+    if obfs_type:
+        profile["obfs"] = obfs_type
         if params.get("obfs-password"):
             profile["obfsPassword"] = params["obfs-password"]
+        # xray-core distinguishes gecko from plain salamander by the presence
+        # of packetSize in the salamander finalmask config — see
+        # transport_internet.go Salamander.Build().
+        profile["geckoEnabled"] = obfs_type.lower() == "gecko"
     if parts.fragment:
         profile["name"] = urllib.parse.unquote(parts.fragment)
     return profile
