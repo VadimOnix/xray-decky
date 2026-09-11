@@ -14,6 +14,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   refreshed to match the new `Xray-linux-64.zip` asset. The release
   workflow and the runtime self-heal downloader both read that pin, so a
   freshly packaged binary and a re-downloaded one stay on the same version.
+  Two upstream hardening changes in this range reject configs that v26.3.27
+  still accepted, so a small number of imported profiles can stop working:
+  VLESS without TLS/REALITY and without `encryption` is refused when the
+  server address is public (a private IP or domain is still allowed), and the
+  Shadowsocks `none` / `plain` ciphers were removed. Everything else the
+  plugin emits — VLESS over REALITY, TLS, WS and gRPC, Trojan, VMess, the
+  AEAD and 2022-blake3 Shadowsocks ciphers, and TUN mode — was verified
+  against the new binary and is unaffected.
 - Documentation and site now list only two installation channels: the
   installer script (`scripts/install-xray-decky.sh` and the one-click
   `.desktop` wrapper) and the release zip installed through Decky →
