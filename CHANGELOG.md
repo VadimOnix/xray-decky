@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Bundled xray-core updated from v26.3.27 to v26.9.9 in
+  `py_modules/backend/src/xray_version.json`, with the pinned SHA-256
+  refreshed to match the new `Xray-linux-64.zip` asset. The release
+  workflow and the runtime self-heal downloader both read that pin, so a
+  freshly packaged binary and a re-downloaded one stay on the same version.
 - Documentation and site now list only two installation channels: the
   installer script (`scripts/install-xray-decky.sh` and the one-click
   `.desktop` wrapper) and the release zip installed through Decky →
