@@ -710,6 +710,95 @@ def parse_subscription_content(text: str) -> List[Dict[str, Any]]:
     return []
 
 
+# Ciphers xray-core dropped. They transmit the payload in the clear, so there
+# is no way to keep them working - the core answers "unknown cipher method".
+_REMOVED_SS_METHODS = ("none", "plain")
+
+# Domain suffixes xray-core counts as private (geosite:private), so a profile
+# pointing at one is still allowed to run without transport security. Taken
+# from probing the v26.9.9 binary rather than guessed: .intranet, .corp, .home
+# and .private look like they belong here but are NOT in the set. A name with
+# no dot at all also counts as private.
+_PRIVATE_DOMAIN_SUFFIXES = (
+    "local",
+    "lan",
+    "internal",
+    "localdomain",
+    "localhost",
+    "home.arpa",
+    "test",
+    "invalid",
+    "example",
+)
+
+
+def _is_private_host(address: str) -> bool:
+    """Whether xray-core treats an address as private (geoip/geosite private)."""
+    host = (address or "").strip().lower()
+    if not host:
+        return False
+    try:
+        ip = ip_address(host)
+    except ValueError:
+        pass
+    else:
+        # geoip:private also covers the ranges Python does not call "private":
+        # multicast, reserved and the unspecified address.
+        return (
+            not ip.is_global
+            or ip.is_multicast
+            or ip.is_reserved
+            or ip.is_unspecified
+        )
+    if "." not in host:
+        return True
+    return any(
+        host == suffix or host.endswith("." + suffix)
+        for suffix in _PRIVATE_DOMAIN_SUFFIXES
+    )
+
+
+def core_rejection_reason(profile: Dict[str, Any]) -> Optional[str]:
+    """Why xray-core will refuse to run this profile, or None if it will run.
+
+    These are configs older xray-core releases accepted and current ones turn
+    down. The core reports them by failing to load the whole config file, which
+    reads as "the plugin is broken" rather than "this profile is unusable", so
+    catching them at import gives the user something actionable instead.
+    """
+    if (profile.get("core") or "xray") != "xray":
+        return None
+
+    protocol = profile.get("protocol")
+
+    if protocol == "shadowsocks":
+        method = (profile.get("method") or "").lower()
+        if method in _REMOVED_SS_METHODS:
+            return (
+                f"Shadowsocks cipher '{method}' sends traffic unencrypted and is "
+                "no longer supported by xray-core. Ask for a profile using an "
+                "AEAD cipher (aes-256-gcm, chacha20-ietf-poly1305) or a "
+                "2022-blake3 one."
+            )
+        return None
+
+    if protocol in ("vless", "trojan"):
+        security = (profile.get("security") or "none").lower()
+        if security in ("tls", "reality"):
+            return None
+        if profile.get("encryption") not in (None, "", "none"):
+            return None
+        if not _is_private_host(profile.get("address") or ""):
+            return (
+                f"{protocol.upper()} without TLS or REALITY is no longer allowed "
+                "by xray-core when the server is on a public address. Use a "
+                "share link with security=tls or security=reality, or point it "
+                "at a private address."
+            )
+
+    return None
+
+
 def validate_share_link(url: str) -> Tuple[bool, Optional[str]]:
     """
     Validate a share link (single node or base64 subscription).
@@ -722,7 +811,11 @@ def validate_share_link(url: str) -> Tuple[bool, Optional[str]]:
 
     url = url.strip()
 
-    if parse_share_link(url):
+    parsed = parse_share_link(url)
+    if parsed:
+        reason = core_rejection_reason(parsed)
+        if reason:
+            return False, reason
         return True, None
 
     if parse_subscription(url):

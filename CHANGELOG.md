@@ -21,6 +21,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Imports now fail with a readable message instead of a config the core will
+  not load. A share link xray-core has stopped accepting — Shadowsocks over
+  the removed `none` / `plain` ciphers, or VLESS/Trojan without TLS or REALITY
+  pointing at a public address — is turned down at import with an explanation
+  and a suggested fix. Previously such a link imported fine and then made the
+  core refuse to start, which broke every other profile too and surfaced as a
+  generic failure. The private-address test mirrors the core's own geodata and
+  was cross-checked host by host against the v26.9.9 binary.
 - Share links can now carry certificate pinning: `pcs` /
   `pinnedPeerCertSha256` (comma-separated SHA-256 hex) and `vcn` /
   `verifyPeerCertByName` (comma-separated names) are parsed, passed through to
@@ -36,14 +44,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   refreshed to match the new `Xray-linux-64.zip` asset. The release
   workflow and the runtime self-heal downloader both read that pin, so a
   freshly packaged binary and a re-downloaded one stay on the same version.
-  Two upstream hardening changes in this range reject configs that v26.3.27
+  Three upstream hardening changes in this range reject configs that v26.3.27
   still accepted, so a small number of imported profiles can stop working:
   VLESS without TLS/REALITY and without `encryption` is refused when the
-  server address is public (a private IP or domain is still allowed), and the
-  Shadowsocks `none` / `plain` ciphers were removed. Everything else the
-  plugin emits — VLESS over REALITY, TLS, WS and gRPC, Trojan, VMess, the
-  AEAD and 2022-blake3 Shadowsocks ciphers, and TUN mode — was verified
-  against the new binary and is unaffected.
+  server address is public, Trojan without TLS is refused on a public address
+  too, and the Shadowsocks `none` / `plain` ciphers were removed. "Private"
+  here is what the core's own geodata calls private: private, loopback,
+  link-local, CGNAT, multicast and reserved IPs, plus `.local`, `.lan`,
+  `.internal`, `.localdomain`, `.localhost`, `.home.arpa`, `.test`,
+  `.invalid`, `.example` and names with no dot. Everything else the plugin
+  emits — VLESS over REALITY, TLS, WS and gRPC, Trojan over TLS, VMess,
+  SOCKS, the AEAD and 2022-blake3 Shadowsocks ciphers, and TUN mode — was
+  verified against the new binary and is unaffected.
 - Documentation and site now list only two installation channels: the
   installer script (`scripts/install-xray-decky.sh` and the one-click
   `.desktop` wrapper) and the release zip installed through Decky →

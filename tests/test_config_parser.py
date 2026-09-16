@@ -6,6 +6,7 @@ import json
 from backend.src.config_parser import (
     build_profile_config,
     core_for_protocol,
+    core_rejection_reason,
     parse_share_link,
     parse_subscription,
     validate_share_link,
@@ -396,8 +397,10 @@ def test_subscription_invalid_payloads():
 def test_validate_accepts_all_supported_schemes():
     userinfo = base64.urlsafe_b64encode(b"aes-256-gcm:pw").decode().rstrip("=")
     for url in (
-        f"vless://{UUID_V4}@example.com:443",
-        "trojan://pw@example.com:443",
+        # VLESS/Trojan carry security=tls: xray-core refuses either protocol
+        # without transport security when the server is on a public address.
+        f"vless://{UUID_V4}@example.com:443?security=tls&sni=example.com",
+        "trojan://pw@example.com:443?security=tls&sni=example.com",
         f"ss://{userinfo}@example.com:8388",
         f"vmess://{_b64(json.dumps({'add': 'h.io', 'port': 443, 'id': UUID_V4}))}",
     ):
@@ -489,3 +492,72 @@ def test_vless_tls_omits_cert_pinning_when_all_pins_are_malformed():
     tls = profile.get("tlsConfig") or {}
     assert "pinnedPeerCertSha256" not in tls
     assert "verifyPeerCertByName" not in tls
+
+
+def _ss_link(method: str, host: str = "example.com") -> str:
+    userinfo = base64.urlsafe_b64encode(f"{method}:pw".encode()).decode().rstrip("=")
+    return f"ss://{userinfo}@{host}:8388#S"
+
+
+def test_removed_shadowsocks_ciphers_are_rejected_at_import():
+    for method in ("none", "plain"):
+        ok, error = validate_share_link(_ss_link(method))
+        assert ok is False
+        assert method in error
+        assert "aes-256-gcm" in error
+
+
+def test_supported_shadowsocks_ciphers_still_import():
+    for method in ("aes-256-gcm", "chacha20-ietf-poly1305"):
+        assert validate_share_link(_ss_link(method)) == (True, None)
+
+
+def test_vless_without_transport_security_to_public_address_is_rejected():
+    for host in ("example.com", "1.2.3.4", "8.8.8.8"):
+        ok, error = validate_share_link(
+            f"vless://{UUID_V4}@{host}:443?type=tcp&security=none#A"
+        )
+        assert ok is False, host
+        assert "VLESS" in error and "TLS" in error
+
+
+def test_trojan_without_tls_to_public_address_is_rejected():
+    ok, error = validate_share_link(
+        "trojan://pw@example.com:443?type=tcp&security=none#A"
+    )
+    assert ok is False
+    assert "TROJAN" in error
+
+
+def test_no_transport_security_is_allowed_on_private_addresses():
+    # Matches what xray-core counts as private (geoip/geosite private).
+    for host in ("192.168.1.5", "10.0.0.5", "127.0.0.1", "nas.local", "box.lan",
+                 "srv.internal", "myserver", "x.y.local"):
+        assert validate_share_link(
+            f"vless://{UUID_V4}@{host}:443?type=tcp&security=none#A"
+        ) == (True, None), host
+
+
+def test_transport_security_keeps_public_addresses_importable():
+    assert validate_share_link(
+        f"vless://{UUID_V4}@example.com:443?type=tcp&security=tls&sni=example.com#A"
+    ) == (True, None)
+    assert validate_share_link(
+        f"vless://{UUID_V4}@1.2.3.4:443?type=tcp&security=reality"
+        "&pbk=PUB&sid=ab&sni=example.com&fp=chrome#A"
+    ) == (True, None)
+
+
+def test_singbox_protocols_are_not_judged_by_xray_rules():
+    # hysteria2/tuic run on sing-box, which has none of these restrictions.
+    assert core_rejection_reason(
+        {"core": "sing-box", "protocol": "hysteria2", "address": "example.com"}
+    ) is None
+
+
+def test_vmess_and_socks_without_tls_are_unaffected():
+    for profile in (
+        {"protocol": "vmess", "address": "example.com", "security": "none"},
+        {"protocol": "socks", "address": "example.com", "security": "none"},
+    ):
+        assert core_rejection_reason(profile) is None
