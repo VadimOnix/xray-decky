@@ -78,6 +78,10 @@ def _tls_query(profile: Dict[str, Any]) -> Dict[str, str]:
         query["fp"] = str(tls["fingerprint"])
     if tls.get("allowInsecure"):
         query["allowInsecure"] = "1"
+    if tls.get("pinnedPeerCertSha256"):
+        query["pcs"] = str(tls["pinnedPeerCertSha256"])
+    if tls.get("verifyPeerCertByName"):
+        query["vcn"] = str(tls["verifyPeerCertByName"])
     return query
 
 

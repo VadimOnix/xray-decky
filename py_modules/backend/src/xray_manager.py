@@ -202,8 +202,22 @@ class XrayManager:
                 tls_settings["alpn"] = tls_config["alpn"]
             if tls_config.get("fingerprint"):
                 tls_settings["fingerprint"] = tls_config["fingerprint"]
-            if tls_config.get("allowInsecure"):
-                tls_settings["allowInsecure"] = True
+            # "allowInsecure" is deliberately NOT forwarded: xray-core removed
+            # it and now refuses to load any config that still carries the key,
+            # so emitting it would take down the whole core, not just this
+            # profile. The replacements it points at (pinnedPeerCertSha256 /
+            # verifyPeerCertByName) still verify the peer - there is no way to
+            # skip verification outright anymore - so a profile that only asks
+            # for allowInsecure gets plain verified TLS. The flag is kept on the
+            # profile because sing-box still honors it as "insecure".
+            if tls_config.get("pinnedPeerCertSha256"):
+                tls_settings["pinnedPeerCertSha256"] = tls_config[
+                    "pinnedPeerCertSha256"
+                ]
+            if tls_config.get("verifyPeerCertByName"):
+                tls_settings["verifyPeerCertByName"] = tls_config[
+                    "verifyPeerCertByName"
+                ]
             stream["tlsSettings"] = tls_settings
         elif security == "reality" and reality_config:
             # CLIENT configuration only: publicKey, serverName, shortId,

@@ -439,3 +439,53 @@ def test_build_profile_config_adds_metadata():
     assert isinstance(config["importedAt"], int)
     # The parsed dict is not mutated.
     assert "sourceUrl" not in parsed
+
+
+def test_vless_tls_parses_cert_pinning_params():
+    pin = "b" * 64
+    url = (
+        f"vless://{UUID_V4}@example.com:443"
+        f"?type=tcp&security=tls&sni=example.com&pcs={pin}"
+        "&vcn=a.example.com%2Cb.example.com#PIN"
+    )
+    profile = parse_share_link(url)
+    assert profile["tlsConfig"] == {
+        "serverName": "example.com",
+        "pinnedPeerCertSha256": pin,
+        "verifyPeerCertByName": "a.example.com,b.example.com",
+    }
+
+
+def test_vless_tls_accepts_long_form_cert_pinning_params():
+    pin = "C" * 64
+    url = (
+        f"vless://{UUID_V4}@example.com:443"
+        f"?type=tcp&security=tls&pinnedPeerCertSha256={pin}"
+        "&verifyPeerCertByName=a.example.com#PIN"
+    )
+    profile = parse_share_link(url)
+    assert profile["tlsConfig"]["pinnedPeerCertSha256"] == "c" * 64
+    assert profile["tlsConfig"]["verifyPeerCertByName"] == "a.example.com"
+
+
+def test_vless_tls_drops_malformed_cert_pins():
+    # xray-core refuses to start on a bad pin, so a malformed one must never
+    # reach the generated config.
+    good = "d" * 64
+    url = (
+        f"vless://{UUID_V4}@example.com:443"
+        f"?type=tcp&security=tls&pcs=nothex%2C{good}%2Cabc#PIN"
+    )
+    profile = parse_share_link(url)
+    assert profile["tlsConfig"]["pinnedPeerCertSha256"] == good
+
+
+def test_vless_tls_omits_cert_pinning_when_all_pins_are_malformed():
+    url = (
+        f"vless://{UUID_V4}@example.com:443"
+        "?type=tcp&security=tls&pcs=abc&vcn=%20#PIN"
+    )
+    profile = parse_share_link(url)
+    tls = profile.get("tlsConfig") or {}
+    assert "pinnedPeerCertSha256" not in tls
+    assert "verifyPeerCertByName" not in tls
