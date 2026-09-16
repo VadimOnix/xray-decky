@@ -39,6 +39,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Pinned sing-box (the second core, used for Hysteria2 and TUIC) updated from
+  v1.11.15 to v1.14.1 in `py_modules/backend/src/singbox_version.json`. Every
+  config the plugin generates for that core — Hysteria2 plain, with `insecure`
+  and with Salamander obfuscation, and TUIC plain, with congestion control and
+  UDP relay mode, and with ALPN — passes `sing-box check` on the new binary in
+  both normal and TUN mode, with no deprecation warnings, and the process
+  starts and serves its SOCKS inbound. One packaging note: the v1.14.x tarball
+  also ships `libcronet.so` and the binary is dynamically linked rather than
+  static, where v1.11.15 was static. It needs only unversioned libc and
+  pthread symbols, so there is no new glibc floor on SteamOS, and it runs
+  without `libcronet.so` present — that library backs a Cloudflare outbound
+  the plugin never configures, and it is loaded lazily. The downloader keeps
+  extracting just the `sing-box` binary, which was verified end to end against
+  the new pin.
 - Bundled xray-core updated from v26.3.27 to v26.9.9 in
   `py_modules/backend/src/xray_version.json`, with the pinned SHA-256
   refreshed to match the new `Xray-linux-64.zip` asset. The release
