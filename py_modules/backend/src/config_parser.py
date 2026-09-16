@@ -126,6 +126,28 @@ def _is_truthy(value: Optional[str]) -> bool:
     return (value or "").lower() in ("1", "true", "yes")
 
 
+def _clean_cert_pins(value: Optional[str]) -> str:
+    """Keep only well-formed SHA-256 hex pins from a comma-separated list.
+
+    xray-core wants lowercase hex and refuses to start on anything else, so a
+    malformed pin in a share link would take the whole core down rather than
+    just that profile. Dropping the bad entries here keeps a bad link from
+    producing a config the core cannot load.
+    """
+    pins = []
+    for pin in (value or "").split(","):
+        pin = pin.strip().lower()
+        if len(pin) == 64 and all(c in "0123456789abcdef" for c in pin):
+            pins.append(pin)
+    return ",".join(pins)
+
+
+def _clean_cert_names(value: Optional[str]) -> str:
+    """Normalize a comma-separated verifyPeerCertByName list."""
+    names = [name.strip() for name in (value or "").split(",") if name.strip()]
+    return ",".join(names)
+
+
 def _transport_from_params(network: str, params: Dict[str, str]) -> Dict[str, Any]:
     """Extract transport-specific settings from share-link query params."""
     transport: Dict[str, Any] = {}
@@ -174,6 +196,14 @@ def _tls_from_params(params: Dict[str, str]) -> Dict[str, Any]:
         tls["fingerprint"] = params["fp"]
     if _is_truthy(params.get("allowInsecure")) or _is_truthy(params.get("insecure")):
         tls["allowInsecure"] = True
+    pins = _clean_cert_pins(params.get("pcs") or params.get("pinnedPeerCertSha256"))
+    if pins:
+        tls["pinnedPeerCertSha256"] = pins
+    names = _clean_cert_names(
+        params.get("vcn") or params.get("verifyPeerCertByName")
+    )
+    if names:
+        tls["verifyPeerCertByName"] = names
     return tls
 
 

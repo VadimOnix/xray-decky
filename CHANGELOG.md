@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- TLS profiles that carry `allowInsecure` (from an `allowInsecure=1` or
+  `insecure=1` share link) no longer take xray-core down. The plugin was
+  writing that key into the generated config, and xray-core has removed it:
+  the core refuses to load the whole config file, so one such profile broke
+  every profile, not just its own. The key is no longer emitted. It is still
+  kept on the profile and still exported back into share links, and sing-box
+  continues to honor it as `insecure`, so Hysteria2 and TUIC are unaffected.
+  Note that there is no longer any way to skip certificate verification in
+  xray-core, so such a profile now negotiates plain verified TLS.
+
+### Added
+
+- Share links can now carry certificate pinning: `pcs` /
+  `pinnedPeerCertSha256` (comma-separated SHA-256 hex) and `vcn` /
+  `verifyPeerCertByName` (comma-separated names) are parsed, passed through to
+  the xray-core config, and exported back out. These are the two options
+  xray-core offers in place of the removed `allowInsecure`; both still verify
+  the peer. Malformed pins are dropped at import so a bad link cannot produce
+  a config the core will not start.
+
 ### Changed
 
 - Bundled xray-core updated from v26.3.27 to v26.9.9 in

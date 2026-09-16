@@ -323,3 +323,42 @@ def test_no_tun_inbound_without_tun_mode():
         {"protocol": "vless", "uuid": UUID, "address": "h.io", "port": 443}
     )
     assert all(i["protocol"] != "tun" for i in config["inbounds"])
+
+
+def _tls_stream(tls_config):
+    profile = {
+        "protocol": "vless",
+        "uuid": UUID,
+        "address": "example.com",
+        "port": 443,
+        "network": "tcp",
+        "security": "tls",
+        "tlsConfig": tls_config,
+    }
+    return _proxy_outbound(_build(profile))["streamSettings"]
+
+
+def test_allow_insecure_is_never_emitted_into_the_xray_config():
+    # xray-core removed the key and refuses to load a config that still has it,
+    # which would take down the core for every profile, not just this one.
+    stream = _tls_stream({"serverName": "example.com", "allowInsecure": True})
+    assert "allowInsecure" not in stream["tlsSettings"]
+    assert stream["tlsSettings"]["serverName"] == "example.com"
+
+
+def test_pinned_peer_cert_sha256_is_forwarded():
+    pin = "a" * 64
+    stream = _tls_stream({"serverName": "example.com", "pinnedPeerCertSha256": pin})
+    assert stream["tlsSettings"]["pinnedPeerCertSha256"] == pin
+
+
+def test_verify_peer_cert_by_name_is_forwarded():
+    stream = _tls_stream(
+        {"serverName": "example.com", "verifyPeerCertByName": "a.example.com"}
+    )
+    assert stream["tlsSettings"]["verifyPeerCertByName"] == "a.example.com"
+
+
+def test_tls_settings_stay_minimal_without_pinning():
+    stream = _tls_stream({"serverName": "example.com"})
+    assert stream["tlsSettings"] == {"serverName": "example.com"}

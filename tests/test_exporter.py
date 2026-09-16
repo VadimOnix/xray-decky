@@ -132,3 +132,22 @@ def test_export_profiles_builds_links_and_subscription():
 def test_export_empty_list():
     result = export_profiles([])
     assert result == {"links": [], "subscription": "", "count": 0}
+
+
+def test_roundtrip_vless_tls_with_cert_pinning():
+    pin = "e" * 64
+    _roundtrip(
+        f"vless://{UUID}@example.com:443?type=tcp&security=tls&sni=example.com"
+        f"&pcs={pin}&vcn=a.example.com%2Cb.example.com#Pinned"
+    )
+
+
+def test_cert_pinning_params_are_exported():
+    pin = "f" * 64
+    profile = parse_share_link(
+        f"vless://{UUID}@example.com:443?type=tcp&security=tls&sni=example.com"
+        f"&pcs={pin}&vcn=a.example.com#Pinned"
+    )
+    link = profile_to_share_link(profile)
+    assert f"pcs={pin}" in link
+    assert "vcn=a.example.com" in link
