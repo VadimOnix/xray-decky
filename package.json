@@ -44,7 +44,7 @@
     "@decky/rollup": "^1.0.2",
     "@decky/ui": "^4.11.0",
     "@eslint/js": "^9.39.3",
-    "@rollup/rollup-linux-x64-musl": "^4.59.0",
+    "@rollup/rollup-linux-x64-musl": "^4.64.5",
     "@types/jsdom": "^21.1.7",
     "@types/node": "^22.20.1",
     "@types/react": "19.2.14",
