@@ -66,6 +66,32 @@ describe('language detection', () => {
   });
 });
 
+describe('server latency controls', () => {
+  it.each([
+    {
+      locale: 'en-US',
+      labels: ['Ping', 'Ping All', 'Select a server to ping'],
+      errors: ['Latency test failed. Please try again.', 'Could not refresh server results.'],
+    },
+    {
+      locale: 'ru-RU',
+      labels: ['Пинг', 'Пинговать все', 'Выберите сервер для проверки'],
+      errors: [
+        'Не удалось проверить задержку. Повторите попытку.',
+        'Не удалось обновить результаты серверов.',
+      ],
+    },
+  ])('provides action labels and errors for $locale', async ({ locale, labels, errors }) => {
+    const mod = await importWithLocale(locale);
+    expect(
+      ['servers.ping', 'servers.pingAll', 'servers.pingSelect'].map((key) => mod.t(key))
+    ).toEqual(labels);
+    expect(['servers.pingFailed', 'servers.refreshFailed'].map((key) => mod.t(key))).toEqual(
+      errors
+    );
+  });
+});
+
 describe('source contracts', () => {
   const source = readFileSync(new URL('../../src/utils/i18n.ts', import.meta.url), 'utf8');
 
