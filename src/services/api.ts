@@ -242,5 +242,7 @@ export const getProfiles = callable<[], GetProfilesResponse>('get_profiles');
 export const setActiveProfile = callable<[profileId: string], SetActiveProfileResponse>(
   'set_active_profile'
 );
-export const testProfilesLatency = callable<[], TestLatencyResponse>('test_profiles_latency');
+export const testProfilesLatency = callable<[profileId?: string], TestLatencyResponse>(
+  'test_profiles_latency'
+);
 export const getTrafficStats = callable<[], TrafficStatsResponse>('get_traffic_stats');

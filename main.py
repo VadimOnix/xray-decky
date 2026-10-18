@@ -913,18 +913,29 @@ class Plugin:
                 ErrorCode.UNKNOWN_ERROR, f"Failed to set interval: {str(e)}"
             )
 
-    async def test_profiles_latency(self) -> Dict[str, Any]:
+    async def test_profiles_latency(
+        self, profile_id: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
-        TCPing every stored profile concurrently and persist the results.
+        TCPing one stored profile, or all profiles when no id is supplied.
+        Persist results without changing the active profile.
 
         Returns:
             { 'success': bool, 'results': { profileId: ms | None } }
         """
         try:
-            profiles = profile_store.list_profiles()
+            if profile_id is None:
+                profiles = profile_store.list_profiles()
+            else:
+                profile = profile_store.get(profile_id) if profile_id else None
+                if profile is None:
+                    return create_error_response(
+                        ErrorCode.INVALID_CONFIG, "Profile not found"
+                    )
+                profiles = [profile]
             results = await test_profiles(profiles)
-            for profile_id, latency_ms in results.items():
-                profile_store.set_latency(profile_id, latency_ms)
+            for tested_id, latency_ms in results.items():
+                profile_store.set_latency(tested_id, latency_ms)
             return create_success_response({"results": results})
         except Exception as e:
             return create_error_response(

@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The server picker's Ping controls now navigate horizontally with a gamepad
+  and use matching button sizes. The selected server's dropdown label also
+  refreshes its latency after a test instead of retaining an older value.
 - TLS profiles that carry `allowInsecure` (from an `allowInsecure=1` or
   `insecure=1` share link) no longer take xray-core down. The plugin was
   writing that key into the generated config, and xray-core has removed it:
@@ -21,6 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The Quick Access Menu server picker now has visible Ping and Ping All
+  controls, including when only one server is saved. Ping tests a selected
+  server without changing the active connection. The controls replace the
+  previous X / … context-menu Ping All action.
 - Imports now fail with a readable message instead of a config the core will
   not load. A share link xray-core has stopped accepting — Shadowsocks over
   the removed `none` / `plain` ciphers, or VLESS/Trojan without TLS or REALITY
