@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Connect the selected profile automatically after a network route appears.
 - Route Steam service domains and Valve networks directly in TUN mode.
+- Route Decky's catalog and image hosts through the proxy when Steam Direct is enabled.
 - Add a shortcut on the Desktop and in the KDE menu for the web settings panel.
 
 - Imports now fail with a readable message instead of a config the core will

@@ -55,8 +55,13 @@ def test_steam_direct_uses_a_bound_outbound_and_keeps_default_proxy():
     assert config["route"]["final"] == "proxy"
     rules = config["route"]["rules"]
     assert rules[0]["action"] == "sniff"
-    assert "steampowered.com" in rules[1]["domain_suffix"]
-    assert "162.254.192.0/21" in rules[2]["ip_cidr"]
+    assert rules[1]["outbound"] == "proxy"
+    assert set(rules[1]["domain"]) == {
+        "plugins.deckbrew.xyz", "testing.deckbrew.xyz", "cdn.tzatzikiweeb.moe"
+    }
+    assert "steampowered.com" in rules[2]["domain_suffix"]
+    assert "steampipe.akamaized.net" in rules[2]["domain_suffix"]
+    assert "162.254.192.0/21" in rules[3]["ip_cidr"]
     assert not any(o["tag"] == "steam-direct" for o in build_singbox_config(_hysteria2(), steam_direct=True)["outbounds"])
 
 

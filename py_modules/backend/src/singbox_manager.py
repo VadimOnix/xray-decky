@@ -15,7 +15,7 @@ import asyncio
 import json
 import os
 import tempfile
-from .steam_routing import STEAM_DIRECT, STEAM_DOMAINS, STEAM_NETWORKS
+from .steam_routing import DECKY_PROXY_HOSTS, STEAM_DIRECT, STEAM_DOMAINS, STEAM_NETWORKS
 from typing import Any, Dict, Optional
 
 SOCKS_PORT = 10808
@@ -153,6 +153,7 @@ def build_singbox_config(
         })
         config["route"]["rules"][:0] = [
             {"inbound": ["tun-in"], "action": "sniff"},
+            {"domain": list(DECKY_PROXY_HOSTS), "action": "route", "outbound": "proxy"},
             {"domain_suffix": list(STEAM_DOMAINS), "action": "route", "outbound": STEAM_DIRECT},
             {"ip_cidr": list(STEAM_NETWORKS), "action": "route", "outbound": STEAM_DIRECT},
         ]

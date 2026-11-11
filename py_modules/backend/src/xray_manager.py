@@ -12,7 +12,7 @@ import tempfile
 from typing import Dict, Any, Optional
 
 from .stats import API_PORT
-from .steam_routing import STEAM_DIRECT, STEAM_DOMAINS, STEAM_NETWORKS
+from .steam_routing import DECKY_PROXY_HOSTS, STEAM_DIRECT, STEAM_DOMAINS, STEAM_NETWORKS
 
 
 class XrayManager:
@@ -358,6 +358,11 @@ class XrayManager:
                     {**steam_rule, "domain": [f"domain:{domain}" for domain in STEAM_DOMAINS]},
                     {**steam_rule, "ip": list(STEAM_NETWORKS)},
                 ]
+                routing_rules.insert(1, {
+                    "type": "field",
+                    "domain": [f"full:{host}" for host in DECKY_PROXY_HOSTS],
+                    "outboundTag": "proxy",
+                })
                 # Use sniffed names for policy, retaining the original CDN/IP destination.
                 sniffing["routeOnly"] = True
 

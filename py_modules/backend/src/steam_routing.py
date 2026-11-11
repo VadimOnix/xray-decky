@@ -7,6 +7,12 @@ STEAM_DOMAINS = (
     "steamserver.net", "steamcdn-a.akamaihd.net",
     "steamcommunity-a.akamaihd.net", "steamstore-a.akamaihd.net",
     "steamuserimages-a.akamaihd.net", "steamvideo-a.akamaihd.net",
+    "steampipe.akamaized.net",
+)
+
+# Default and testing Decky stores and their artifact/image host.
+DECKY_PROXY_HOSTS = (
+    "plugins.deckbrew.xyz", "testing.deckbrew.xyz", "cdn.tzatzikiweeb.moe",
 )
 
 # Valve AS32590 announcements, aggregated from RIPE RIS on 2026-11-11.

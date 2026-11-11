@@ -26,9 +26,16 @@ def test_steam_direct_precedes_the_default_tun_proxy():
     steam = [rule for rule in rules if rule["outboundTag"] == "steam-direct"]
     assert len(steam) == 2
     assert "domain:steampowered.com" in steam[0]["domain"]
+    assert "domain:steampipe.akamaized.net" in steam[0]["domain"]
     assert "domain:akamaihd.net" not in steam[0]["domain"]
     assert "162.254.192.0/21" in steam[1]["ip"]
-    assert all(rules.index(rule) < next(i for i, r in enumerate(rules) if r["outboundTag"] == "proxy") for rule in steam)
+    decky = rules[1]
+    assert decky["outboundTag"] == "proxy"
+    assert set(decky["domain"]) == {
+        "full:plugins.deckbrew.xyz", "full:testing.deckbrew.xyz", "full:cdn.tzatzikiweeb.moe"
+    }
+    tun_proxy = {"type": "field", "inboundTag": ["tun"], "outboundTag": "proxy"}
+    assert all(rules.index(decky) < rules.index(rule) < rules.index(tun_proxy) for rule in steam)
     assert not any(o["tag"] == "steam-direct" for o in XrayManager()._build_xray_config(profile, False, steam_direct=True)["outbounds"])
 
 
