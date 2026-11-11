@@ -95,6 +95,7 @@ export function usePluginPanelState(): PluginPanelState & PluginPanelActions {
   const isVisible = useQuickAccessVisible();
 
   useEffect(() => {
+    isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
     };
@@ -145,14 +146,15 @@ export function usePluginPanelState(): PluginPanelState & PluginPanelActions {
 
   useEffect(() => {
     if (!isVisible) return;
-    // refresh() fetches panel state; setState runs in its async callbacks
-    void refresh();
-
+    const initialRefresh = setTimeout(() => void refresh(), 0);
     const interval = setInterval(() => {
       void refresh();
     }, POLL_INTERVAL_MS);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(initialRefresh);
+      clearInterval(interval);
+    };
   }, [isVisible, refresh]);
 
   useEffect(() => {

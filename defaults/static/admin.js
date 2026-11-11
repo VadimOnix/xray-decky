@@ -78,6 +78,10 @@
       'options.tun': 'TUN mode',
       'options.tunDesc': 'Route all system traffic through the proxy',
       'options.ks': 'Kill switch',
+      'options.autoConnect': 'Connect when online',
+      'options.autoConnectDesc': 'Start the active profile when a network route becomes available',
+      'options.steamDirect': 'Steam direct',
+      'options.steamDirectDesc': 'Bypass the proxy for Steam services in TUN. Reconnect to apply.',
       'options.ksDesc': 'Block all traffic if the proxy drops unexpectedly',
       'options.tunNote':
         'TUN mode is enabled but privileges are missing — see ' +
@@ -216,6 +220,10 @@
       'options.tun': 'Режим TUN',
       'options.tunDesc': 'Направлять весь системный трафик через прокси',
       'options.ks': 'Kill switch',
+      'options.autoConnect': 'Подключаться после появления сети',
+      'options.autoConnectDesc': 'Запускает выбранный профиль, когда появляется сеть',
+      'options.steamDirect': 'Steam напрямую',
+      'options.steamDirectDesc': 'В TUN сервисы Steam идут напрямую. Применяется при подключении.',
       'options.ksDesc': 'Блокировать весь трафик при внезапном обрыве прокси',
       'options.tunNote':
         'Режим TUN включён, но нет прав — см. INSTALLATION.md на Deck.',
@@ -396,6 +404,8 @@
     graphUpPeak: document.getElementById('graph-up-peak'),
     tunToggle: document.getElementById('tun-toggle'),
     killswitchToggle: document.getElementById('killswitch-toggle'),
+    autoconnectToggle: document.getElementById('autoconnect-toggle'),
+    steamDirectToggle: document.getElementById('steam-direct-toggle'),
     optionsNote: document.getElementById('options-note'),
     importForm: document.getElementById('import-form'),
     importSub: document.getElementById('import-sub'),
@@ -435,7 +445,8 @@
 
   function loadToken() {
     var params = new URLSearchParams(window.location.search)
-    var fromUrl = params.get('token')
+    var fragment = new URLSearchParams(window.location.hash.slice(1))
+    var fromUrl = fragment.get('token') || params.get('token')
     if (fromUrl) {
       sessionStorage.setItem(TOKEN_KEY, fromUrl)
       // Strip the token from the address bar / browser history.
@@ -691,6 +702,8 @@
     if (!state.busy) {
       els.tunToggle.checked = Boolean(data.tun && data.tun.enabled)
       els.killswitchToggle.checked = Boolean(data.killSwitch && data.killSwitch.enabled)
+      els.autoconnectToggle.checked = Boolean(data.preferences && data.preferences.autoConnect)
+      els.steamDirectToggle.checked = Boolean(data.preferences && data.preferences.steamDirect)
     }
     if (data.tun && data.tun.enabled && !data.tun.hasPrivileges) {
       els.optionsNote.textContent = t('options.tunNote')
@@ -1230,6 +1243,8 @@
 
   bindToggle(els.tunToggle, '/api/v1/tun', 'enabled', 'options.tun')
   bindToggle(els.killswitchToggle, '/api/v1/killswitch', 'enabled', 'options.ks')
+  bindToggle(els.autoconnectToggle, '/api/v1/preferences/autoConnect', 'enabled', 'options.autoConnect')
+  bindToggle(els.steamDirectToggle, '/api/v1/preferences/steamDirect', 'enabled', 'options.steamDirect')
 
   els.importForm.addEventListener('submit', function (e) {
     e.preventDefault()

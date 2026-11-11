@@ -15,6 +15,7 @@ import asyncio
 import json
 import os
 import tempfile
+from .steam_routing import DECKY_PROXY_HOSTS, STEAM_DIRECT, STEAM_DOMAINS, STEAM_NETWORKS
 from typing import Any, Dict, Optional
 
 SOCKS_PORT = 10808
@@ -81,6 +82,8 @@ def build_singbox_config(
     profile: Dict[str, Any],
     tun_mode: bool = False,
     outbound_interface: Optional[str] = None,
+    *,
+    steam_direct: bool = False,
 ) -> Dict[str, Any]:
     """
     Build a sing-box JSON configuration for a hysteria2/tuic profile.
@@ -121,7 +124,7 @@ def build_singbox_config(
                 # Unlike xray, sing-box has no implicit TUN address; without
                 # one the interface can't come up and tun_manager's
                 # `ip route add default dev xray0` fails.
-                "address": ["172.19.0.1/30"],
+                "address": ["172.19.0.1/30", "fd00:78:72::1/126"],
                 "stack": "system",
                 # System routing is set up externally (tun_manager), matching
                 # the xray path — don't let sing-box manage routes itself.
@@ -142,6 +145,18 @@ def build_singbox_config(
             "final": "proxy",
         },
     }
+    if tun_mode and steam_direct:
+        if not outbound_interface:
+            raise ValueError("Steam Direct requires a physical interface")
+        config["outbounds"].append({
+            "type": "direct", "tag": STEAM_DIRECT, "bind_interface": outbound_interface,
+        })
+        config["route"]["rules"][:0] = [
+            {"inbound": ["tun-in"], "action": "sniff"},
+            {"domain": list(DECKY_PROXY_HOSTS), "action": "route", "outbound": "proxy"},
+            {"domain_suffix": list(STEAM_DOMAINS), "action": "route", "outbound": STEAM_DIRECT},
+            {"ip_cidr": list(STEAM_NETWORKS), "action": "route", "outbound": STEAM_DIRECT},
+        ]
     return config
 
 
@@ -166,15 +181,19 @@ class SingBoxManager:
         profile: Dict[str, Any],
         tun_mode: bool = False,
         outbound_interface: Optional[str] = None,
+        *,
+        steam_direct: bool = False,
     ) -> str:
         """Write a sing-box config to a temp file and return its path."""
-        config_dir = tempfile.gettempdir()
-        config_file = os.path.join(config_dir, f"singbox-config-{os.getpid()}.json")
-        config = build_singbox_config(profile, tun_mode, outbound_interface)
-        with open(config_file, "w", encoding="utf-8") as f:
+        config = build_singbox_config(
+            profile, tun_mode, outbound_interface, steam_direct=steam_direct
+        )
+        with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", prefix="singbox-config-", suffix=".json", delete=False
+        ) as f:
             json.dump(config, f, indent=2)
-        self.config_file = config_file
-        return config_file
+            self.config_file = f.name
+        return self.config_file
 
     async def start(self, config_file: str) -> Dict[str, Any]:
         """

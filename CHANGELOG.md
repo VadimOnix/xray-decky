@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Restore TUN routes after resume even when the Steam UI misses the resume event.
+- Capture IPv6 traffic when an IPv6 default route is available.
+
 - TLS profiles that carry `allowInsecure` (from an `allowInsecure=1` or
   `insecure=1` share link) no longer take xray-core down. The plugin was
   writing that key into the generated config, and xray-core has removed it:
@@ -20,6 +23,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   xray-core, so such a profile now negotiates plain verified TLS.
 
 ### Added
+
+- Connect the selected profile automatically after a network route appears.
+- Route Steam service domains and Valve networks directly in TUN mode.
+- Route Decky's catalog and image hosts through the proxy when Steam Direct is enabled.
+- Add a shortcut on the Desktop and in the KDE menu for the web settings panel.
 
 - Imports now fail with a readable message instead of a config the core will
   not load. A share link xray-core has stopped accepting — Shadowsocks over

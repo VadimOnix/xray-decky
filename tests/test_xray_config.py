@@ -16,6 +16,29 @@ def _proxy_outbound(config):
     return next(o for o in config["outbounds"] if o.get("tag") == "proxy")
 
 
+def test_steam_direct_precedes_the_default_tun_proxy():
+    profile = {"uuid": UUID, "address": "example.com", "port": 443}
+    config = XrayManager()._build_xray_config(profile, True, "wlan0", steam_direct=True)
+    assert next(inbound for inbound in config["inbounds"] if inbound["tag"] == "tun")["settings"]["name"] == "xray0"
+    assert config["outbounds"][-1]["streamSettings"]["sockopt"]["interface"] == "wlan0"
+    assert config["outbounds"][0]["tag"] == "proxy"
+    rules = config["routing"]["rules"]
+    steam = [rule for rule in rules if rule["outboundTag"] == "steam-direct"]
+    assert len(steam) == 2
+    assert "domain:steampowered.com" in steam[0]["domain"]
+    assert "domain:steampipe.akamaized.net" in steam[0]["domain"]
+    assert "domain:akamaihd.net" not in steam[0]["domain"]
+    assert "162.254.192.0/21" in steam[1]["ip"]
+    decky = rules[1]
+    assert decky["outboundTag"] == "proxy"
+    assert set(decky["domain"]) == {
+        "full:plugins.deckbrew.xyz", "full:testing.deckbrew.xyz", "full:cdn.tzatzikiweeb.moe"
+    }
+    tun_proxy = {"type": "field", "inboundTag": ["tun"], "outboundTag": "proxy"}
+    assert all(rules.index(decky) < rules.index(rule) < rules.index(tun_proxy) for rule in steam)
+    assert not any(o["tag"] == "steam-direct" for o in XrayManager()._build_xray_config(profile, False, steam_direct=True)["outbounds"])
+
+
 def test_vless_reality_outbound():
     config = _build(
         {

@@ -21,7 +21,7 @@ Thank you for your interest in contributing. This guide helps you set up a devel
 ## Prerequisites
 
 - **Steam Deck** (or SteamOS device) with internet
-- **PC** (macOS or Linux) with Node.js 18+, pnpm 9, and SSH client
+- **PC** (macOS or Linux) with Node.js 24.15+, pnpm 9, and SSH client
 - Same LAN for PC and Deck (Wi‑Fi or Ethernet)
 
 ---

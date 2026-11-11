@@ -1,7 +1,7 @@
 {
   "repo": "SagerNet/sing-box",
   "asset": "sing-box-{version_no_v}-linux-amd64.tar.gz",
-  "version": "v1.14.1",
-  "sha256": "12cb2816b52febb356f6a885b740cc8758c3f30b8ae0ca8edba80f0d2d35343f",
+  "version": "v1.14.4",
+  "sha256": "699a1b510aa4396b2176d32d1181920399ebf1e267835da6f3b598d0f7c24968",
   "_comment": "Pinned sing-box (second core for Hysteria2/TUIC). Downloaded on demand into DECKY_PLUGIN_RUNTIME_DIR, not bundled in the plugin zip, to keep the store package small. 'asset' uses {version_no_v} which is the version tag without the leading 'v'. Set sha256 to enable integrity verification. Bump deliberately."
 }

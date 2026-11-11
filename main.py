@@ -207,6 +207,9 @@ class Plugin:
         """
         print("Xray Decky Plugin: Backend initialized")
         self._supervisor: Optional[XraySupervisor] = None
+        self._connection_lock = asyncio.Lock()
+        self._auto_connect_armed = True
+        self._outbound_interface = None
 
         # Ensure the xray-core binary is present. On SteamOS the plugin's bin/
         # can be wiped on reboot/system update, so re-download it if missing.
@@ -219,12 +222,92 @@ class Plugin:
 
         # Start import HTTPS server (TLS self-signed cert so Paste works from any device).
         await self._start_import_server()
+        await self._update_desktop_shortcut()
 
         # Background subscription auto-refresh. Off unless the user set an
         # interval, so this is a no-op for everyone else. It only re-fetches
         # the stored subscription URL (preserving the active server) — it never
         # touches or reconnects the live xray process.
         self._refresh_task = asyncio.create_task(self._subscription_refresh_loop())
+        self._maintenance_task = asyncio.create_task(self._maintain_connection())
+
+    async def _update_desktop_shortcut(self, remove: bool = False) -> None:
+        user = os.environ.get("DECKY_USER")
+        if not user or user == "root":
+            return
+        script = PLUGIN_DIR / "open-desktop-settings.py"
+        if not script.is_file():
+            script = PLUGIN_DIR / "defaults" / script.name
+        command = ["/usr/bin/python3", str(script), "--uninstall" if remove else "--install"]
+        if os.geteuid() == 0:
+            command = ["runuser", "-u", user, "--", *command]
+        try:
+            process = await asyncio.create_subprocess_exec(*command)
+            if await process.wait() != 0:
+                print("Xray Decky: could not update the desktop settings shortcut")
+        except OSError as error:
+            print(f"Xray Decky: desktop shortcut unavailable: {type(error).__name__}")
+
+    async def get_connection_preferences(self) -> Dict[str, Any]:
+        return {
+            "autoConnect": settings.getSetting("autoConnect", False) is True,
+            "steamDirect": settings.getSetting("steamDirect", False) is True,
+        }
+
+    async def set_connection_preference(self, name: str, enabled: bool) -> Dict[str, Any]:
+        if name not in ("autoConnect", "steamDirect") or not isinstance(enabled, bool):
+            return create_error_response(ErrorCode.INVALID_CONFIG)
+        async with self._connection_lock:
+            settings.setSetting(name, enabled)
+            settings.commit()
+            if name == "autoConnect":
+                self._auto_connect_armed = enabled
+        return create_success_response()
+
+    async def _maintain_connection(self) -> None:
+        # Decky can start before NetworkManager has installed a default route.
+        # This task also repairs routing when Steam's resume event is missed.
+        while True:
+            try:
+                async with self._connection_lock:
+                    await self._check_connection()
+            except Exception as error:
+                print(f"Xray Decky: connection maintenance failed: {type(error).__name__}")
+            await asyncio.sleep(5)
+
+    async def _check_connection(self) -> Dict[str, Any]:
+        state = get_connection_state()
+        tun_enabled = settings.getSetting("tunMode", {}).get("enabled", False)
+        if state.status == ConnectionStatus.CONNECTED and active_core_manager.is_running():
+            if not tun_enabled:
+                return create_success_response({"checked": True, "routeRestored": False})
+            interface = await tun_manager.get_physical_interface()
+            if not interface:
+                return create_success_response({"checked": False})
+            if interface != self._outbound_interface:
+                await self._toggle_connection(False)
+                result = await self._toggle_connection(True)
+                if not result.get("success"):
+                    return result
+                return create_success_response({"checked": True, "routeRestored": True})
+            route = await tun_manager.ensure_system_route()
+            if not route.get("success"):
+                return create_error_response(ErrorCode.IPTABLES_FAILED, route.get("error"))
+            return create_success_response(
+                {"checked": True, "routeRestored": bool(route.get("restored"))}
+            )
+
+        supervisor = self._supervisor
+        if (
+            state.status not in (ConnectionStatus.CONNECTED, ConnectionStatus.CONNECTING)
+            and (supervisor is None or not supervisor.running)
+            and self._auto_connect_armed
+            and settings.getSetting("autoConnect", False) is True
+            and (settings.getSetting("vlessConfig", None) or {}).get("isValid")
+            and await tun_manager.get_physical_interface()
+        ):
+            return await self._toggle_connection(True)
+        return create_success_response({"checked": False})
 
     async def _start_import_server(self) -> None:
         """
@@ -292,6 +375,7 @@ class Plugin:
                         handlers={
                             "get_connection_status": self.get_connection_status,
                             "toggle_connection": self.toggle_connection,
+                            "set_connection_preference": self.set_connection_preference,
                             "get_vless_config": self.get_vless_config,
                             "import_config": self.import_vless_config,
                             "toggle_tun_mode": self.toggle_tun_mode,
@@ -318,11 +402,16 @@ class Plugin:
                         runner, bind_host, try_port, ssl_context=ssl_context
                     )
                     await site.start()
+                    # A local browser can use the panel without accepting a
+                    # self-signed certificate. LAN clients still use HTTPS.
+                    desktop_site = web.TCPSite(runner, "127.0.0.1", 0)
+                    await desktop_site.start()
+                    desktop_port = runner.addresses[-1][1]
                     self._import_runner = runner
+                    import_server_config.update({"port": try_port, "desktopPort": desktop_port})
+                    settings.setSetting("importServer", import_server_config)
+                    settings.commit()
                     if try_port != port:
-                        import_server_config["port"] = try_port
-                        settings.setSetting("importServer", import_server_config)
-                        settings.commit()
                         print(
                             f"Xray Decky Plugin: Port {port} in use, using {try_port}. Import server listening on {bind_host}:{try_port} (HTTPS)"
                         )
@@ -501,6 +590,10 @@ class Plugin:
         Cleanup code called when the plugin is unloaded.
         """
         print("Xray Decky Plugin: Backend unloading")
+        maintenance_task = getattr(self, "_maintenance_task", None)
+        if maintenance_task is not None:
+            maintenance_task.cancel()
+            await asyncio.gather(maintenance_task, return_exceptions=True)
         # Stop crash supervision before tearing anything down
         await self._stop_supervisor()
 
@@ -529,7 +622,7 @@ class Plugin:
 
         # Stop the proxy core if running
         connection_state = get_connection_state()
-        if connection_state.status == ConnectionStatus.CONNECTED:
+        if active_core_manager.is_running() or connection_state.status == ConnectionStatus.CONNECTED:
             tun_pref = settings.getSetting("tunMode", {})
             if tun_pref.get("enabled", False):
                 await tun_manager.remove_system_route()
@@ -552,6 +645,7 @@ class Plugin:
         ToMoon's resolv.conf failure mode).
         """
         print("Xray Decky Plugin: Uninstalling, restoring network state")
+        await self._update_desktop_shortcut(remove=True)
         await self._stop_supervisor()
         try:
             await system_proxy_manager.clear_system_proxy()
@@ -1232,15 +1326,15 @@ class Plugin:
                 )
 
         async def restart() -> bool:
+            outbound_if = await tun_manager.get_physical_interface() if tun_mode else None
+            if tun_mode and not outbound_if:
+                return False
             config_file = manager.config_file
-            if not config_file or not os.path.exists(config_file):
-                outbound_if = (
-                    await tun_manager.get_physical_interface() if tun_mode else None
-                )
-                if tun_mode and not outbound_if:
-                    return False
+            if not config_file or not os.path.exists(config_file) or outbound_if != self._outbound_interface:
+                await manager.stop()
                 config_file = manager.generate_config(
-                    config, tun_mode, outbound_if
+                    config, tun_mode, outbound_if,
+                    steam_direct=settings.getSetting("steamDirect", False) is True,
                 )
             result = await manager.start(config_file)
             if not result.get("success", False):
@@ -1253,8 +1347,11 @@ class Plugin:
                         "Xray Decky Plugin: TUN route re-setup failed after "
                         f"restart: {route_result.get('error', 'Unknown')}"
                     )
+                    await manager.stop()
+                    return False
 
             connection_state = get_connection_state()
+            self._outbound_interface = outbound_if
             connection_state.set_connected(
                 result.get("processId"), config_file, config
             )
@@ -1285,6 +1382,7 @@ class Plugin:
             print(
                 f"Xray Decky Plugin: {core_name} keeps crashing; auto-restart gave up"
             )
+            self._auto_connect_armed = False
             connection_state = get_connection_state()
             kill_switch_pref = settings.getSetting("killSwitch", {})
             if kill_switch_pref.get("isActive", False):
@@ -1312,6 +1410,11 @@ class Plugin:
 
     # Connection Management
     async def toggle_connection(self, enable: bool) -> Dict[str, Any]:
+        self._auto_connect_armed = enable
+        async with self._connection_lock:
+            return await self._toggle_connection(enable)
+
+    async def _toggle_connection(self, enable: bool) -> Dict[str, Any]:
         """
         Toggle proxy connection on/off.
 
@@ -1379,6 +1482,10 @@ class Plugin:
                     manager = singbox_manager
                 else:
                     manager = xray_manager
+                    if not os.path.isfile(manager.xray_binary_path):
+                        ensure_result = await self._ensure_xray_binary()
+                        if not ensure_result.get("success"):
+                            return create_error_response(ErrorCode.PROCESS_FAILED)
                 active_core_manager = manager
 
                 # Set connecting status
@@ -1425,7 +1532,8 @@ class Plugin:
                     )
 
                 config_file = manager.generate_config(
-                    config, tun_mode, outbound_if
+                    config, tun_mode, outbound_if,
+                    steam_direct=settings.getSetting("steamDirect", False) is True,
                 )
 
                 # Start the proxy core the profile needs
@@ -1436,6 +1544,7 @@ class Plugin:
                         "error", f"Failed to start {_core_name(manager)}"
                     )
                     error_code = result.get("errorCode", ErrorCode.PROCESS_FAILED)
+                    await manager.stop()
                     connection_state.set_error(error_msg, error_code)
                     return create_error_response(error_code, error_msg)
 
@@ -1449,6 +1558,7 @@ class Plugin:
                         # degrading to SOCKS-only would leave Gaming Mode
                         # traffic unproxied while the UI claims otherwise.
                         await manager.stop()
+                        await tun_manager.remove_system_route()
                         error_msg = (
                             "TUN route setup failed: "
                             f"{route_result.get('error', 'Unknown')}. "
@@ -1476,6 +1586,7 @@ class Plugin:
                 # Update connection state
                 process_id = result.get("processId")
                 connection_state.set_connected(process_id, config_file, config)
+                self._outbound_interface = outbound_if
 
                 # Deactivate kill switch if active (connection restored)
                 kill_switch_pref = settings.getSetting("killSwitch", {})
@@ -1643,31 +1754,8 @@ class Plugin:
             {'success': bool, 'checked': bool, 'routeRestored': bool}
         """
         try:
-            connection_state = get_connection_state()
-            if connection_state.status not in (
-                ConnectionStatus.CONNECTED,
-                ConnectionStatus.CONNECTING,
-            ):
-                return create_success_response({"checked": False})
-
-            route_restored = False
-            tun_pref = settings.getSetting("tunMode", {})
-            if tun_pref.get("enabled", False) and active_core_manager.is_running():
-                route_result = await tun_manager.ensure_system_route()
-                route_restored = bool(route_result.get("restored", False))
-                if not route_result.get("success", False):
-                    print(
-                        "Xray Decky Plugin: TUN route repair after resume "
-                        f"failed: {route_result.get('error', 'Unknown')}"
-                    )
-                elif route_restored:
-                    print(
-                        "Xray Decky Plugin: TUN default route restored after resume"
-                    )
-
-            return create_success_response(
-                {"checked": True, "routeRestored": route_restored}
-            )
+            async with self._connection_lock:
+                return await self._check_connection()
         except Exception as e:
             return create_error_response(
                 ErrorCode.UNKNOWN_ERROR, f"Resume handling failed: {str(e)}"

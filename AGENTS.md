@@ -13,7 +13,7 @@ Two halves, one plugin:
 
 ## Commands
 
-Package manager is **pnpm 9** (mandatory), Node.js 18+.
+Package manager is **pnpm 9** (mandatory). CI uses Node.js 24.
 
 ```bash
 pnpm install               # also required once per fresh git worktree

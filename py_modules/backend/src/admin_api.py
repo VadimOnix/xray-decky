@@ -287,6 +287,10 @@ def register_admin_routes(
                     "enabled": bool(kill_pref.get("enabled", False)),
                     "isActive": bool(kill_pref.get("isActive", False)),
                 },
+                "preferences": {
+                    "autoConnect": settings.getSetting("autoConnect", False) is True,
+                    "steamDirect": settings.getSetting("steamDirect", False) is True,
+                },
             }
         )
 
@@ -317,6 +321,21 @@ def register_admin_routes(
         result = await handlers["toggle_tun_mode"](body["enabled"])
         status = 200 if result.get("success", False) else 502
         return web.json_response(result, status=status)
+
+    async def api_connection_preference(request: web.Request) -> web.Response:
+        denied = _guard(request)
+        if denied is not None:
+            return denied
+        body = await _body_json(request)
+        if body is None or not isinstance(body.get("enabled"), bool):
+            return web.json_response(
+                {"success": False, "error": "Expected JSON body {\"enabled\": bool}"},
+                status=400,
+            )
+        result = await handlers["set_connection_preference"](
+            request.match_info["name"], body["enabled"]
+        )
+        return web.json_response(result, status=200 if result.get("success") else 502)
 
     async def api_killswitch(request: web.Request) -> web.Response:
         denied = _guard(request)
@@ -474,6 +493,7 @@ def register_admin_routes(
     app.router.add_get("/api/v1/status", api_status)
     app.router.add_post("/api/v1/connection", api_connection)
     app.router.add_post("/api/v1/tun", api_tun)
+    app.router.add_post("/api/v1/preferences/{name:autoConnect|steamDirect}", api_connection_preference)
     app.router.add_post("/api/v1/killswitch", api_killswitch)
     app.router.add_post("/api/v1/killswitch/deactivate", api_killswitch_deactivate)
     app.router.add_post("/api/v1/import", api_import)

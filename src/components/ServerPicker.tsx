@@ -60,8 +60,8 @@ export const ServerPicker: FC<ServerPickerProps> = ({ refreshKey }) => {
   }, []);
 
   useEffect(() => {
-    // load() fetches profiles; setState runs in its async callback
-    void load();
+    const initialLoad = setTimeout(() => void load(), 0);
+    return () => clearTimeout(initialLoad);
   }, [load, refreshKey]);
 
   const handleSelect = useCallback(

@@ -61,6 +61,7 @@ def _make_handlers(overrides=None):
     handlers = {
         "get_connection_status": handler("status", {"status": "disconnected"}),
         "toggle_connection": handler("toggle_connection", {"success": True}),
+        "set_connection_preference": handler("set_connection_preference", {"success": True}),
         "get_vless_config": handler("get_config", {"config": None}),
         "import_config": handler("import", {"success": True}),
         "toggle_tun_mode": handler("tun", {"success": True}),
@@ -332,6 +333,25 @@ def test_mutating_endpoints_require_token():
             await client.close()
 
     _run(scenario())
+
+
+def test_connection_preference_requires_auth_and_a_boolean():
+    async def _run():
+        handlers, calls = _make_handlers()
+        app = web.Application()
+        register_admin_routes(app, _FakeSettings(), Path("defaults/static"), handlers, TOKEN)
+        async with TestClient(TestServer(app)) as client:
+            path = "/api/v1/preferences/steamDirect"
+            response = await client.post(path, json={"enabled": True})
+            assert response.status == 401
+            headers = {"X-Admin-Token": TOKEN}
+            response = await client.post(path, json={"enabled": "true"}, headers=headers)
+            assert response.status == 400
+            response = await client.post(path, json={"enabled": True}, headers=headers)
+            assert response.status == 200
+        assert calls == [("set_connection_preference", ("steamDirect", True))]
+
+    asyncio.run(_run())
 
 
 def test_handler_failure_maps_to_error_status():

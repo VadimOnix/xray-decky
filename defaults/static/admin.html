@@ -219,6 +219,32 @@
                 <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
               </label>
             </div>
+            <div class="option-row">
+              <div class="option-text">
+                <span class="option-name" data-i18n="options.autoConnect">Connect when online</span>
+                <span class="option-desc" data-i18n="options.autoConnectDesc"
+                  >Start the active profile when a network route becomes available</span
+                >
+              </div>
+              <label class="switch">
+                <input id="autoconnect-toggle" type="checkbox" role="switch"
+                  data-i18n-aria="options.autoConnect" aria-label="Connect when online" />
+                <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+              </label>
+            </div>
+            <div class="option-row">
+              <div class="option-text">
+                <span class="option-name" data-i18n="options.steamDirect">Steam direct</span>
+                <span class="option-desc" data-i18n="options.steamDirectDesc"
+                  >Bypass the proxy for Steam services in TUN. Reconnect to apply.</span
+                >
+              </div>
+              <label class="switch">
+                <input id="steam-direct-toggle" type="checkbox" role="switch"
+                  data-i18n-aria="options.steamDirect" aria-label="Steam direct" />
+                <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+              </label>
+            </div>
             <p id="options-note" class="option-note" hidden></p>
           </section>
 
