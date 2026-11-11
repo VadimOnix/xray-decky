@@ -179,16 +179,16 @@ class TUNManager:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
-    async def _default_route_devices(self) -> List[str]:
+    async def _default_route_devices(self, family: str = "-4") -> List[str]:
         """
-        The device of every IPv4 default route, in the order ``ip`` prints them
+        The device of every default route in the requested address family
         (which is by ascending metric, i.e. most-preferred first).
         """
         devices: List[str] = []
         try:
             proc = await asyncio.create_subprocess_exec(
                 "ip",
-                "-4",
+                family,
                 "route",
                 "show",
                 "default",
@@ -202,7 +202,7 @@ class TUNManager:
             for line in out.decode("utf-8", errors="ignore").strip().split("\n"):
                 parts = line.split()
                 for i, p in enumerate(parts):
-                    if p == "dev" and i + 1 < len(parts):
+                    if p == "dev" and i + 1 < len(parts) and "linkdown" not in parts:
                         dev = parts[i + 1]
                         if dev:
                             devices.append(dev)
@@ -213,10 +213,27 @@ class TUNManager:
 
     async def get_physical_interface(self) -> Optional[str]:
         """Get the default route's interface (e.g. wlan0) for sockopt.interface binding."""
-        for dev in await self._default_route_devices():
-            if dev != self.TUN_INTERFACE:
-                return dev
+        for family in ("-4", "-6"):
+            for dev in await self._default_route_devices(family):
+                if dev not in (self.TUN_INTERFACE, "lo"):
+                    return dev
         return None
+
+    async def _ensure_ipv6_route(self) -> Dict[str, Any]:
+        devices = await self._default_route_devices("-6")
+        if not devices or devices[0] == self.TUN_INTERFACE:
+            return {"success": True, "restored": False}
+        proc = await asyncio.create_subprocess_exec(
+            "ip", "-6", "route", "add", "default", "dev", self.TUN_INTERFACE,
+            "metric", str(self.ROUTE_METRIC),
+            stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.PIPE,
+        )
+        err = (await proc.stderr.read()).decode("utf-8", errors="replace").strip()
+        if await proc.wait() != 0:
+            return {"success": False, "error": err}
+        if (await self._default_route_devices("-6"))[:1] != [self.TUN_INTERFACE]:
+            return {"success": False, "error": "The IPv6 TUN route is not preferred"}
+        return {"success": True, "restored": True}
 
     async def get_tunnel_bypass_interface(self) -> Optional[str]:
         """
@@ -278,7 +295,7 @@ class TUNManager:
             await proc.wait()
             if proc.returncode == 0:
                 self._route_added = True
-                return {"success": True}
+                return await self._ensure_ipv6_route()
             err = (await proc.stderr.read()).decode("utf-8", errors="ignore").strip()
             return {"success": False, "error": err}
         except Exception as e:
@@ -307,7 +324,7 @@ class TUNManager:
             out = await proc.stdout.read()
             await proc.wait()
             if proc.returncode == 0 and out.strip():
-                return {"success": True, "restored": False}
+                return await self._ensure_ipv6_route()
 
             result = await self.setup_system_route()
             return {
@@ -325,6 +342,8 @@ class TUNManager:
             for args in [
                 ["ip", "rule", "del", "fwmark", "0x206", "table", "100"],
                 ["ip", "route", "del", "default", "table", "100"],
+                ["ip", "-6", "route", "del", "default", "dev", self.TUN_INTERFACE,
+                 "metric", str(self.ROUTE_METRIC)],
             ]:
                 proc = await asyncio.create_subprocess_exec(
                     *args,

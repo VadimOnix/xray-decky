@@ -196,6 +196,15 @@ export const getAdminPanelUrl = callable<[], AdminPanelUrlResponse>('get_admin_p
 export const setLanAccess = callable<[enabled: boolean], SetLanAccessResponse>('set_lan_access');
 export const handleResume = callable<[], HandleResumeResponse>('handle_resume');
 
+export type ConnectionPreferences = { autoConnect: boolean; steamDirect: boolean };
+export const getConnectionPreferences = callable<[], ConnectionPreferences>(
+  'get_connection_preferences'
+);
+export const setConnectionPreference = callable<
+  [name: keyof ConnectionPreferences, enabled: boolean],
+  { success: boolean; error?: string }
+>('set_connection_preference');
+
 export interface ServerProfile {
   id: string;
   protocol?: string;

@@ -12,6 +12,7 @@ import tempfile
 from typing import Dict, Any, Optional
 
 from .stats import API_PORT
+from .steam_routing import STEAM_DIRECT, STEAM_DOMAINS, STEAM_NETWORKS
 
 
 class XrayManager:
@@ -42,6 +43,8 @@ class XrayManager:
         vless_config: Dict[str, Any],
         tun_mode: bool = False,
         outbound_interface: Optional[str] = None,
+        *,
+        steam_direct: bool = False,
     ) -> str:
         """
         Generate xray-core JSON configuration from VLESSConfig.
@@ -55,26 +58,24 @@ class XrayManager:
             Path to generated config file
         """
         # Create temporary config file
-        config_dir = tempfile.gettempdir()
-        config_file = os.path.join(config_dir, f"xray-config-{os.getpid()}.json")
-
-        # Generate xray-core config
         xray_config = self._build_xray_config(
-            vless_config, tun_mode, outbound_interface
+            vless_config, tun_mode, outbound_interface, steam_direct=steam_direct
         )
 
-        # Write config file
-        with open(config_file, "w") as f:
+        with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", prefix="xray-config-", suffix=".json", delete=False
+        ) as f:
             json.dump(xray_config, f, indent=2)
-
-        self.config_file = config_file
-        return config_file
+            self.config_file = f.name
+        return self.config_file
 
     def _build_xray_config(
         self,
         vless_config: Dict[str, Any],
         tun_mode: bool,
         outbound_interface: Optional[str] = None,
+        *,
+        steam_direct: bool = False,
     ) -> Dict[str, Any]:
         """
         Build xray-core JSON configuration structure.
@@ -247,8 +248,8 @@ class XrayManager:
         # Direct outbound for bypassing (private/LAN IPs - geoip:private)
         direct_outbound = {
             "protocol": "freedom",
-            "settings": {"domainStrategy": "UseIP"},
             "tag": "direct",
+            "streamSettings": {"sockopt": {"domainStrategy": "UseIP"}},
         }
 
         # Sniffing restores the destination domain so domain-based routing
@@ -340,14 +341,40 @@ class XrayManager:
                 {"type": "field", "inboundTag": ["tun"], "outboundTag": "proxy"},
             )
 
-            # TUN inbound — supported since xray-core v26.1.23.
-            # xray-core creates the TUN interface; no settings required.
-            # System routing must still be set up externally (tun_manager).
+            if steam_direct:
+                if not outbound_interface:
+                    raise ValueError("Steam Direct requires a physical interface")
+                config["outbounds"].append({
+                    "tag": STEAM_DIRECT,
+                    "protocol": "freedom",
+                    "streamSettings": {"sockopt": {"interface": outbound_interface}},
+                })
+                steam_rule = {
+                    "type": "field",
+                    "inboundTag": ["tun", "socks", "http"],
+                    "outboundTag": STEAM_DIRECT,
+                }
+                routing_rules[2:2] = [
+                    {**steam_rule, "domain": [f"domain:{domain}" for domain in STEAM_DOMAINS]},
+                    {**steam_rule, "ip": list(STEAM_NETWORKS)},
+                ]
+                # Use sniffed names for policy, retaining the original CDN/IP destination.
+                sniffing["routeOnly"] = True
+
+            # Use separate source addresses so kernel-generated traffic is
+            # distinguishable from packets sent on the physical interface.
+            tun_settings = {
+                "name": "xray0",
+                "gateway": ["172.19.0.1/30", "fd00:78:72::1/126"],
+            }
+            if outbound_interface:
+                tun_settings["autoOutboundsInterface"] = outbound_interface
             config["inbounds"].append(
                 {
                     "protocol": "tun",
                     "sniffing": sniffing,
                     "tag": "tun",
+                    "settings": tun_settings,
                 }
             )
 

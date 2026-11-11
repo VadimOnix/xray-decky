@@ -47,6 +47,19 @@ def _proxy(config):
     return next(o for o in config["outbounds"] if o.get("tag") == "proxy")
 
 
+def test_steam_direct_uses_a_bound_outbound_and_keeps_default_proxy():
+    config = build_singbox_config(_hysteria2(), True, "wlan0", steam_direct=True)
+    assert config["outbounds"][-1] == {
+        "type": "direct", "tag": "steam-direct", "bind_interface": "wlan0"
+    }
+    assert config["route"]["final"] == "proxy"
+    rules = config["route"]["rules"]
+    assert rules[0]["action"] == "sniff"
+    assert "steampowered.com" in rules[1]["domain_suffix"]
+    assert "162.254.192.0/21" in rules[2]["ip_cidr"]
+    assert not any(o["tag"] == "steam-direct" for o in build_singbox_config(_hysteria2(), steam_direct=True)["outbounds"])
+
+
 def test_hysteria2_outbound():
     config = build_singbox_config(_hysteria2(obfs="salamander", obfsPassword="xyz"))
     proxy = _proxy(config)
@@ -103,7 +116,7 @@ def test_tun_mode_adds_inbound_and_binds_interface():
     assert tun["auto_route"] is False
     # An explicit address is required for the interface to come up so the
     # external default-route setup can succeed.
-    assert tun["address"] == ["172.19.0.1/30"]
+    assert tun["address"] == ["172.19.0.1/30", "fd00:78:72::1/126"]
     assert _proxy(config)["bind_interface"] == "wlan0"
 
 

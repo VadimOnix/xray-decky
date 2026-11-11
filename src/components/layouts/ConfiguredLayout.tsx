@@ -5,6 +5,7 @@ import { FaPlug, FaInfoCircle, FaSlidersH } from 'react-icons/fa';
 import type { IconType } from 'react-icons';
 import { AdminPanelBlock } from '../AdminPanelBlock';
 import { ConfigSummaryCard } from '../ConfigSummaryCard';
+import { ConnectionPreferences } from '../ConnectionPreferences';
 import { ConnectionToggle } from '../ConnectionToggle';
 import { KillSwitchToggle } from '../KillSwitchToggle';
 import { ResetConfigurationButton } from '../ResetConfigurationButton';
@@ -231,6 +232,9 @@ export const ConfiguredLayout: FC<ConfiguredLayoutProps> = ({
 
       {activeTab === TAB_OPTIONS && (
         <>
+          <PanelSectionRow>
+            <ConnectionPreferences />
+          </PanelSectionRow>
           <PanelSectionRow>
             <TUNModeToggle
               enabled={options.tunEnabled}

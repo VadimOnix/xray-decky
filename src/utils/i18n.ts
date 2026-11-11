@@ -63,6 +63,10 @@ const en: Dict = {
   'tun.help': 'Help: TUN mode',
   'tun.enable': 'Enable TUN Mode',
   'tun.enableDesc': 'Routes all system traffic through the proxy.',
+  'options.autoConnect': 'Connect when online',
+  'options.autoConnectDesc': 'Start the active profile when a network route becomes available.',
+  'options.steamDirect': 'Steam direct',
+  'options.steamDirectDesc': 'Bypass the proxy for Steam services in TUN. Reconnect to apply.',
   'tun.privReqLabel': 'Privileges Required:',
   'tun.privReqMsg': 'TUN mode requires elevated privileges.',
   'tun.privSteps':
@@ -214,6 +218,10 @@ const ru: Dict = {
   'tun.help': 'Справка: режим TUN',
   'tun.enable': 'Включить режим TUN',
   'tun.enableDesc': 'Направляет весь системный трафик через прокси.',
+  'options.autoConnect': 'Подключаться после появления сети',
+  'options.autoConnectDesc': 'Запускает выбранный профиль, когда появляется сетевое подключение.',
+  'options.steamDirect': 'Steam напрямую',
+  'options.steamDirectDesc': 'В TUN сервисы Steam идут напрямую. Применяется при подключении.',
   'tun.privReqLabel': 'Требуются права:',
   'tun.privReqMsg': 'Режиму TUN нужны повышенные права.',
   'tun.privSteps':
