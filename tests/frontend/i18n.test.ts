@@ -1,9 +1,7 @@
 // @vitest-environment node
 import { readFileSync } from 'node:fs';
 
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
-import { t } from '../../src/utils/i18n';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
  * Load a fresh copy of the module with a stubbed navigator language. The
@@ -22,6 +20,11 @@ afterEach(() => {
 });
 
 describe('t', () => {
+  let t: typeof import('../../src/utils/i18n').t;
+  beforeEach(async () => {
+    ({ t } = await importWithLocale('en-US'));
+  });
+
   it('returns the key itself when nothing is translated', () => {
     expect(t('definitely.not.a.key')).toBe('definitely.not.a.key');
   });

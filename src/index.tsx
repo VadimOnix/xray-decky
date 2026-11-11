@@ -2,40 +2,16 @@ import { definePlugin } from '@decky/api';
 import { handleResume } from './services/api';
 import { ErrorBoundary } from '@decky/ui';
 import { FaNetworkWired } from 'react-icons/fa';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { ConfiguredLayout } from './components/layouts/ConfiguredLayout';
 import { SetupLayout } from './components/layouts/SetupLayout';
 import { usePluginPanelState } from './hooks/usePluginPanelState';
 
-function Content() {
-  const {
-    layout,
-    configSummary,
-    connection,
-    options,
-    isLoading,
-    saveConfig,
-    resetConfig,
-    toggleConnection,
-    toggleTUNMode,
-    toggleKillSwitch,
-    deactivateKillSwitch,
-    checkTUNPrivileges,
-  } = usePluginPanelState();
-
+function SetupContent({ saveConfig }: Pick<ReturnType<typeof usePluginPanelState>, 'saveConfig'>) {
   const [vlessUrl, setVlessUrl] = useState('');
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-
-  useEffect(() => {
-    if (layout === 'setup') {
-      // Intentional one-time form reset when entering the setup layout.
-      setSaveError(null);
-      setSaveSuccess(null);
-      setVlessUrl('');
-    }
-  }, [layout]);
 
   const handleSave = async () => {
     setSaveError(null);
@@ -54,35 +30,52 @@ function Content() {
     }
   };
 
+  return (
+    <SetupLayout
+      vlessUrl={vlessUrl}
+      onVlessUrlChange={setVlessUrl}
+      onSave={handleSave}
+      isSaving={isSaving}
+      error={saveError}
+      successMessage={saveSuccess}
+    />
+  );
+}
+
+function Content() {
+  const {
+    layout,
+    configSummary,
+    connection,
+    options,
+    isLoading,
+    saveConfig,
+    resetConfig,
+    toggleConnection,
+    toggleTUNMode,
+    toggleKillSwitch,
+    deactivateKillSwitch,
+    checkTUNPrivileges,
+  } = usePluginPanelState();
+
   if (isLoading && layout === 'setup') {
     return <div style={{ padding: '10px', color: '#8f98a0' }}>Loading…</div>;
   }
 
+  if (layout === 'setup') return <SetupContent saveConfig={saveConfig} />;
+
   return (
-    <>
-      {layout === 'setup' ? (
-        <SetupLayout
-          vlessUrl={vlessUrl}
-          onVlessUrlChange={setVlessUrl}
-          onSave={handleSave}
-          isSaving={isSaving}
-          error={saveError}
-          successMessage={saveSuccess}
-        />
-      ) : (
-        <ConfiguredLayout
-          configSummary={configSummary}
-          connection={connection}
-          options={options}
-          onToggleConnection={toggleConnection}
-          onToggleTUNMode={toggleTUNMode}
-          onCheckTUNPrivileges={checkTUNPrivileges}
-          onToggleKillSwitch={toggleKillSwitch}
-          onDeactivateKillSwitch={deactivateKillSwitch}
-          onResetConfig={resetConfig}
-        />
-      )}
-    </>
+    <ConfiguredLayout
+      configSummary={configSummary}
+      connection={connection}
+      options={options}
+      onToggleConnection={toggleConnection}
+      onToggleTUNMode={toggleTUNMode}
+      onCheckTUNPrivileges={checkTUNPrivileges}
+      onToggleKillSwitch={toggleKillSwitch}
+      onDeactivateKillSwitch={deactivateKillSwitch}
+      onResetConfig={resetConfig}
+    />
   );
 }
 
