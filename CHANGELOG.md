@@ -26,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Connect the selected profile automatically after a network route appears.
 - Route Steam service domains and Valve networks directly in TUN mode.
-- Open the web settings panel from Desktop Mode and configure both options.
+- Add a shortcut on the Desktop and in the KDE menu for the web settings panel.
 
 - Imports now fail with a readable message instead of a config the core will
   not load. A share link xray-core has stopped accepting — Shadowsocks over
